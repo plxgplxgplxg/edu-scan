@@ -1,13 +1,228 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
 }
+
+//enum 
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+enum SubmissionStatus {
+  GRADED
+  NEED_REVIEW
+  FAILED
+}
+
+enum SubmitStatus {
+  ON_TIME
+  LATE
+}
+
+enum GradeStatus {
+  PENDING
+  GRADED
+}
+
+enum RemarkStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+
+
+//model 
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  taughtClasses     Class[]            @relation("TeacherClasses")
+  classEnrollments  ClassEnrollment[]
+  submissions       Submission[]
+  assignmentSubmits AssignmentSubmit[]
+  remarkRequests    RemarkRequest[]
+  questions         Question[]
+  exams             Exam[]             @relation("TeacherExams")
+  assignments       Assignment[]       @relation("TeacherAssignments")
+}
+
+model Class {
+  id         String   @id @default(uuid())
+  name       String
+  subject    String
+  schoolYear String
+  code       String   @unique
+  teacherId  String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  teacher     User              @relation("TeacherClasses", fields: [teacherId], references: [id])
+  enrollments ClassEnrollment[]
+  exams       Exam[]
+  assignments Assignment[]
+}
+
+model ClassEnrollment {
+  id        String   @id @default(uuid())
+  classId   String
+  studentId String
+  joinedAt  DateTime @default(now())
+
+  class   Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, studentId])
+}
+
+model Exam {
+  id            String   @id @default(uuid())
+  title         String
+  questionCount Int
+  maxScore      Float
+  classId       String
+  teacherId     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  class       Class        @relation(fields: [classId], references: [id])
+  teacher     User         @relation("TeacherExams", fields: [teacherId], references: [id])
+  answerKeys  AnswerKey[]
+  submissions Submission[]
+}
+
+model AnswerKey {
+  id             String @id @default(uuid())
+  examId         String
+  questionNumber Int
+  correctAnswer  String
+
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@unique([examId, questionNumber])
+}
+
+model Submission {
+  id          String           @id @default(uuid())
+  examId      String
+  studentId   String
+  batchId     String?
+  studentCode String?
+  totalScore  Float?
+  status      SubmissionStatus @default(NEED_REVIEW)
+  imageUrl    String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  exam    Exam               @relation(fields: [examId], references: [id])
+  student User               @relation(fields: [studentId], references: [id])
+  details SubmissionDetail[]
+  remarks RemarkRequest[]
+}
+
+model SubmissionDetail {
+  id             String  @id @default(uuid())
+  submissionId   String
+  questionNumber Int
+  studentAnswer  String?
+  correctAnswer  String
+  isCorrect      Boolean
+  needsReview    Boolean @default(false)
+
+  submission    Submission      @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  remarkRequest RemarkRequest[]
+
+  @@unique([submissionId, questionNumber])
+}
+
+model Assignment {
+  id             String   @id @default(uuid())
+  title          String
+  description    String?
+  deadline       DateTime
+  allowLate      Boolean  @default(false)
+  latePenaltyPct Float    @default(0)
+  maxScore       Float    @default(10)
+  classId        String
+  teacherId      String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  class   Class              @relation(fields: [classId], references: [id])
+  teacher User               @relation("TeacherAssignments", fields: [teacherId], references: [id])
+  submits AssignmentSubmit[]
+}
+
+model AssignmentSubmit {
+  id           String      @id @default(uuid())
+  assignmentId String
+  studentId    String
+  fileUrl      String
+  submitStatus SubmitStatus
+  gradeStatus  GradeStatus @default(PENDING)
+  score        Float?
+  feedback     String?
+  submittedAt  DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student    User       @relation(fields: [studentId], references: [id])
+
+  @@unique([assignmentId, studentId])
+}
+
+model RemarkRequest {
+  id                 String       @id @default(uuid())
+  submissionId       String
+  submissionDetailId String
+  studentId          String
+  reason             String
+  status             RemarkStatus @default(PENDING)
+  teacherComment     String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  submission       Submission       @relation(fields: [submissionId], references: [id])
+  submissionDetail SubmissionDetail @relation(fields: [submissionDetailId], references: [id])
+  student          User             @relation(fields: [studentId], references: [id])
+
+  @@unique([submissionDetailId, studentId])
+}
+
+model Question {
+  id            String     @id @default(uuid())
+  content       String
+  optionA       String
+  optionB       String
+  optionC       String
+  optionD       String
+  correctAnswer String
+  subject       String
+  difficulty    Difficulty
+  tags          String[]
+  teacherId     String
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  teacher User @relation(fields: [teacherId], references: [id])
+}
+

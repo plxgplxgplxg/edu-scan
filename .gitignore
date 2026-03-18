@@ -77,3 +77,6 @@ Thumbs.db
 *.bak
 *.backup
 *.old
+
+# Thư mục tài liệu nội bộ
+docs/
