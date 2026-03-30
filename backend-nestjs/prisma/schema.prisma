@@ -6,17 +6,30 @@ datasource db {
   provider = "postgresql"
 }
 
-//enum 
-
 enum Role {
   ADMIN
   TEACHER
   STUDENT
 }
 
+enum AnswerChoice {
+  A
+  B
+  C
+  D
+}
+
 enum SubmissionStatus {
   GRADED
-  NEED_REVIEW
+  NEEDS_REVIEW
+  FAILED
+}
+
+enum OmrBatchStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  PARTIAL_FAILED
   FAILED
 }
 
@@ -42,28 +55,27 @@ enum Difficulty {
   HARD
 }
 
-
-
-//model 
-
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
   passwordHash String
   name         String
   role         Role
+  studentCode  String?  @unique
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   taughtClasses     Class[]            @relation("TeacherClasses")
   classEnrollments  ClassEnrollment[]
-  submissions       Submission[]
+  submissions       Submission[]       @relation("StudentSubmissions")
   assignmentSubmits AssignmentSubmit[]
-  remarkRequests    RemarkRequest[]
+  remarkRequests    RemarkRequest[]    @relation("StudentRemarkRequests")
+  reviewedRemarks   RemarkRequest[]    @relation("TeacherReviewedRemarks")
   questions         Question[]
   exams             Exam[]             @relation("TeacherExams")
   assignments       Assignment[]       @relation("TeacherAssignments")
+  omrBatches        OmrBatch[]         @relation("TeacherOmrBatches")
 }
 
 model Class {
@@ -76,10 +88,10 @@ model Class {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  teacher     User              @relation("TeacherClasses", fields: [teacherId], references: [id])
-  enrollments ClassEnrollment[]
-  exams       Exam[]
-  assignments Assignment[]
+  teacher         User              @relation("TeacherClasses", fields: [teacherId], references: [id])
+  enrollments     ClassEnrollment[]
+  examAssignments ExamClass[]
+  assignments     AssignmentClass[]
 }
 
 model ClassEnrollment {
@@ -95,61 +107,106 @@ model ClassEnrollment {
 }
 
 model Exam {
-  id            String   @id @default(uuid())
-  title         String
-  questionCount Int
-  maxScore      Float
-  classId       String
-  teacherId     String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id        String   @id @default(uuid())
+  title     String
+  maxScore  Float
+  teacherId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  class       Class        @relation(fields: [classId], references: [id])
-  teacher     User         @relation("TeacherExams", fields: [teacherId], references: [id])
+  teacher     User           @relation("TeacherExams", fields: [teacherId], references: [id])
   answerKeys  AnswerKey[]
+  questionMap ExamQuestion[]
+  classes     ExamClass[]
   submissions Submission[]
+  omrBatches  OmrBatch[]
+}
+
+model ExamClass {
+  id      String @id @default(uuid())
+  examId  String
+  classId String
+
+  exam  Exam  @relation(fields: [examId], references: [id], onDelete: Cascade)
+  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([examId, classId])
 }
 
 model AnswerKey {
-  id             String @id @default(uuid())
+  id             String       @id @default(uuid())
   examId         String
   questionNumber Int
-  correctAnswer  String
+  correctAnswer  AnswerChoice
 
   exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
 
   @@unique([examId, questionNumber])
 }
 
+model ExamQuestion {
+  id             String  @id @default(uuid())
+  examId         String
+  questionNumber Int
+  questionId     String?
+
+  exam     Exam      @relation(fields: [examId], references: [id], onDelete: Cascade)
+  question Question? @relation(fields: [questionId], references: [id], onDelete: SetNull)
+
+  @@unique([examId, questionNumber])
+  @@unique([examId, questionId])
+}
+
+model OmrBatch {
+  id             String         @id @default(uuid())
+  examId         String
+  teacherId      String
+  status         OmrBatchStatus @default(PENDING)
+  totalFiles     Int
+  processedFiles Int            @default(0)
+  successCount   Int            @default(0)
+  failedCount    Int            @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  completedAt    DateTime?
+
+  exam        Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+  teacher     User         @relation("TeacherOmrBatches", fields: [teacherId], references: [id])
+  submissions Submission[]
+}
+
 model Submission {
   id          String           @id @default(uuid())
   examId      String
-  studentId   String
+  studentId   String?
   batchId     String?
   studentCode String?
-  totalScore  Float?
-  status      SubmissionStatus @default(NEED_REVIEW)
   imageUrl    String?
+  status      SubmissionStatus @default(NEEDS_REVIEW)
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
+  reviewedAt  DateTime?
 
-  exam    Exam               @relation(fields: [examId], references: [id])
-  student User               @relation(fields: [studentId], references: [id])
+  exam    Exam               @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student User?              @relation("StudentSubmissions", fields: [studentId], references: [id], onDelete: SetNull)
+  batch   OmrBatch?          @relation(fields: [batchId], references: [id], onDelete: SetNull)
   details SubmissionDetail[]
-  remarks RemarkRequest[]
+
+  @@index([examId, studentId])
+  @@index([batchId])
+  @@index([studentCode])
 }
 
 model SubmissionDetail {
-  id             String  @id @default(uuid())
+  id             String        @id @default(uuid())
   submissionId   String
   questionNumber Int
-  studentAnswer  String?
-  correctAnswer  String
-  isCorrect      Boolean
-  needsReview    Boolean @default(false)
+  detectedAnswer AnswerChoice?
+  finalAnswer    AnswerChoice?
+  needsReview    Boolean       @default(false)
 
-  submission    Submission      @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-  remarkRequest RemarkRequest[]
+  submission Submission      @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  remarks    RemarkRequest[]
 
   @@unique([submissionId, questionNumber])
 }
@@ -162,67 +219,94 @@ model Assignment {
   allowLate      Boolean  @default(false)
   latePenaltyPct Float    @default(0)
   maxScore       Float    @default(10)
-  classId        String
   teacherId      String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  class   Class              @relation(fields: [classId], references: [id])
   teacher User               @relation("TeacherAssignments", fields: [teacherId], references: [id])
+  classes AssignmentClass[]
   submits AssignmentSubmit[]
 }
 
+model AssignmentClass {
+  id           String @id @default(uuid())
+  assignmentId String
+  classId      String
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  class      Class      @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, classId])
+}
+
 model AssignmentSubmit {
-  id           String      @id @default(uuid())
+  id           String       @id @default(uuid())
   assignmentId String
   studentId    String
   fileUrl      String
   submitStatus SubmitStatus
-  gradeStatus  GradeStatus @default(PENDING)
+  gradeStatus  GradeStatus  @default(PENDING)
   score        Float?
   feedback     String?
-  submittedAt  DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  submittedAt  DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  student    User       @relation(fields: [studentId], references: [id])
+  student    User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([assignmentId, studentId])
 }
 
 model RemarkRequest {
   id                 String       @id @default(uuid())
-  submissionId       String
   submissionDetailId String
   studentId          String
+  reviewerId         String?
   reason             String
   status             RemarkStatus @default(PENDING)
   teacherComment     String?
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
+  reviewedAt         DateTime?
 
-  submission       Submission       @relation(fields: [submissionId], references: [id])
-  submissionDetail SubmissionDetail @relation(fields: [submissionDetailId], references: [id])
-  student          User             @relation(fields: [studentId], references: [id])
+  submissionDetail SubmissionDetail @relation(fields: [submissionDetailId], references: [id], onDelete: Cascade)
+  student          User             @relation("StudentRemarkRequests", fields: [studentId], references: [id], onDelete: Cascade)
+  reviewer         User?            @relation("TeacherReviewedRemarks", fields: [reviewerId], references: [id], onDelete: SetNull)
 
   @@unique([submissionDetailId, studentId])
 }
 
 model Question {
-  id            String     @id @default(uuid())
+  id            String       @id @default(uuid())
   content       String
   optionA       String
   optionB       String
   optionC       String
   optionD       String
-  correctAnswer String
+  correctAnswer AnswerChoice
   subject       String
   difficulty    Difficulty
-  tags          String[]
   teacherId     String
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
-  teacher User @relation(fields: [teacherId], references: [id])
+  teacher     User           @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  tags        QuestionTag[]
+  examEntries ExamQuestion[]
 }
 
+model Tag {
+  id        String        @id @default(uuid())
+  name      String        @unique
+  questions QuestionTag[]
+}
+
+model QuestionTag {
+  questionId String
+  tagId      String
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([questionId, tagId])
+}

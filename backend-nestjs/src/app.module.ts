@@ -8,6 +8,8 @@ import cloudinaryConfig from './config/cloudinary.config';
 import redisConfig from './config/redis.config';
 import { DatabaseModule } from './database/database.module';
 import { StorageModule } from './storage/storage.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { ClassesModule } from './modules/classes/classes.module';
 
 @Module({
   imports: [
@@ -17,6 +19,8 @@ import { StorageModule } from './storage/storage.module';
     }),
     DatabaseModule,
     StorageModule,
+    AuthModule,
+    ClassesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
