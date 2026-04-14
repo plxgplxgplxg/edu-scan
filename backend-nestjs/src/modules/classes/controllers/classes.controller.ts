@@ -23,7 +23,7 @@ export class ClassesController {
         return this.classesService.createClass(teacherId, createClassDto);
     }
 
-    @Get()
+    @Get('my')
     @Roles(Role.TEACHER)
     async getMyClasses(@CurrentUser('id') teacherId: string) {
         return this.classesService.listTeacherClasses(teacherId);
@@ -68,11 +68,11 @@ export class ClassesController {
         return this.classesService.removeStudentFromClass(classId, studentId, teacherId);
     }
 
-    @Post('join')
+    @Post('join/:code')
     @Roles(Role.STUDENT)
     async joinClassByCode(
+        @Param('code') code: string,
         @CurrentUser('id') studentId: string,
-        @Body('code') code: string,
     ) {
         return this.classesService.joinClassByCode(studentId, code);
     }

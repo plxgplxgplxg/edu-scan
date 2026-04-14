@@ -10,6 +10,7 @@ import { DatabaseModule } from './database/database.module';
 import { StorageModule } from './storage/storage.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ClassesModule } from './modules/classes/classes.module';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { ClassesModule } from './modules/classes/classes.module';
     StorageModule,
     AuthModule,
     ClassesModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

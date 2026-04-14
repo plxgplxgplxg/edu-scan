@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, IsUUID, ValidateIf } from "class-validator";
+import { IsEmail, IsOptional, IsString, IsUUID, ValidateIf } from "class-validator";
 
 export class AddStudentDto {
     @ValidateIf((dto: AddStudentDto) => !dto.studentId && !dto.studentCode)
@@ -12,6 +12,7 @@ export class AddStudentDto {
     studentId?: string;
 
     @ValidateIf((dto: AddStudentDto) => !dto.email && !dto.studentId)
+    @IsString()
     @IsOptional()
     studentCode?: string;
 }
