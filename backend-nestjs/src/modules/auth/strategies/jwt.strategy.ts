@@ -24,8 +24,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     const user = await this.prismaService.user.findUnique({
         where: { id: payload.sub },
     });
-    if (!user || !user.isActive) {
-        throw new UnauthorizedException('Unauthorized');
+    if (!user) {
+        throw new UnauthorizedException('User from access token was not found');
+    }
+    if (!user.isActive) {
+        throw new UnauthorizedException('User account is inactive');
     }
     const { passwordHash, ...result} = user;
     return result;

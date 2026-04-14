@@ -1,8 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { ClassesRepository } from "../repositories/classes.repository";
-import { CreateClassDto } from "../dto/create-class.dto";
-import { UpdateClassDto } from "../dto/update-class.dto";
-import { AddStudentDto } from "../dto/add-student.dto";
+import { CreateClassDto } from "../dto/request/create-class.dto";
+import { UpdateClassDto } from "../dto/request/update-class.dto";
+import { AddStudentDto } from "../dto/request/add-student.dto";
 
 @Injectable()
 export class ClassesService {

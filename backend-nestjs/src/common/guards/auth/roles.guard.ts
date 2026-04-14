@@ -1,4 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../../decorators/auth/roles.decorator';
 import { Role } from '@prisma/client';
@@ -14,12 +19,20 @@ export class RolesGuard implements CanActivate {
     ]);
     
     if (!requiredRoles) {
-      return true; // Nếu route không yêu cầu role, cho phép đi tiếp
+      return true;
     }
-    
-    const { user } = context.switchToHttp().getRequest();
-    if (!user) return false;
 
-    return requiredRoles.includes(user.role);
+    const { user } = context.switchToHttp().getRequest();
+    if (!user) {
+      throw new ForbiddenException('Authenticated user context is missing');
+    }
+
+    if (!requiredRoles.includes(user.role)) {
+      throw new ForbiddenException(
+        `Required role: ${requiredRoles.join(', ')}. Current role: ${user.role}`,
+      );
+    }
+
+    return true;
   }
 }

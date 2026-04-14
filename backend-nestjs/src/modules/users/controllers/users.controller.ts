@@ -5,8 +5,10 @@ import { Roles } from "../../../common/decorators/auth/roles.decorator";
 import { Role } from "@prisma/client";
 import { UsersService } from "../services/users.service";
 import { CurrentUser } from "../../../common/decorators/auth/current-user.decorator";
-import { UpdateUserDto } from "../dto/update-user.dto";
-import { CreateUserDto } from "../dto/create-user.dto";
+import { UpdateUserDto } from "../dto/request/update-user.dto";
+import { CreateUserDto } from "../dto/request/create-user.dto";
+import { assertUserRole } from "../../../common/auth/assert-user-role";
+import type { AuthenticatedUser } from "../../../common/auth/assert-user-role";
 
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -15,17 +17,26 @@ export class UsersController {
     constructor(private readonly usersService: UsersService) {}
 
     @Get()
-    async listUsers() {
+    async listUsers(@CurrentUser() currentUser: AuthenticatedUser) {
+        assertUserRole(currentUser, [Role.ADMIN]);
         return this.usersService.listUsers();
     }
 
     @Get(':id')
-    async getUserById(@Param('id') userId: string) {
+    async getUserById(
+        @Param('id') userId: string,
+        @CurrentUser() currentUser: AuthenticatedUser,
+    ) {
+        assertUserRole(currentUser, [Role.ADMIN]);
         return this.usersService.getUserById(userId);
     }
 
     @Post()
-    async createUser(@Body() createUserDto: CreateUserDto) {
+    async createUser(
+        @Body() createUserDto: CreateUserDto,
+        @CurrentUser() currentUser: AuthenticatedUser,
+    ) {
+        assertUserRole(currentUser, [Role.ADMIN]);
         return this.usersService.createUser(createUserDto);
     }
 
@@ -33,16 +44,19 @@ export class UsersController {
     async updateUser(
         @Param('id') userId: string,
         @Body() updateUserDto: UpdateUserDto,
+        @CurrentUser() currentUser: AuthenticatedUser,
     ) {
+        assertUserRole(currentUser, [Role.ADMIN]);
         return this.usersService.updateUser(userId, updateUserDto);
     }
 
     @Delete(':id')
     async deleteUser(
         @Param('id') userId: string,
-        @CurrentUser('id') currentAdminId: string,
+        @CurrentUser() currentUser: AuthenticatedUser,
     ) {
-        return this.usersService.deleteUser(userId, currentAdminId);
+        assertUserRole(currentUser, [Role.ADMIN]);
+        return this.usersService.deleteUser(userId, currentUser.id);
     }
 
 }
