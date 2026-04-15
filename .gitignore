@@ -21,13 +21,20 @@ build/
 *.seed
 *.pid.lock
 
+# Python/OMR service
+.venv/
+.pytest_cache/
+artifacts/
+
 # IDE
+
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 .DS_Store
+._*
 
 # Testing
 coverage/
@@ -80,3 +87,4 @@ Thumbs.db
 *.old
 
 # Thư mục tài liệu nội bộ
+docs/

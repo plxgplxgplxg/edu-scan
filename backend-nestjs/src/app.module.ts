@@ -11,6 +11,7 @@ import { StorageModule } from './storage/storage.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ClassesModule } from './modules/classes/classes.module';
 import { ExamsModule } from './modules/exams/exams.module';
+import { OmrModule } from './modules/omr/omr.module';
 import { UsersModule } from './modules/users/users.module';
 
 @Module({
@@ -24,6 +25,7 @@ import { UsersModule } from './modules/users/users.module';
     AuthModule,
     ClassesModule,
     ExamsModule,
+    OmrModule,
     UsersModule,
   ],
   controllers: [AppController],

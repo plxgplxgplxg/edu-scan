@@ -27,7 +27,9 @@ yarn-debug.*
 yarn-error.*
 
 # macOS
+
 .DS_Store
+._*
 *.pem
 
 # local env files
