@@ -15,6 +15,19 @@ def test_template_registry_resolves_alias():
     assert len(template.answer_groups) == 4
 
 
+def test_template_registry_loads_bundled_tnteam_template():
+    registry = TemplateRegistry()
+
+    template = registry.get("tnteam_60")
+
+    assert template is not None
+    assert template.name == "tnteam_60q_4col_ad"
+    assert template.question_count == 60
+    assert template.answer_options == ["A", "B", "C", "D"]
+    assert len(template.id_fields) == 2
+    assert len(template.answer_groups) == 6
+
+
 def test_template_registry_loads_custom_json_templates(tmp_path):
     template_file = tmp_path / "custom_layout.json"
     template_file.write_text(

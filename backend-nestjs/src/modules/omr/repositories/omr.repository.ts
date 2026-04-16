@@ -72,7 +72,7 @@ export type OmrExam = Prisma.ExamGetPayload<{
 
 type SubmissionDetailInput = {
   questionNumber: number;
-  detectedAnswer: Prisma.SubmissionDetailCreateManySubmissionInput['detectedAnswer'];
+  detectedAnswer: string | null;
   finalAnswer: Prisma.SubmissionDetailCreateManySubmissionInput['finalAnswer'];
   needsReview: boolean;
 };

@@ -201,7 +201,7 @@ model SubmissionDetail {
   id             String        @id @default(uuid())
   submissionId   String
   questionNumber Int
-  detectedAnswer AnswerChoice?
+  detectedAnswer String?
   finalAnswer    AnswerChoice?
   needsReview    Boolean       @default(false)
 

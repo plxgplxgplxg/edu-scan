@@ -56,5 +56,5 @@ def test_answer_detector_marks_ambiguous_question_for_review(synthetic_sheet_bui
     detector.anchor_locator.locate = lambda image, region: detector._extract_region(image, region)
     answers = detector.detect(processed, 15, template)
 
-    assert answers[0].detectedAnswer is None
+    assert answers[0].detectedAnswer == "AB"
     assert answers[0].needsReview is True

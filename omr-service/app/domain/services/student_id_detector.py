@@ -3,6 +3,7 @@ import numpy as np
 from app.domain.layouts.template_models import OmrLayoutTemplate
 from app.domain.services.anchor_locator import AnchorLocator
 from app.domain.services.bubble_analyzer import BubbleAnalyzer
+from app.domain.services.tnteam_block_locator import TnTeamBlockLocator
 
 
 class StudentIdDetector:
@@ -21,16 +22,18 @@ class StudentIdDetector:
         self.confidence_margin = confidence_margin
         self.anchor_locator = AnchorLocator()
         self.bubble_analyzer = BubbleAnalyzer(
+            mask_radius_ratio=0.40,
             fill_threshold=fill_threshold,
             confidence_margin=confidence_margin,
         )
+        self.tnteam_block_locator = TnTeamBlockLocator()
 
     def detect(
         self,
         processed_image: np.ndarray,
         template: OmrLayoutTemplate | None = None,
     ) -> str | None:
-        field_values = self.detect_fields(processed_image, template)
+        field_values, _ = self.detect_fields_with_debug(processed_image, template)
         if template and template.id_fields:
             for field in template.id_fields:
                 if field.primary:
@@ -44,35 +47,94 @@ class StudentIdDetector:
         processed_image: np.ndarray,
         template: OmrLayoutTemplate | None = None,
     ) -> dict[str, str | None]:
+        field_values, _ = self.detect_fields_with_debug(processed_image, template)
+        return field_values
+
+    def detect_fields_with_debug(
+        self,
+        processed_image: np.ndarray,
+        template: OmrLayoutTemplate | None = None,
+    ) -> tuple[dict[str, str | None], dict[str, dict[str, object]]]:
         if template and template.id_fields:
-            return {
-                field.name: self._detect_from_region(
-                    self.anchor_locator.locate(processed_image, field.region),
+            located_boxes = self._resolve_tnteam_field_boxes(processed_image, template)
+            results: dict[str, str | None] = {}
+            debug: dict[str, dict[str, object]] = {}
+            for field in template.id_fields:
+                field_region = self._extract_field_region(
+                    processed_image,
+                    template,
+                    field.name,
+                    field.region,
+                    located_boxes,
+                )
+                field_value, column_debug = self._detect_from_region(
+                    field_region,
                     field.code_length,
                     field.grid.rows,
+                    capture_debug=True,
                 )
-                for field in template.id_fields
-            }
+                results[field.name] = field_value
+                debug[field.name] = {
+                    "box": located_boxes.get(field.name),
+                    "columns": column_debug,
+                }
+            return results, debug
 
         id_region = self._extract_id_region(processed_image, template)
+        value, column_debug = self._detect_from_region(
+            id_region,
+            template.student_id_length if template and template.student_id_length else self.code_length,
+            template.student_id_grid.rows if template and template.student_id_grid else self.row_count,
+            capture_debug=True,
+        )
         return {
-            "student_code": self._detect_from_region(
-                id_region,
-                template.student_id_length if template and template.student_id_length else self.code_length,
-                template.student_id_grid.rows if template and template.student_id_grid else self.row_count,
-            )
+            "student_code": value,
+        }, {
+            "student_code": {
+                "box": None,
+                "columns": column_debug,
+            }
         }
+
+    def _resolve_tnteam_field_boxes(
+        self,
+        processed_image: np.ndarray,
+        template: OmrLayoutTemplate,
+    ) -> dict[str, tuple[int, int, int, int]]:
+        if template.name != TnTeamBlockLocator.TEMPLATE_NAME:
+            return {}
+
+        return self.tnteam_block_locator.locate_blocks(processed_image)
+
+    def _extract_field_region(
+        self,
+        processed_image: np.ndarray,
+        template: OmrLayoutTemplate,
+        field_name: str,
+        fallback_region,
+        located_boxes: dict[str, tuple[int, int, int, int]],
+    ) -> np.ndarray:
+        if field_name in located_boxes:
+            return self._extract_box(processed_image, located_boxes[field_name])
+
+        return (
+            self.anchor_locator.locate(processed_image, fallback_region)
+            if template.use_anchor_locator
+            else self._extract_region(processed_image, fallback_region)
+        )
 
     def _detect_from_region(
         self,
         id_region: np.ndarray,
         code_length: int,
         row_count: int,
-    ) -> str | None:
+        capture_debug: bool = False,
+    ) -> str | tuple[str | None, list[dict[str, object]]] | None:
         if id_region.size == 0:
-            return None
+            return (None, []) if capture_debug else None
 
         digits: list[str] = []
+        debug_columns: list[dict[str, object]] = []
         for column_index in range(code_length):
             column = self._slice_column(id_region, column_index, code_length)
             fill_scores = [
@@ -81,19 +143,59 @@ class StudentIdDetector:
                 )
                 for row_index in range(row_count)
             ]
-            best_row, needs_review = self.bubble_analyzer.classify_scores(fill_scores)
+            best_row, needs_review = self._classify_digit_scores(fill_scores)
+            debug_columns.append(
+                {
+                    "columnIndex": column_index,
+                    "scores": [round(float(score), 4) for score in fill_scores],
+                    "detectedDigit": None if best_row is None else str(best_row),
+                    "needsReview": needs_review,
+                }
+            )
             if needs_review or best_row is None:
-                return None
+                return (None, debug_columns) if capture_debug else None
 
             digits.append(str(best_row))
 
-        return "".join(digits)
+        detected_value = "".join(digits)
+        return (detected_value, debug_columns) if capture_debug else detected_value
+
+    def _classify_digit_scores(self, scores: list[float]) -> tuple[int | None, bool]:
+        if not scores:
+            return None, True
+
+        best_index = int(np.argmax(scores))
+        best_score = scores[best_index]
+        sorted_scores = sorted(scores, reverse=True)
+        best_score = sorted_scores[0] if sorted_scores else 0.0
+        second_score = sorted_scores[1] if len(sorted_scores) > 1 else 0.0
+        needs_review = (
+            best_score < self.fill_threshold
+            or (best_score - second_score) < self.confidence_margin
+        )
+        if needs_review:
+            return None, True
+
+        return best_index, False
+
+    def _extract_box(
+        self,
+        processed_image: np.ndarray,
+        box: tuple[int, int, int, int],
+    ) -> np.ndarray:
+        left, top, right, bottom = box
+        return processed_image[top:bottom, left:right]
 
     def _extract_id_region(
         self,
         processed_image: np.ndarray,
         template: OmrLayoutTemplate | None = None,
     ) -> np.ndarray:
+        if template and template.name == TnTeamBlockLocator.TEMPLATE_NAME:
+            located_boxes = self.tnteam_block_locator.locate_blocks(processed_image)
+            if "roll_no" in located_boxes:
+                return self._extract_box(processed_image, located_boxes["roll_no"])
+
         if template and template.student_id_region:
             return self._extract_region(processed_image, template.student_id_region)
 

@@ -34,6 +34,7 @@ class OmrLayoutTemplate(BaseModel):
     aliases: list[str] = Field(default_factory=list)
     question_count: int = Field(gt=0)
     answer_options: list[str] = Field(default_factory=lambda: ["A", "B", "C", "D"])
+    use_anchor_locator: bool = True
     id_fields: list[IdFieldTemplate] = Field(default_factory=list)
     student_id_length: int | None = Field(default=None, gt=0)
     student_id_region: BoundingBoxRatio | None = None

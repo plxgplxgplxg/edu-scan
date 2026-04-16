@@ -5,11 +5,13 @@ import numpy as np
 
 from app.domain.layouts.template_models import OmrLayoutTemplate
 from app.domain.layouts.template_registry import TemplateRegistry
+from app.domain.services.tnteam_block_locator import TnTeamBlockLocator
 
 
 class LayoutClassifier:
     def __init__(self, template_registry: TemplateRegistry | None = None) -> None:
         self.template_registry = template_registry or TemplateRegistry()
+        self.tnteam_block_locator = TnTeamBlockLocator()
 
     def classify(
         self,
@@ -17,8 +19,14 @@ class LayoutClassifier:
         question_count: int,
     ) -> OmrLayoutTemplate | None:
         if question_count == 60:
+            if self.tnteam_block_locator.supports(processed_image):
+                return self.template_registry.get(TnTeamBlockLocator.TEMPLATE_NAME)
+
             answer_columns = self._estimate_answer_columns(processed_image)
             top_blocks = self._estimate_top_blocks(processed_image)
+
+            if top_blocks >= 4:
+                return self.template_registry.get("tnteam_60q_4col_ad")
 
             if answer_columns >= 4 and top_blocks >= 2:
                 return self.template_registry.get("institute_60_4col")

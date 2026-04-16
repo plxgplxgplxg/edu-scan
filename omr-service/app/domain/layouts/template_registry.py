@@ -137,6 +137,8 @@ class TemplateRegistry:
             for template in active_templates
             for alias in [template.name, *template.aliases]
         }
+        if templates is None:
+            self.load_directory(Path(__file__).resolve().parents[3] / "templates")
 
     def list_templates(self) -> list[OmrLayoutTemplate]:
         return [self._templates[name] for name in sorted(self._templates)]
@@ -150,12 +152,14 @@ class TemplateRegistry:
     def register(self, template: OmrLayoutTemplate) -> None:
         self._templates[template.name] = template
         for alias in [template.name, *template.aliases]:
-            self._alias_lookup[alias] = template.name
+            self._alias_lookup.setdefault(alias, template.name)
 
     def load_directory(self, directory: str | Path) -> int:
         path = Path(directory)
         loaded = 0
         for file_path in sorted(path.glob("*.json")):
+            if file_path.name.startswith("._"):
+                continue
             payload = json.loads(file_path.read_text(encoding="utf-8"))
             self.register(OmrLayoutTemplate.model_validate(payload))
             loaded += 1

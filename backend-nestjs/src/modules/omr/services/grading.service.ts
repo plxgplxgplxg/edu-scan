@@ -9,7 +9,7 @@ import { OmrServiceResponse } from '../interfaces/omr-response.interface';
 
 export type PreparedSubmissionDetail = {
   questionNumber: number;
-  detectedAnswer: AnswerChoice | null;
+  detectedAnswer: string | null;
   finalAnswer: AnswerChoice | null;
   needsReview: boolean;
 };
@@ -38,7 +38,7 @@ export class GradingService {
     const seenQuestionNumbers = new Set<number>();
     const payloadAnswerMap = new Map<
       number,
-      { detectedAnswer: AnswerChoice | null; needsReview: boolean }
+      { detectedAnswer: string | null; needsReview: boolean }
     >();
 
     for (const answer of payload.answers) {
@@ -76,16 +76,19 @@ export class GradingService {
 
     const details = answerKeyNumbers.map((questionNumber) => {
       const answer = payloadAnswerMap.get(questionNumber);
-      const detectedAnswer = answer?.detectedAnswer ?? null;
+      const detectedAnswer = this.normalizeDetectedAnswer(
+        answer?.detectedAnswer ?? null,
+      );
+      const finalAnswer = this.normalizeFinalAnswer(detectedAnswer);
       const needsReview =
         Boolean(payload.needsReview) ||
         Boolean(answer?.needsReview) ||
-        detectedAnswer === null;
+        finalAnswer === null;
 
       return {
         questionNumber,
         detectedAnswer,
-        finalAnswer: detectedAnswer,
+        finalAnswer,
         needsReview,
       };
     });
@@ -130,5 +133,25 @@ export class GradingService {
   private normalizeStudentCode(studentCode: string | null | undefined) {
     const normalized = studentCode?.trim().toUpperCase();
     return normalized || null;
+  }
+
+  private normalizeDetectedAnswer(detectedAnswer: string | null | undefined) {
+    const normalized = detectedAnswer?.trim().toUpperCase();
+    return normalized || null;
+  }
+
+  private normalizeFinalAnswer(
+    detectedAnswer: string | null,
+  ): AnswerChoice | null {
+    if (
+      detectedAnswer === AnswerChoice.A ||
+      detectedAnswer === AnswerChoice.B ||
+      detectedAnswer === AnswerChoice.C ||
+      detectedAnswer === AnswerChoice.D
+    ) {
+      return detectedAnswer;
+    }
+
+    return null;
   }
 }

@@ -1,8 +1,6 @@
-import { AnswerChoice } from '@prisma/client';
-
 export interface OmrAnswerResult {
   questionNumber: number;
-  detectedAnswer: AnswerChoice | null;
+  detectedAnswer: string | null;
   needsReview?: boolean;
 }
 

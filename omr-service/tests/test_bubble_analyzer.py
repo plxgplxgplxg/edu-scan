@@ -39,3 +39,11 @@ def test_bubble_analyzer_marks_close_scores_for_review():
 
     assert best_index is None
     assert needs_review is True
+
+
+def test_bubble_analyzer_uses_lower_threshold_for_true_multi_mark():
+    analyzer = BubbleAnalyzer(marked_threshold=0.80, multi_marked_threshold=0.40)
+
+    marked_indices = analyzer.detect_marked_indices([0.1142, 1.0, 0.0212, 0.7765])
+
+    assert marked_indices == [1, 3]
