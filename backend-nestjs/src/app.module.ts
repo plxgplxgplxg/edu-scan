@@ -13,6 +13,7 @@ import { ClassesModule } from './modules/classes/classes.module';
 import { ExamsModule } from './modules/exams/exams.module';
 import { OmrModule } from './modules/omr/omr.module';
 import { UsersModule } from './modules/users/users.module';
+import { SubmissionsModule } from './modules/submissions/submissions.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { UsersModule } from './modules/users/users.module';
     ExamsModule,
     OmrModule,
     UsersModule,
+    SubmissionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
