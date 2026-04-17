@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { AnswerChoice } from '@prisma/client';
 import { CreateExamDto } from '../dto/request/create-exam.dto';
 import {
   DeleteExamResponseDto,
@@ -11,6 +12,16 @@ import {
 } from '../dto/response/exam-response.dto';
 import { UpdateExamDto } from '../dto/request/update-exam.dto';
 import { ExamsRepository } from '../repositories/exams.repository';
+
+const DEFAULT_VARIANT_TEST_CODE = 'DEFAULT';
+
+type NormalizedVariant = {
+  testCode: string;
+  answerKeys: Array<{
+    questionNumber: number;
+    correctAnswer: AnswerChoice;
+  }>;
+};
 
 @Injectable()
 export class ExamsService {
@@ -24,8 +35,8 @@ export class ExamsService {
 
     await this.ensureTeacherOwnsClasses(teacherId, normalized.classIds);
     await this.ensureTeacherOwnsMappedQuestions(teacherId, normalized.questionMap);
-    this.ensureQuestionMapMatchesAnswerKeys(
-      normalized.answerKeys.map((item) => item.questionNumber),
+    this.ensureQuestionMapMatchesVariants(
+      normalized.variants,
       normalized.questionMap.map((item) => item.questionNumber),
     );
 
@@ -34,7 +45,7 @@ export class ExamsService {
       maxScore: normalized.maxScore,
       teacherId,
       classIds: normalized.classIds,
-      answerKeys: normalized.answerKeys,
+      variants: normalized.variants,
       questionMap: normalized.questionMap,
     });
 
@@ -77,11 +88,15 @@ export class ExamsService {
       classIds:
         updateExamDto.classIds ??
         existingExam.classes.map((item) => item.class.id),
-      answerKeys:
-        updateExamDto.answerKeys ??
-        existingExam.answerKeys.map((item) => ({
-          questionNumber: item.questionNumber,
-          correctAnswer: item.correctAnswer,
+      answerKeys: updateExamDto.answerKeys,
+      variants:
+        updateExamDto.variants ??
+        existingExam.variants.map((variant) => ({
+          testCode: variant.testCode,
+          answerKeys: variant.answerKeys.map((item) => ({
+            questionNumber: item.questionNumber,
+            correctAnswer: item.correctAnswer,
+          })),
         })),
       questionMap:
         updateExamDto.questionMap ??
@@ -99,19 +114,20 @@ export class ExamsService {
       hasDependentData &&
       (
         updateExamDto.answerKeys !== undefined ||
+        updateExamDto.variants !== undefined ||
         updateExamDto.classIds !== undefined ||
         updateExamDto.questionMap !== undefined
       )
     ) {
       throw new BadRequestException(
-        'Cannot change classes, answer keys, or question mapping after submissions or OMR batches already exist',
+        'Cannot change classes, variants, answer keys, or question mapping after submissions or OMR batches already exist',
       );
     }
 
     await this.ensureTeacherOwnsClasses(teacherId, normalized.classIds);
     await this.ensureTeacherOwnsMappedQuestions(teacherId, normalized.questionMap);
-    this.ensureQuestionMapMatchesAnswerKeys(
-      normalized.answerKeys.map((item) => item.questionNumber),
+    this.ensureQuestionMapMatchesVariants(
+      normalized.variants,
       normalized.questionMap.map((item) => item.questionNumber),
     );
 
@@ -119,7 +135,7 @@ export class ExamsService {
       title: normalized.title,
       maxScore: normalized.maxScore,
       classIds: normalized.classIds,
-      answerKeys: normalized.answerKeys,
+      variants: normalized.variants,
       questionMap: normalized.questionMap,
     });
 
@@ -156,9 +172,16 @@ export class ExamsService {
     title: string;
     maxScore: number;
     classIds: string[];
-    answerKeys: Array<{
+    answerKeys?: Array<{
       questionNumber: number;
-      correctAnswer: CreateExamDto['answerKeys'][number]['correctAnswer'];
+      correctAnswer: AnswerChoice;
+    }>;
+    variants?: Array<{
+      testCode: string;
+      answerKeys: Array<{
+        questionNumber: number;
+        correctAnswer: AnswerChoice;
+      }>;
     }>;
     questionMap?: Array<{
       questionNumber: number;
@@ -171,18 +194,7 @@ export class ExamsService {
       throw new BadRequestException('At least one class must be assigned to the exam');
     }
 
-    const answerKeys = [...payload.answerKeys]
-      .map((item) => ({
-        questionNumber: item.questionNumber,
-        correctAnswer: item.correctAnswer,
-      }))
-      .sort((left, right) => left.questionNumber - right.questionNumber);
-
-    this.ensureUniqueQuestionNumbers(
-      answerKeys.map((item) => item.questionNumber),
-      'Answer key question numbers must be unique',
-    );
-
+    const variants = this.normalizeVariants(payload.variants, payload.answerKeys);
     const questionMap = [...(payload.questionMap ?? [])]
       .map((item) => ({
         questionNumber: item.questionNumber,
@@ -207,9 +219,92 @@ export class ExamsService {
       title: this.normalizeTitle(payload.title),
       maxScore: payload.maxScore,
       classIds,
-      answerKeys,
+      variants,
       questionMap,
     };
+  }
+
+  private normalizeVariants(
+    variants: Array<{
+      testCode: string;
+      answerKeys: Array<{
+        questionNumber: number;
+        correctAnswer: AnswerChoice;
+      }>;
+    }> | undefined,
+    legacyAnswerKeys: Array<{
+      questionNumber: number;
+      correctAnswer: AnswerChoice;
+    }> | undefined,
+  ): NormalizedVariant[] {
+    if ((variants?.length ?? 0) > 0 && (legacyAnswerKeys?.length ?? 0) > 0) {
+      throw new BadRequestException(
+        'Provide either variants or legacy answerKeys, not both',
+      );
+    }
+
+    const rawVariants =
+      variants && variants.length > 0
+        ? variants
+        : legacyAnswerKeys && legacyAnswerKeys.length > 0
+          ? [
+              {
+                testCode: DEFAULT_VARIANT_TEST_CODE,
+                answerKeys: legacyAnswerKeys,
+              },
+            ]
+          : [];
+
+    if (rawVariants.length === 0) {
+      throw new BadRequestException('At least one exam variant is required');
+    }
+
+    const normalizedVariants = rawVariants
+      .map((variant) => ({
+        testCode: this.normalizeTestCode(variant.testCode),
+        answerKeys: [...variant.answerKeys]
+          .map((item) => ({
+            questionNumber: item.questionNumber,
+            correctAnswer: item.correctAnswer,
+          }))
+          .sort((left, right) => left.questionNumber - right.questionNumber),
+      }))
+      .sort((left, right) => left.testCode.localeCompare(right.testCode));
+
+    const seenTestCodes = new Set<string>();
+    const questionSignature = normalizedVariants[0].answerKeys
+      .map((item) => item.questionNumber)
+      .join(',');
+
+    for (const variant of normalizedVariants) {
+      if (seenTestCodes.has(variant.testCode)) {
+        throw new BadRequestException('Variant test codes must be unique');
+      }
+      seenTestCodes.add(variant.testCode);
+
+      this.ensureUniqueQuestionNumbers(
+        variant.answerKeys.map((item) => item.questionNumber),
+        `Answer key question numbers must be unique for variant ${variant.testCode}`,
+      );
+
+      if (variant.answerKeys.length === 0) {
+        throw new BadRequestException(
+          `Variant ${variant.testCode} must contain at least one answer key`,
+        );
+      }
+
+      const currentSignature = variant.answerKeys
+        .map((item) => item.questionNumber)
+        .join(',');
+
+      if (currentSignature !== questionSignature) {
+        throw new BadRequestException(
+          'All variants must define the same question number set',
+        );
+      }
+    }
+
+    return normalizedVariants;
   }
 
   private ensureUniqueQuestionNumbers(numbers: number[], message: string) {
@@ -218,16 +313,18 @@ export class ExamsService {
     }
   }
 
-  private ensureQuestionMapMatchesAnswerKeys(
-    answerKeyNumbers: number[],
+  private ensureQuestionMapMatchesVariants(
+    variants: NormalizedVariant[],
     mappedNumbers: number[],
   ) {
-    const allowedNumbers = new Set(answerKeyNumbers);
+    const allowedNumbers = new Set(
+      variants[0]?.answerKeys.map((item) => item.questionNumber) ?? [],
+    );
 
     for (const questionNumber of mappedNumbers) {
       if (!allowedNumbers.has(questionNumber)) {
         throw new BadRequestException(
-          `Question map contains questionNumber ${questionNumber} that does not exist in answer keys`,
+          `Question map contains questionNumber ${questionNumber} that does not exist in variant answer keys`,
         );
       }
     }
@@ -275,5 +372,15 @@ export class ExamsService {
     }
 
     return normalizedTitle;
+  }
+
+  private normalizeTestCode(testCode: string) {
+    const normalized = testCode.trim().toUpperCase();
+
+    if (!normalized) {
+      throw new BadRequestException('Variant testCode must not be empty');
+    }
+
+    return normalized;
   }
 }

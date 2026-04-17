@@ -57,6 +57,12 @@ class AnswerDetector:
         answer_options = "".join(template.answer_options) if template else self.options
         responses: list[OmrAnswerResponse] = []
         question_debug: list[dict[str, object]] = []
+        answer_box = self._resolve_region_box(processed_image, template.answer_region) if template else {
+            "left": 0,
+            "top": int(processed_image.shape[0] * self.region_start_ratio),
+            "right": processed_image.shape[1],
+            "bottom": int(processed_image.shape[0] * self.region_end_ratio),
+        }
         for question_index in range(question_count):
             row = self._slice_row(answer_region, question_index, question_count)
             fill_scores = [
@@ -71,13 +77,25 @@ class AnswerDetector:
             best_index, needs_review = self.bubble_analyzer.classify_scores(fill_scores)
             marked_indices = self.bubble_analyzer.detect_marked_indices(fill_scores)
             detected_answer = self._resolve_detected_answer(answer_options, best_index, marked_indices)
+            review_reason = self._resolve_review_reason(
+                fill_scores,
+                marked_indices,
+                needs_review,
+            )
 
             responses.append(
                 OmrAnswerResponse(
                     questionNumber=question_index + 1,
                     detectedAnswer=detected_answer,
                     needsReview=needs_review,
+                    reviewReason=review_reason,
                 ),
+            )
+            row_box, bubble_boxes = self._build_row_geometry(
+                answer_box,
+                question_index,
+                question_count,
+                answer_options,
             )
             question_debug.append(
                 {
@@ -97,6 +115,9 @@ class AnswerDetector:
                     "backgroundScore": round(float(background_score), 4),
                     "detectedAnswer": detected_answer,
                     "needsReview": needs_review,
+                    "reviewReason": review_reason,
+                    "rowBox": row_box,
+                    "bubbleBoxes": bubble_boxes,
                 }
             )
 
@@ -130,6 +151,7 @@ class AnswerDetector:
                         questionNumber=question_number,
                         detectedAnswer=None,
                         needsReview=True,
+                        reviewReason="LOW_CONFIDENCE",
                     )
                     question_debug.append(
                         {
@@ -140,6 +162,7 @@ class AnswerDetector:
                             },
                             "detectedAnswer": None,
                             "needsReview": True,
+                            "reviewReason": "LOW_CONFIDENCE",
                         }
                     )
                 group_debug.append(
@@ -153,12 +176,13 @@ class AnswerDetector:
                 continue
 
             group_question_count = group.question_end - group.question_start + 1
+            group_box = self._normalize_group_box(processed_image, group, box)
             group_debug.append(
                 {
                     "name": group_name,
                     "questionStart": group.question_start,
                     "questionEnd": group.question_end,
-                    "box": box,
+                    "box": group_box,
                 }
             )
             for offset in range(group_question_count):
@@ -175,12 +199,24 @@ class AnswerDetector:
                 best_index, needs_review = self.bubble_analyzer.classify_scores(fill_scores)
                 marked_indices = self.bubble_analyzer.detect_marked_indices(fill_scores)
                 detected_answer = self._resolve_detected_answer(answer_options, best_index, marked_indices)
+                review_reason = self._resolve_review_reason(
+                    fill_scores,
+                    marked_indices,
+                    needs_review,
+                )
 
                 question_number = group.question_start + offset
                 responses_by_number[question_number] = OmrAnswerResponse(
                     questionNumber=question_number,
                     detectedAnswer=detected_answer,
                     needsReview=needs_review,
+                    reviewReason=review_reason,
+                )
+                row_box, bubble_boxes = self._build_row_geometry(
+                    group_box,
+                    offset,
+                    group_question_count,
+                    answer_options,
                 )
                 question_debug.append(
                     {
@@ -200,6 +236,9 @@ class AnswerDetector:
                         "backgroundScore": round(float(background_score), 4),
                         "detectedAnswer": detected_answer,
                         "needsReview": needs_review,
+                        "reviewReason": review_reason,
+                        "rowBox": row_box,
+                        "bubbleBoxes": bubble_boxes,
                     }
                 )
 
@@ -210,6 +249,7 @@ class AnswerDetector:
                     questionNumber=question_number,
                     detectedAnswer=None,
                     needsReview=True,
+                    reviewReason="LOW_CONFIDENCE",
                 ),
             )
             for question_number in range(1, question_count + 1)
@@ -272,6 +312,15 @@ class AnswerDetector:
         right = int(image_width * (region.x + region.width))
         return processed_image[top:bottom, left:right]
 
+    def _resolve_region_box(self, processed_image: np.ndarray, region) -> dict[str, int]:
+        image_height, image_width = processed_image.shape[:2]
+        return {
+            "left": int(image_width * region.x),
+            "top": int(image_height * region.y),
+            "right": int(image_width * (region.x + region.width)),
+            "bottom": int(image_height * (region.y + region.height)),
+        }
+
     def _slice_row(self, image: np.ndarray, index: int, total: int) -> np.ndarray:
         if image.size == 0:
             return image
@@ -305,6 +354,7 @@ class AnswerDetector:
                 questionNumber=question_number,
                 detectedAnswer=None,
                 needsReview=True,
+                reviewReason="LOW_CONFIDENCE",
             )
             for question_number in range(1, question_count + 1)
         ]
@@ -320,3 +370,72 @@ class AnswerDetector:
         if best_index is None:
             return None
         return answer_options[best_index]
+
+    def _resolve_review_reason(
+        self,
+        fill_scores: list[float],
+        marked_indices: list[int],
+        needs_review: bool,
+    ) -> str | None:
+        if not needs_review:
+            return None
+        if len(marked_indices) > 1:
+            return "MULTI_MARK"
+
+        _, corrected_scores, _ = self.bubble_analyzer.normalize_scores(fill_scores)
+        if max(corrected_scores, default=0.0) < self.bubble_analyzer.min_corrected_fill_threshold:
+            return "BLANK"
+
+        return "LOW_CONFIDENCE"
+
+    def _normalize_group_box(
+        self,
+        processed_image: np.ndarray,
+        group,
+        box: tuple[int, int, int, int] | None,
+    ) -> dict[str, int]:
+        if box is not None:
+            left, top, right, bottom = box
+            return {
+                "left": left,
+                "top": top,
+                "right": right,
+                "bottom": bottom,
+            }
+        return self._resolve_region_box(processed_image, group.region)
+
+    def _build_row_geometry(
+        self,
+        box: dict[str, int],
+        row_index: int,
+        total_rows: int,
+        answer_options: str,
+    ) -> tuple[dict[str, int], dict[str, dict[str, int]]]:
+        top = int(box["top"] + (box["bottom"] - box["top"]) * row_index / total_rows)
+        bottom = int(box["top"] + (box["bottom"] - box["top"]) * (row_index + 1) / total_rows)
+        margin_y = max(1, int((bottom - top) * 0.05))
+        row_box = {
+            "left": box["left"],
+            "top": top + margin_y,
+            "right": box["right"],
+            "bottom": max(top + margin_y + 1, bottom - margin_y),
+        }
+
+        width = row_box["right"] - row_box["left"]
+        crop_left = row_box["left"] + int(width * 0.03)
+        crop_right = row_box["right"] - int(width * 0.03)
+        crop_width = max(1, crop_right - crop_left)
+
+        bubble_boxes: dict[str, dict[str, int]] = {}
+        for option_index, option in enumerate(answer_options):
+            col_left = crop_left + int(crop_width * option_index / len(answer_options))
+            col_right = crop_left + int(crop_width * (option_index + 1) / len(answer_options))
+            margin_x = max(1, int((col_right - col_left) * 0.05))
+            bubble_boxes[option] = {
+                "left": col_left + margin_x,
+                "top": row_box["top"],
+                "right": max(col_left + margin_x + 1, col_right - margin_x),
+                "bottom": row_box["bottom"],
+            }
+
+        return row_box, bubble_boxes

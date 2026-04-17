@@ -3,15 +3,21 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { OmrBatchStatus, SubmissionStatus } from '@prisma/client';
+import {
+  OmrBatchStatus,
+  SubmissionStatus,
+  TestCodeResolutionStatus,
+} from '@prisma/client';
 import {
   OmrBatchResponseDto,
+  OmrSubmissionDetailViewResponseDto,
   OmrSubmissionResponseDto,
 } from '../dto/response/omr-batch-response.dto';
 import { PreparedSubmissionDetail, GradingService } from './grading.service';
 import {
   OmrBatchWithRelations,
   OmrRepository,
+  OmrSubmissionWithRelations,
 } from '../repositories/omr.repository';
 
 @Injectable()
@@ -39,11 +45,19 @@ export class BatchService {
   async recordSuccessfulFile(data: {
     batchId: string;
     examId: string;
+    resolvedVariantId: string | null;
     imageUrl: string;
     studentId: string | null;
     studentCode: string | null;
+    detectedTestId: string | null;
+    resolvedTestCode: string | null;
+    testCodeResolutionStatus: TestCodeResolutionStatus;
     status: SubmissionStatus;
     details: PreparedSubmissionDetail[];
+    processedImageUrl?: string | null;
+    annotatedImageUrl?: string | null;
+    warpOverlayUrl?: string | null;
+    answerScoresUrl?: string | null;
   }) {
     return this.omrRepository.recordSuccessfulFile(data);
   }
@@ -78,6 +92,22 @@ export class BatchService {
     return this.toBatchResponseDto(teacherBatch);
   }
 
+  async getTeacherSubmissionById(
+    submissionId: string,
+    teacherId: string,
+  ): Promise<OmrSubmissionDetailViewResponseDto> {
+    const submission = await this.omrRepository.findTeacherSubmissionById(
+      submissionId,
+      teacherId,
+    );
+
+    if (!submission) {
+      throw new NotFoundException('Submission not found');
+    }
+
+    return this.toSubmissionDetailResponseDto(submission);
+  }
+
   private toBatchResponseDto(
     batch: OmrBatchWithRelations,
   ): OmrBatchResponseDto {
@@ -97,33 +127,109 @@ export class BatchService {
       completedAt: batch.completedAt,
       createdAt: batch.createdAt,
       updatedAt: batch.updatedAt,
-      submissions: batch.submissions.map((submission) => {
-        const details = submission.details.map((detail) => ({
-          questionNumber: detail.questionNumber,
-          detectedAnswer: detail.detectedAnswer,
-          finalAnswer: detail.finalAnswer,
-          needsReview: detail.needsReview,
-        }));
-
-        const score = this.gradingService.calculateScore(
-          batch.exam.answerKeys,
-          details,
-          batch.exam.maxScore,
-        );
-
-        return {
-          id: submission.id,
-          studentId: submission.studentId,
-          studentCode: submission.studentCode,
-          studentName: submission.student?.name ?? null,
-          imageUrl: submission.imageUrl,
-          status: submission.status,
-          score,
-          maxScore: batch.exam.maxScore,
-          needsReview: submission.status === SubmissionStatus.NEEDS_REVIEW,
-          details,
-        } satisfies OmrSubmissionResponseDto;
-      }),
+      submissions: batch.submissions.map((submission) =>
+        this.toSubmissionResponseDto(
+          {
+            ...submission,
+            exam: batch.exam,
+          } as OmrSubmissionWithRelations,
+        ),
+      ),
     };
+  }
+
+  private toSubmissionDetailResponseDto(
+    submission: OmrSubmissionWithRelations,
+  ): OmrSubmissionDetailViewResponseDto {
+    const base = this.toSubmissionResponseDto(submission);
+
+    return {
+      ...base,
+      examId: submission.examId,
+      batchId: submission.batchId,
+      createdAt: submission.createdAt,
+      updatedAt: submission.updatedAt,
+    };
+  }
+
+  private toSubmissionResponseDto(
+    submission: OmrSubmissionWithRelations,
+  ): OmrSubmissionResponseDto {
+    const answerKeys = submission.resolvedVariant?.answerKeys ?? null;
+    const details = this.mapSubmissionDetails(
+      answerKeys,
+      submission.details,
+      submission.testCodeResolutionStatus,
+    );
+    const summary = this.gradingService.summarizeSubmission(
+      answerKeys,
+      submission.details,
+      submission.exam.maxScore,
+    );
+
+    return {
+      id: submission.id,
+      studentId: submission.studentId,
+      studentCode: submission.studentCode,
+      studentName: submission.student?.name ?? null,
+      detectedTestId: submission.detectedTestId,
+      resolvedTestCode: submission.resolvedTestCode,
+      resolvedVariantId: submission.resolvedVariantId,
+      testCodeResolutionStatus: submission.testCodeResolutionStatus,
+      imageUrl: submission.imageUrl,
+      processedImageUrl: submission.processedImageUrl,
+      annotatedImageUrl: submission.annotatedImageUrl,
+      warpOverlayUrl: submission.warpOverlayUrl,
+      answerScoresUrl: submission.answerScoresUrl,
+      status: submission.status,
+      score: summary.score,
+      maxScore: summary.maxScore,
+      correctCount: summary.correctCount,
+      wrongCount: summary.wrongCount,
+      reviewCount: summary.reviewCount,
+      needsReview: submission.status === SubmissionStatus.NEEDS_REVIEW,
+      details,
+    };
+  }
+
+  private mapSubmissionDetails(
+    answerKeys:
+      | Array<{ questionNumber: number; correctAnswer: string | null }>
+      | null,
+    details: Array<{
+      questionNumber: number;
+      detectedAnswer: string | null;
+      finalAnswer: string | null;
+      needsReview: boolean;
+      reviewReason: string | null;
+    }>,
+    testCodeResolutionStatus: TestCodeResolutionStatus,
+  ) {
+    const answerKeyMap = new Map(
+      (answerKeys ?? []).map((item) => [item.questionNumber, item.correctAnswer]),
+    );
+
+    return details.map((detail) => {
+      const correctAnswer = answerKeyMap.get(detail.questionNumber) ?? null;
+      const reviewReason =
+        detail.reviewReason ??
+        (testCodeResolutionStatus === TestCodeResolutionStatus.MATCHED
+          ? null
+          : testCodeResolutionStatus);
+
+      return {
+        questionNumber: detail.questionNumber,
+        correctAnswer,
+        detectedAnswer: detail.detectedAnswer,
+        finalAnswer: detail.finalAnswer,
+        isCorrect:
+          correctAnswer !== null &&
+          !detail.needsReview &&
+          detail.finalAnswer !== null &&
+          detail.finalAnswer === correctAnswer,
+        needsReview: detail.needsReview,
+        reviewReason,
+      };
+    });
   }
 }

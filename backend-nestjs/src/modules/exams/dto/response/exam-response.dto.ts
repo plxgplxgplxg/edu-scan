@@ -21,6 +21,12 @@ export class AnswerKeyResponseDto {
   correctAnswer!: AnswerChoice;
 }
 
+export class ExamVariantResponseDto {
+  id!: string;
+  testCode!: string;
+  answerKeys!: AnswerKeyResponseDto[];
+}
+
 export class ExamQuestionMapResponseDto {
   questionNumber!: number;
   questionId!: string | null;
@@ -35,7 +41,7 @@ export class ExamResponseDto {
   createdAt!: Date;
   updatedAt!: Date;
   classes!: ExamClassResponseDto[];
-  answerKeys!: AnswerKeyResponseDto[];
+  variants!: ExamVariantResponseDto[];
   questionMap!: ExamQuestionMapResponseDto[];
 }
 
@@ -59,9 +65,13 @@ export function toExamResponseDto(exam: ExamWithRelations): ExamResponseDto {
       schoolYear: item.class.schoolYear,
       code: item.class.code,
     })),
-    answerKeys: exam.answerKeys.map((item) => ({
-      questionNumber: item.questionNumber,
-      correctAnswer: item.correctAnswer,
+    variants: exam.variants.map((variant) => ({
+      id: variant.id,
+      testCode: variant.testCode,
+      answerKeys: variant.answerKeys.map((item) => ({
+        questionNumber: item.questionNumber,
+        correctAnswer: item.correctAnswer,
+      })),
     })),
     questionMap: exam.questionMap.map((item) => ({
       questionNumber: item.questionNumber,

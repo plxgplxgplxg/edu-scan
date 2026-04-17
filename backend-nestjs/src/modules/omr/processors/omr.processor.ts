@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { SubmissionStatus } from '@prisma/client';
+import { SubmissionStatus, TestCodeResolutionStatus } from '@prisma/client';
 import { OmrExam, OmrRepository } from '../repositories/omr.repository';
 import { BatchService } from '../services/batch.service';
 import { GradingService } from '../services/grading.service';
@@ -10,6 +10,7 @@ type ProcessBatchInput = {
   batchId: string;
   exam: OmrExam;
   files: Express.Multer.File[];
+  templateName?: string;
 };
 
 @Injectable()
@@ -33,15 +34,55 @@ export class OmrProcessor {
           file,
           input.batchId,
         );
-        const omrResult = await this.omrClientService.processImage({
+        const detectResult = await this.omrClientService.detectImage({
           imageUrl,
-          questionCount: input.exam.answerKeys.length,
+          templateName: input.templateName,
         });
-
-        const preparedSubmission = this.gradingService.prepareSubmission(
+        const variantResolution = this.gradingService.resolveVariant(
           input.exam,
-          omrResult,
+          detectResult.testId,
         );
+        const resolvedVariant =
+          variantResolution.status === TestCodeResolutionStatus.MATCHED
+            ? input.exam.variants.find(
+                (variant) => variant.id === variantResolution.resolvedVariantId,
+              ) ?? null
+            : null;
+        const preparedSubmission = this.gradingService.prepareSubmission(
+          resolvedVariant?.answerKeys ?? null,
+          detectResult,
+          variantResolution.status,
+        );
+
+        const overlayResult =
+          resolvedVariant && detectResult.artifacts?.resultJsonPath
+            ? await this.omrClientService.renderGradeOverlay({
+                resultJsonPath: detectResult.artifacts.resultJsonPath,
+                answerKey: resolvedVariant.answerKeys.map((item) => ({
+                  questionNumber: item.questionNumber,
+                  correctAnswer: item.correctAnswer,
+                })),
+              })
+            : null;
+
+        const artifactUrls = {
+          processedImageUrl: await this.imageUploadService.uploadArtifact(
+            detectResult.artifacts?.processedImagePath,
+            input.batchId,
+          ),
+          annotatedImageUrl: await this.imageUploadService.uploadArtifact(
+            overlayResult?.artifacts?.annotatedImagePath ?? null,
+            input.batchId,
+          ),
+          warpOverlayUrl: await this.imageUploadService.uploadArtifact(
+            detectResult.artifacts?.warpOverlayPath,
+            input.batchId,
+          ),
+          answerScoresUrl: await this.imageUploadService.uploadArtifact(
+            detectResult.artifacts?.answerScoresPath,
+            input.batchId,
+          ),
+        };
 
         let studentId: string | null = null;
         let status = preparedSubmission.status;
@@ -62,11 +103,16 @@ export class OmrProcessor {
         await this.batchService.recordSuccessfulFile({
           batchId: input.batchId,
           examId: input.exam.id,
+          resolvedVariantId: variantResolution.resolvedVariantId,
           imageUrl,
           studentId,
           studentCode: preparedSubmission.studentCode,
+          detectedTestId: variantResolution.detectedTestId,
+          resolvedTestCode: variantResolution.resolvedTestCode,
+          testCodeResolutionStatus: variantResolution.status,
           status,
           details: preparedSubmission.details,
+          ...artifactUrls,
         });
       } catch (error) {
         const message =

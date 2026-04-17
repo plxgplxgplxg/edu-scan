@@ -30,9 +30,14 @@ describe('ExamsService', () => {
       title: '  Midterm Exam  ',
       maxScore: 10,
       classIds: ['class-b', 'class-a', 'class-a'],
-      answerKeys: [
-        { questionNumber: 2, correctAnswer: AnswerChoice.B },
-        { questionNumber: 1, correctAnswer: AnswerChoice.A },
+      variants: [
+        {
+          testCode: 'b02',
+          answerKeys: [
+            { questionNumber: 2, correctAnswer: AnswerChoice.B },
+            { questionNumber: 1, correctAnswer: AnswerChoice.A },
+          ],
+        },
       ],
       questionMap: [
         { questionNumber: 2, questionId: 'question-2' },
@@ -57,9 +62,14 @@ describe('ExamsService', () => {
       maxScore: 10,
       teacherId,
       classIds: ['class-b', 'class-a'],
-      answerKeys: [
-        { questionNumber: 1, correctAnswer: AnswerChoice.A },
-        { questionNumber: 2, correctAnswer: AnswerChoice.B },
+      variants: [
+        {
+          testCode: 'B02',
+          answerKeys: [
+            { questionNumber: 1, correctAnswer: AnswerChoice.A },
+            { questionNumber: 2, correctAnswer: AnswerChoice.B },
+          ],
+        },
       ],
       questionMap: [
         { questionNumber: 1, questionId: 'question-1' },
@@ -77,7 +87,12 @@ describe('ExamsService', () => {
         title: 'Exam',
         maxScore: 10,
         classIds: ['class-a'],
-        answerKeys: [{ questionNumber: 1, correctAnswer: AnswerChoice.A }],
+        variants: [
+          {
+            testCode: 'A01',
+            answerKeys: [{ questionNumber: 1, correctAnswer: AnswerChoice.A }],
+          },
+        ],
         questionMap: [{ questionNumber: 2, questionId: 'question-1' }],
       }),
     ).rejects.toThrow(BadRequestException);
@@ -118,9 +133,14 @@ describe('ExamsService', () => {
       title: 'Updated title',
       maxScore: 10,
       classIds: ['class-a'],
-      answerKeys: [
-        { questionNumber: 1, correctAnswer: AnswerChoice.A },
-        { questionNumber: 2, correctAnswer: AnswerChoice.B },
+      variants: [
+        {
+          testCode: 'A01',
+          answerKeys: [
+            { questionNumber: 1, correctAnswer: AnswerChoice.A },
+            { questionNumber: 2, correctAnswer: AnswerChoice.B },
+          ],
+        },
       ],
       questionMap: [{ questionNumber: 1, questionId: 'question-1' }],
     });
@@ -173,9 +193,15 @@ function buildExamEntity(overrides: Partial<Record<string, unknown>> = {}) {
         },
       },
     ],
-    answerKeys: [
-      { questionNumber: 1, correctAnswer: AnswerChoice.A },
-      { questionNumber: 2, correctAnswer: AnswerChoice.B },
+    variants: [
+      {
+        id: 'variant-1',
+        testCode: 'A01',
+        answerKeys: [
+          { questionNumber: 1, correctAnswer: AnswerChoice.A },
+          { questionNumber: 2, correctAnswer: AnswerChoice.B },
+        ],
+      },
     ],
     questionMap: [
       {

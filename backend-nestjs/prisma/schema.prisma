@@ -25,6 +25,13 @@ enum SubmissionStatus {
   FAILED
 }
 
+enum TestCodeResolutionStatus {
+  MATCHED
+  UNKNOWN_TEST_CODE
+  MISSING_TEST_CODE
+  AMBIGUOUS_TEST_CODE
+}
+
 enum OmrBatchStatus {
   PENDING
   PROCESSING
@@ -115,11 +122,26 @@ model Exam {
   updatedAt DateTime @updatedAt
 
   teacher     User           @relation("TeacherExams", fields: [teacherId], references: [id])
-  answerKeys  AnswerKey[]
+  variants    ExamVariant[]
   questionMap ExamQuestion[]
   classes     ExamClass[]
   submissions Submission[]
   omrBatches  OmrBatch[]
+}
+
+model ExamVariant {
+  id        String   @id @default(uuid())
+  examId     String
+  testCode   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  exam         Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+  answerKeys   AnswerKey[]
+  submissions  Submission[]
+
+  @@unique([examId, testCode])
+  @@index([examId])
 }
 
 model ExamClass {
@@ -135,13 +157,13 @@ model ExamClass {
 
 model AnswerKey {
   id             String       @id @default(uuid())
-  examId         String
+  variantId      String
   questionNumber Int
   correctAnswer  AnswerChoice
 
-  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  variant ExamVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
 
-  @@unique([examId, questionNumber])
+  @@unique([variantId, questionNumber])
 }
 
 model ExamQuestion {
@@ -178,16 +200,25 @@ model OmrBatch {
 model Submission {
   id          String           @id @default(uuid())
   examId      String
+  resolvedVariantId String?
   studentId   String?
   batchId     String?
   studentCode String?
+  detectedTestId String?
+  resolvedTestCode String?
+  testCodeResolutionStatus TestCodeResolutionStatus
   imageUrl    String?
+  processedImageUrl String?
+  annotatedImageUrl String?
+  warpOverlayUrl    String?
+  answerScoresUrl   String?
   status      SubmissionStatus @default(NEEDS_REVIEW)
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   reviewedAt  DateTime?
 
   exam    Exam               @relation(fields: [examId], references: [id], onDelete: Cascade)
+  resolvedVariant ExamVariant? @relation(fields: [resolvedVariantId], references: [id], onDelete: SetNull)
   student User?              @relation("StudentSubmissions", fields: [studentId], references: [id], onDelete: SetNull)
   batch   OmrBatch?          @relation(fields: [batchId], references: [id], onDelete: SetNull)
   details SubmissionDetail[]
@@ -195,6 +226,8 @@ model Submission {
   @@index([examId, studentId])
   @@index([batchId])
   @@index([studentCode])
+  @@index([resolvedVariantId])
+  @@index([testCodeResolutionStatus])
 }
 
 model SubmissionDetail {
@@ -204,6 +237,7 @@ model SubmissionDetail {
   detectedAnswer String?
   finalAnswer    AnswerChoice?
   needsReview    Boolean       @default(false)
+  reviewReason   String?
 
   submission Submission      @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   remarks    RemarkRequest[]

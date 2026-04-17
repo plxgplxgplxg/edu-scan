@@ -11,6 +11,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { CreateAnswerKeyDto } from './create-answer-key.dto';
+import { CreateExamVariantDto } from './create-exam-variant.dto';
 import { MapExamQuestionDto } from './map-exam-question.dto';
 
 export class UpdateExamDto {
@@ -36,6 +37,13 @@ export class UpdateExamDto {
   @Type(() => CreateAnswerKeyDto)
   @IsOptional()
   answerKeys?: CreateAnswerKeyDto[];
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => CreateExamVariantDto)
+  @IsOptional()
+  variants?: CreateExamVariantDto[];
 
   @IsArray()
   @ValidateNested({ each: true })

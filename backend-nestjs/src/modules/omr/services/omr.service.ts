@@ -49,6 +49,7 @@ export class OmrService {
         batchId: batch.id,
         exam,
         files,
+        templateName: uploadOmrDto.templateName,
       })
       .catch((error: unknown) => {
         const message =
@@ -61,5 +62,9 @@ export class OmrService {
 
   async getBatchById(batchId: string, teacherId: string) {
     return this.batchService.getTeacherBatchById(batchId, teacherId);
+  }
+
+  async getSubmissionById(submissionId: string, teacherId: string) {
+    return this.batchService.getTeacherSubmissionById(submissionId, teacherId);
   }
 }

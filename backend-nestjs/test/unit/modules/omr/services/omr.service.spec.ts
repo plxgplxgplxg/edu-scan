@@ -19,6 +19,7 @@ describe('OmrService', () => {
   const batchService = {
     createBatch: jest.fn(),
     getTeacherBatchById: jest.fn(),
+    getTeacherSubmissionById: jest.fn(),
   };
 
   const omrProcessor = {
@@ -94,6 +95,18 @@ describe('OmrService', () => {
       service.getBatchById('batch-1', TEST_TEACHER_ID),
     ).resolves.toEqual({
       id: 'batch-1',
+    });
+  });
+
+  it('delegates submission lookup to batch service', async () => {
+    batchService.getTeacherSubmissionById.mockResolvedValue({
+      id: 'submission-1',
+    });
+
+    await expect(
+      service.getSubmissionById('submission-1', TEST_TEACHER_ID),
+    ).resolves.toEqual({
+      id: 'submission-1',
     });
   });
 });

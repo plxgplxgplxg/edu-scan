@@ -40,4 +40,12 @@ export class OmrController {
   ) {
     return this.omrService.getBatchById(batchId, teacherId);
   }
+
+  @Get('submissions/:submissionId')
+  async getSubmissionById(
+    @Param('submissionId') submissionId: string,
+    @CurrentUser('id') teacherId: string,
+  ) {
+    return this.omrService.getSubmissionById(submissionId, teacherId);
+  }
 }

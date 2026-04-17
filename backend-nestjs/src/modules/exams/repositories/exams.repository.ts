@@ -23,9 +23,16 @@ export const examDetailInclude = {
       },
     },
   },
-  answerKeys: {
+  variants: {
+    include: {
+      answerKeys: {
+        orderBy: {
+          questionNumber: 'asc',
+        },
+      },
+    },
     orderBy: {
-      questionNumber: 'asc',
+      testCode: 'asc',
     },
   },
   questionMap: {
@@ -49,6 +56,14 @@ export type ExamWithRelations = Prisma.ExamGetPayload<{
   include: typeof examDetailInclude;
 }>;
 
+type VariantInput = {
+  testCode: string;
+  answerKeys: Array<{
+    questionNumber: number;
+    correctAnswer: AnswerChoice;
+  }>;
+};
+
 @Injectable()
 export class ExamsRepository {
   constructor(private readonly prismaService: PrismaService) {}
@@ -58,10 +73,7 @@ export class ExamsRepository {
     maxScore: number;
     teacherId: string;
     classIds: string[];
-    answerKeys: Array<{
-      questionNumber: number;
-      correctAnswer: AnswerChoice;
-    }>;
+    variants: VariantInput[];
     questionMap: Array<{
       questionNumber: number;
       questionId?: string;
@@ -83,13 +95,22 @@ export class ExamsRepository {
         })),
       });
 
-      await tx.answerKey.createMany({
-        data: data.answerKeys.map((item) => ({
-          examId: exam.id,
-          questionNumber: item.questionNumber,
-          correctAnswer: item.correctAnswer,
-        })),
-      });
+      for (const variant of data.variants) {
+        const createdVariant = await tx.examVariant.create({
+          data: {
+            examId: exam.id,
+            testCode: variant.testCode,
+          },
+        });
+
+        await tx.answerKey.createMany({
+          data: variant.answerKeys.map((item) => ({
+            variantId: createdVariant.id,
+            questionNumber: item.questionNumber,
+            correctAnswer: item.correctAnswer,
+          })),
+        });
+      }
 
       if (data.questionMap.length > 0) {
         await tx.examQuestion.createMany({
@@ -181,10 +202,7 @@ export class ExamsRepository {
       title?: string;
       maxScore?: number;
       classIds: string[];
-      answerKeys: Array<{
-        questionNumber: number;
-        correctAnswer: AnswerChoice;
-      }>;
+      variants: VariantInput[];
       questionMap: Array<{
         questionNumber: number;
         questionId?: string;
@@ -205,6 +223,14 @@ export class ExamsRepository {
       });
 
       await tx.answerKey.deleteMany({
+        where: {
+          variant: {
+            examId,
+          },
+        },
+      });
+
+      await tx.examVariant.deleteMany({
         where: { examId },
       });
 
@@ -219,13 +245,22 @@ export class ExamsRepository {
         })),
       });
 
-      await tx.answerKey.createMany({
-        data: data.answerKeys.map((item) => ({
-          examId,
-          questionNumber: item.questionNumber,
-          correctAnswer: item.correctAnswer,
-        })),
-      });
+      for (const variant of data.variants) {
+        const createdVariant = await tx.examVariant.create({
+          data: {
+            examId,
+            testCode: variant.testCode,
+          },
+        });
+
+        await tx.answerKey.createMany({
+          data: variant.answerKeys.map((item) => ({
+            variantId: createdVariant.id,
+            questionNumber: item.questionNumber,
+            correctAnswer: item.correctAnswer,
+          })),
+        });
+      }
 
       if (data.questionMap.length > 0) {
         await tx.examQuestion.createMany({

@@ -10,6 +10,7 @@ from app.domain.layouts.layout_classifier import LayoutClassifier
 from app.domain.layouts.template_models import OmrLayoutTemplate
 from app.domain.layouts.template_registry import TemplateRegistry
 from app.domain.services.answer_detector import AnswerDetector
+from app.domain.services.grading_overlay_renderer import GradingOverlayRenderer
 from app.domain.services.image_processor import ImageProcessor
 from app.domain.services.student_id_detector import StudentIdDetector
 from app.domain.services.tnteam_block_locator import TnTeamBlockLocator
@@ -36,6 +37,11 @@ def main() -> None:
         default=None,
         help="Optional template name or alias to force during debug.",
     )
+    parser.add_argument(
+        "--answer-key",
+        default=None,
+        help="Optional answer key string such as ABCDABCD. Limits grading scope to its length.",
+    )
     args = parser.parse_args()
 
     image_path = Path(args.image_path).expanduser().resolve()
@@ -54,8 +60,9 @@ def main() -> None:
     layout_classifier = LayoutClassifier(template_registry)
     student_id_detector = StudentIdDetector()
     answer_detector = AnswerDetector()
+    overlay_renderer = GradingOverlayRenderer()
 
-    aligned_image = image_processor.sheet_aligner.align(image)
+    aligned_image = image_processor.align(image)
     processed_image = image_processor.preprocess(image)
     template = resolve_template(
         template_registry,
@@ -72,6 +79,20 @@ def main() -> None:
         args.question_count,
         template,
     )
+    answer_key = normalize_answer_key(args.answer_key)
+    for answer, debug in zip(answers, answer_debug["questions"], strict=False):
+        correct_answer = (
+            answer_key[answer.questionNumber - 1]
+            if answer_key and answer.questionNumber <= len(answer_key)
+            else None
+        )
+        debug["correctAnswer"] = correct_answer
+        debug["isCorrect"] = (
+            None
+            if answer.detectedAnswer is None or correct_answer is None
+            else answer.detectedAnswer == correct_answer
+        )
+        debug["reviewReason"] = answer.reviewReason
     needs_review = student_code is None or any(answer.needsReview for answer in answers)
 
     located_blocks = (
@@ -84,6 +105,7 @@ def main() -> None:
     refined_id_crops: dict[str, str] = {}
     refined_answer_group_crops: list[str] = []
     overlay_path = output_dir / "warp_overlay.png"
+    annotated_path = output_dir / "annotated.png"
     score_path = output_dir / "answer_scores.json"
 
     debug_payload = {
@@ -104,6 +126,7 @@ def main() -> None:
             "testIdCrop": str(output_dir / "test_id_crop.png"),
             "answerCrop": str(output_dir / "answer_crop.png"),
             "warpOverlay": str(overlay_path),
+            "annotatedImage": str(annotated_path),
             "answerScoresJson": str(score_path),
             "resultJson": str(output_dir / "result.json"),
             "refinedIdCrops": refined_id_crops,
@@ -152,7 +175,9 @@ def main() -> None:
                 refined_answer_group_crops.append(str(crop_path))
 
     overlay = build_overlay(aligned_image, located_blocks)
+    annotated = overlay_renderer.render(aligned_image, answer_debug["questions"])
     cv2.imwrite(str(overlay_path), overlay)
+    cv2.imwrite(str(annotated_path), annotated)
     score_path.write_text(
         json.dumps(answer_debug, indent=2),
         encoding="utf-8",
@@ -239,6 +264,13 @@ def build_overlay(aligned_image, locator_debug: dict[str, object]):
         )
 
     return overlay
+
+
+def normalize_answer_key(answer_key: str | None) -> str | None:
+    if answer_key is None:
+        return None
+    normalized = answer_key.strip().upper()
+    return normalized or None
 
 
 if __name__ == "__main__":

@@ -4,18 +4,28 @@ import {
   Prisma,
   Role,
   SubmissionStatus,
+  TestCodeResolutionStatus,
   User,
 } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma.service';
 
+const variantInclude = {
+  include: {
+    answerKeys: {
+      orderBy: {
+        questionNumber: 'asc',
+      },
+    },
+  },
+  orderBy: {
+    testCode: 'asc',
+  },
+} as const;
+
 export const omrBatchDetailInclude = {
   exam: {
     include: {
-      answerKeys: {
-        orderBy: {
-          questionNumber: 'asc',
-        },
-      },
+      variants: variantInclude,
     },
   },
   submissions: {
@@ -25,6 +35,15 @@ export const omrBatchDetailInclude = {
           id: true,
           name: true,
           studentCode: true,
+        },
+      },
+      resolvedVariant: {
+        include: {
+          answerKeys: {
+            orderBy: {
+              questionNumber: 'asc',
+            },
+          },
         },
       },
       details: {
@@ -44,11 +63,7 @@ export type OmrBatchWithRelations = Prisma.OmrBatchGetPayload<{
 }>;
 
 export const omrExamInclude = {
-  answerKeys: {
-    orderBy: {
-      questionNumber: 'asc',
-    },
-  },
+  variants: variantInclude,
   classes: {
     include: {
       class: {
@@ -70,11 +85,43 @@ export type OmrExam = Prisma.ExamGetPayload<{
   include: typeof omrExamInclude;
 }>;
 
+export type OmrSubmissionWithRelations = Prisma.SubmissionGetPayload<{
+  include: {
+    exam: {
+      include: {
+        variants: typeof variantInclude;
+      };
+    };
+    resolvedVariant: {
+      include: {
+        answerKeys: {
+          orderBy: {
+            questionNumber: 'asc';
+          };
+        };
+      };
+    };
+    student: {
+      select: {
+        id: true;
+        name: true;
+        studentCode: true;
+      };
+    };
+    details: {
+      orderBy: {
+        questionNumber: 'asc';
+      };
+    };
+  };
+}>;
+
 type SubmissionDetailInput = {
   questionNumber: number;
   detectedAnswer: string | null;
   finalAnswer: Prisma.SubmissionDetailCreateManySubmissionInput['finalAnswer'];
   needsReview: boolean;
+  reviewReason: string | null;
 };
 
 @Injectable()
@@ -126,11 +173,46 @@ export class OmrRepository {
       include: {
         exam: {
           include: {
+            variants: variantInclude,
+          },
+        },
+      },
+    });
+  }
+
+  async findTeacherSubmissionById(submissionId: string, teacherId: string) {
+    return this.prismaService.submission.findFirst({
+      where: {
+        id: submissionId,
+        exam: {
+          teacherId,
+        },
+      },
+      include: {
+        exam: {
+          include: {
+            variants: variantInclude,
+          },
+        },
+        resolvedVariant: {
+          include: {
             answerKeys: {
               orderBy: {
                 questionNumber: 'asc',
               },
             },
+          },
+        },
+        student: {
+          select: {
+            id: true,
+            name: true,
+            studentCode: true,
+          },
+        },
+        details: {
+          orderBy: {
+            questionNumber: 'asc',
           },
         },
       },
@@ -169,20 +251,36 @@ export class OmrRepository {
   async recordSuccessfulFile(data: {
     batchId: string;
     examId: string;
+    resolvedVariantId: string | null;
     imageUrl: string;
     studentId: string | null;
     studentCode: string | null;
+    detectedTestId: string | null;
+    resolvedTestCode: string | null;
+    testCodeResolutionStatus: TestCodeResolutionStatus;
     status: SubmissionStatus;
     details: SubmissionDetailInput[];
+    processedImageUrl?: string | null;
+    annotatedImageUrl?: string | null;
+    warpOverlayUrl?: string | null;
+    answerScoresUrl?: string | null;
   }) {
     return this.prismaService.$transaction(async (tx) => {
       await tx.submission.create({
         data: {
           examId: data.examId,
           batchId: data.batchId,
+          resolvedVariantId: data.resolvedVariantId,
           studentId: data.studentId,
           studentCode: data.studentCode,
+          detectedTestId: data.detectedTestId,
+          resolvedTestCode: data.resolvedTestCode,
+          testCodeResolutionStatus: data.testCodeResolutionStatus,
           imageUrl: data.imageUrl,
+          processedImageUrl: data.processedImageUrl,
+          annotatedImageUrl: data.annotatedImageUrl,
+          warpOverlayUrl: data.warpOverlayUrl,
+          answerScoresUrl: data.answerScoresUrl,
           status: data.status,
           details: {
             createMany: {
@@ -260,14 +358,14 @@ export class OmrRepository {
   }
 
   private resolveFinalBatchStatus(successCount: number, failedCount: number) {
-    if (successCount > 0 && failedCount === 0) {
+    if (failedCount === 0) {
       return OmrBatchStatus.COMPLETED;
     }
 
-    if (successCount > 0 && failedCount > 0) {
-      return OmrBatchStatus.PARTIAL_FAILED;
+    if (successCount === 0) {
+      return OmrBatchStatus.FAILED;
     }
 
-    return OmrBatchStatus.FAILED;
+    return OmrBatchStatus.PARTIAL_FAILED;
   }
 }

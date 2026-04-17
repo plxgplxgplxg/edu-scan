@@ -27,12 +27,14 @@ describe('GradingService', () => {
         detectedAnswer: AnswerChoice.A,
         finalAnswer: AnswerChoice.A,
         needsReview: false,
+        reviewReason: null,
       },
       {
         questionNumber: 2,
         detectedAnswer: AnswerChoice.B,
         finalAnswer: AnswerChoice.B,
         needsReview: false,
+        reviewReason: null,
       },
     ]);
   });
@@ -80,12 +82,14 @@ describe('GradingService', () => {
           detectedAnswer: AnswerChoice.A,
           finalAnswer: AnswerChoice.A,
           needsReview: false,
+          reviewReason: null,
         },
         {
           questionNumber: 2,
           detectedAnswer: AnswerChoice.C,
           finalAnswer: AnswerChoice.C,
           needsReview: false,
+          reviewReason: null,
         },
       ],
       10,
@@ -93,15 +97,71 @@ describe('GradingService', () => {
 
     expect(score).toBe(5);
   });
+
+  it('preserves per-question review reason from omr payload', () => {
+    const submission = service.prepareSubmission(buildExam(), {
+      studentCode: 'STU-001',
+      answers: [
+        {
+          questionNumber: 1,
+          detectedAnswer: 'AB',
+          needsReview: true,
+          reviewReason: 'MULTI_MARK',
+        },
+        {
+          questionNumber: 2,
+          detectedAnswer: AnswerChoice.B,
+          needsReview: false,
+        },
+      ],
+    });
+
+    expect(submission.details[0]).toMatchObject({
+      questionNumber: 1,
+      detectedAnswer: 'AB',
+      finalAnswer: null,
+      needsReview: true,
+      reviewReason: 'MULTI_MARK',
+    });
+  });
+
+  it.each([15, 30, 60])(
+    'scores only the first %i exam questions for a larger template response',
+    (questionCount) => {
+      const exam = buildExam(questionCount);
+      const submission = service.prepareSubmission(exam, {
+        studentCode: 'STU-001',
+        answers: exam.answerKeys.map((item, index) => ({
+          questionNumber: item.questionNumber,
+          detectedAnswer: index % 2 === 0 ? item.correctAnswer : AnswerChoice.D,
+          needsReview: false,
+        })),
+      });
+
+      const summary = service.summarizeSubmission(
+        exam.answerKeys,
+        submission.details,
+        questionCount,
+      );
+
+      expect(submission.details).toHaveLength(questionCount);
+      expect(
+        summary.correctCount + summary.wrongCount + summary.reviewCount,
+      ).toBe(questionCount);
+    },
+  );
 });
 
-function buildExam() {
+function buildExam(questionCount = 2) {
   return {
     id: 'exam-1',
-    answerKeys: [
-      { questionNumber: 1, correctAnswer: AnswerChoice.A },
-      { questionNumber: 2, correctAnswer: AnswerChoice.B },
-    ],
+    answerKeys: Array.from({ length: questionCount }, (_, index) => ({
+      questionNumber: index + 1,
+      correctAnswer:
+        [AnswerChoice.A, AnswerChoice.B, AnswerChoice.C, AnswerChoice.D][
+          index % 4
+        ],
+    })),
     classes: [],
   } as never;
 }
