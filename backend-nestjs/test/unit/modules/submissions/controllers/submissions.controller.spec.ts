@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { SubmissionsController } from './submissions.controller';
-import { SubmissionsService } from '../services/submissions.service';
+import { SubmissionsController } from '../../../../../src/modules/submissions/controllers/submissions.controller';
+import { SubmissionsService } from '../../../../../src/modules/submissions/services/submissions.service';
 import { Role } from '@prisma/client';
 
 describe('SubmissionsController', () => {
@@ -38,14 +38,18 @@ describe('SubmissionsController', () => {
 
   it('should call findOneWithScore with request user', async () => {
     const mockUser = { id: 'user-1', role: Role.STUDENT };
-    jest.spyOn(service, 'findOneWithScore').mockResolvedValue({ id: 'sub-1' } as any);
+    jest
+      .spyOn(service, 'findOneWithScore')
+      .mockResolvedValue({ id: 'sub-1' } as any);
     await controller.findOne('sub-1', { user: mockUser });
     expect(service.findOneWithScore).toHaveBeenCalledWith('sub-1', mockUser);
   });
 
   it('should call manualOverride', async () => {
     const dto = { studentCode: '123' };
-    jest.spyOn(service, 'manualOverride').mockResolvedValue({ id: 'sub-1' } as any);
+    jest
+      .spyOn(service, 'manualOverride')
+      .mockResolvedValue({ id: 'sub-1' } as any);
     await controller.manualOverride('sub-1', dto);
     expect(service.manualOverride).toHaveBeenCalledWith('sub-1', dto);
   });

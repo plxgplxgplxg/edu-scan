@@ -128,12 +128,10 @@ export class BatchService {
       createdAt: batch.createdAt,
       updatedAt: batch.updatedAt,
       submissions: batch.submissions.map((submission) =>
-        this.toSubmissionResponseDto(
-          {
-            ...submission,
-            exam: batch.exam,
-          } as OmrSubmissionWithRelations,
-        ),
+        this.toSubmissionResponseDto({
+          ...submission,
+          exam: batch.exam,
+        } as OmrSubmissionWithRelations),
       ),
     };
   }
@@ -193,9 +191,10 @@ export class BatchService {
   }
 
   private mapSubmissionDetails(
-    answerKeys:
-      | Array<{ questionNumber: number; correctAnswer: string | null }>
-      | null,
+    answerKeys: Array<{
+      questionNumber: number;
+      correctAnswer: string | null;
+    }> | null,
     details: Array<{
       questionNumber: number;
       detectedAnswer: string | null;
@@ -206,7 +205,10 @@ export class BatchService {
     testCodeResolutionStatus: TestCodeResolutionStatus,
   ) {
     const answerKeyMap = new Map(
-      (answerKeys ?? []).map((item) => [item.questionNumber, item.correctAnswer]),
+      (answerKeys ?? []).map((item) => [
+        item.questionNumber,
+        item.correctAnswer,
+      ]),
     );
 
     return details.map((detail) => {

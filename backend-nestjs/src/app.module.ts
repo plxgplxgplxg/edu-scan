@@ -14,7 +14,9 @@ import { ExamsModule } from './modules/exams/exams.module';
 import { OmrModule } from './modules/omr/omr.module';
 import { UsersModule } from './modules/users/users.module';
 import { SubmissionsModule } from './modules/submissions/submissions.module';
-
+import { AssignmentsModule } from './modules/assignments/assignments.module';
+import { RemarksModule } from './modules/remarks/remarks.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -29,6 +31,9 @@ import { SubmissionsModule } from './modules/submissions/submissions.module';
     OmrModule,
     UsersModule,
     SubmissionsModule,
+    AssignmentsModule,
+    EventEmitterModule.forRoot(),
+    RemarksModule,
   ],
   controllers: [AppController],
   providers: [AppService],

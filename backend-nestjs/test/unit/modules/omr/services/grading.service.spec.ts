@@ -157,10 +157,12 @@ function buildExam(questionCount = 2) {
     id: 'exam-1',
     answerKeys: Array.from({ length: questionCount }, (_, index) => ({
       questionNumber: index + 1,
-      correctAnswer:
-        [AnswerChoice.A, AnswerChoice.B, AnswerChoice.C, AnswerChoice.D][
-          index % 4
-        ],
+      correctAnswer: [
+        AnswerChoice.A,
+        AnswerChoice.B,
+        AnswerChoice.C,
+        AnswerChoice.D,
+      ][index % 4],
     })),
     classes: [],
   } as never;

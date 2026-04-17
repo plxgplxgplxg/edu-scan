@@ -1,33 +1,41 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
-import { Prisma, Role } from "@prisma/client";
-import { PrismaService } from "../../../database/prisma.service";
-import { CreateUserDto } from "../dto/request/create-user.dto";
-import { UpdateUserDto } from "../dto/request/update-user.dto";
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma, Role } from '@prisma/client';
+import { PrismaService } from '../../../database/prisma.service';
+import { CreateUserDto } from '../dto/request/create-user.dto';
+import { UpdateUserDto } from '../dto/request/update-user.dto';
 import * as bcrypt from 'bcrypt';
 
-
 const userSelect = {
-    id: true,
-    email: true,
-    name: true,
-    role: true,
-    studentCode: true,
-    isActive: true,
-    createdAt: true,
-    updatedAt: true,
+  id: true,
+  email: true,
+  name: true,
+  role: true,
+  studentCode: true,
+  isActive: true,
+  createdAt: true,
+  updatedAt: true,
 } satisfies Prisma.UserSelect;
 
 @Injectable()
 export class UsersService {
-    constructor(private readonly prismaService: PrismaService) {}
+  constructor(private readonly prismaService: PrismaService) {}
 
-    async createUser(createUserDto: CreateUserDto) {
+  async createUser(createUserDto: CreateUserDto) {
     await this.ensureEmailAvailable(createUserDto.email);
 
-    const normalizedStudentCode = this.normalizeStudentCode(createUserDto.studentCode);
+    const normalizedStudentCode = this.normalizeStudentCode(
+      createUserDto.studentCode,
+    );
 
     if (createUserDto.role === Role.STUDENT && !normalizedStudentCode) {
-      throw new BadRequestException('studentCode is required for student accounts');
+      throw new BadRequestException(
+        'studentCode is required for student accounts',
+      );
     }
 
     if (normalizedStudentCode) {
@@ -42,7 +50,8 @@ export class UsersService {
         name: createUserDto.name.trim(),
         passwordHash,
         role: createUserDto.role,
-        studentCode: createUserDto.role === Role.STUDENT ? normalizedStudentCode : null,
+        studentCode:
+          createUserDto.role === Role.STUDENT ? normalizedStudentCode : null,
       },
       select: userSelect,
     });
@@ -51,10 +60,7 @@ export class UsersService {
   async listUsers() {
     return this.prismaService.user.findMany({
       select: userSelect,
-      orderBy: [
-        { role: 'asc' },
-        { createdAt: 'desc' },
-      ],
+      orderBy: [{ role: 'asc' }, { createdAt: 'desc' }],
     });
   }
 
@@ -82,23 +88,31 @@ export class UsersService {
 
     const nextRole = updateUserDto.role ?? existingUser.role;
     const normalizedEmail = updateUserDto.email?.trim().toLowerCase();
-    const normalizedStudentCode = this.normalizeStudentCode(updateUserDto.studentCode);
+    const normalizedStudentCode = this.normalizeStudentCode(
+      updateUserDto.studentCode,
+    );
 
     if (normalizedEmail && normalizedEmail !== existingUser.email) {
       await this.ensureEmailAvailable(normalizedEmail, userId);
     }
 
     if (nextRole === Role.STUDENT) {
-      const finalStudentCode = normalizedStudentCode ?? existingUser.studentCode;
+      const finalStudentCode =
+        normalizedStudentCode ?? existingUser.studentCode;
 
       if (!finalStudentCode) {
-        throw new BadRequestException('studentCode is required for student accounts');
+        throw new BadRequestException(
+          'studentCode is required for student accounts',
+        );
       }
 
       await this.ensureStudentCodeAvailable(finalStudentCode, userId);
     }
 
-    if (normalizedStudentCode && normalizedStudentCode !== existingUser.studentCode) {
+    if (
+      normalizedStudentCode &&
+      normalizedStudentCode !== existingUser.studentCode
+    ) {
       await this.ensureStudentCodeAvailable(normalizedStudentCode, userId);
     }
 
@@ -156,12 +170,12 @@ export class UsersService {
     });
   }
 
-    private normalizeStudentCode(studentCode?: string) {
+  private normalizeStudentCode(studentCode?: string) {
     const normalized = studentCode?.trim().toUpperCase();
     return normalized || undefined;
   }
 
-    private async ensureEmailAvailable(email: string, excludeUserId?: string) {
+  private async ensureEmailAvailable(email: string, excludeUserId?: string) {
     const existingUser = await this.prismaService.user.findFirst({
       where: {
         email,
@@ -181,8 +195,10 @@ export class UsersService {
     }
   }
 
-
-    private async ensureStudentCodeAvailable(studentCode: string, excludeUserId?: string) {
+  private async ensureStudentCodeAvailable(
+    studentCode: string,
+    excludeUserId?: string,
+  ) {
     const existingUser = await this.prismaService.user.findFirst({
       where: {
         studentCode,
@@ -200,5 +216,5 @@ export class UsersService {
     if (existingUser) {
       throw new ConflictException('Student code already exists');
     }
-}
+  }
 }

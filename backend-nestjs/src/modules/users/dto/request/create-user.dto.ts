@@ -30,7 +30,8 @@ export class CreateUserDto {
   @IsString()
   @IsNotEmpty()
   @Matches(/^[A-Z0-9_-]{4,30}$/, {
-    message: 'studentCode must contain 4-30 uppercase letters, numbers, "_" or "-"',
+    message:
+      'studentCode must contain 4-30 uppercase letters, numbers, "_" or "-"',
   })
   studentCode?: string;
 }

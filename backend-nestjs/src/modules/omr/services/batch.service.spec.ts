@@ -1,4 +1,8 @@
-import { OmrBatchStatus, SubmissionStatus, TestCodeResolutionStatus } from '@prisma/client';
+import {
+  OmrBatchStatus,
+  SubmissionStatus,
+  TestCodeResolutionStatus,
+} from '@prisma/client';
 import { BatchService } from './batch.service';
 import { GradingService } from './grading.service';
 
@@ -22,7 +26,10 @@ describe('BatchService', () => {
 
   it('returns test-code resolution fields in batch list', async () => {
     const batch = buildBatchEntity();
-    omrRepository.findBatchById.mockResolvedValue({ id: batch.id, teacherId: 'teacher-1' });
+    omrRepository.findBatchById.mockResolvedValue({
+      id: batch.id,
+      teacherId: 'teacher-1',
+    });
     omrRepository.findTeacherBatchById.mockResolvedValue(batch);
 
     const result = await service.getTeacherBatchById(batch.id, 'teacher-1');
@@ -57,7 +64,10 @@ describe('BatchService', () => {
     });
     omrRepository.findTeacherSubmissionById.mockResolvedValue(submission);
 
-    const result = await service.getTeacherSubmissionById(submission.id, 'teacher-1');
+    const result = await service.getTeacherSubmissionById(
+      submission.id,
+      'teacher-1',
+    );
 
     expect(result).toMatchObject({
       detectedTestId: 'Z99',
@@ -91,7 +101,9 @@ function buildBatchEntity() {
   };
 }
 
-function buildSubmissionEntity(overrides: Partial<Record<string, unknown>> = {}) {
+function buildSubmissionEntity(
+  overrides: Partial<Record<string, unknown>> = {},
+) {
   return {
     id: 'submission-1',
     examId: 'exam-1',

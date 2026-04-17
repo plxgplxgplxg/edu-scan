@@ -1,4 +1,10 @@
-import { IsEmail, IsOptional, IsString, IsUUID, ValidateIf } from 'class-validator';
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  IsUUID,
+  ValidateIf,
+} from 'class-validator';
 
 export class AddStudentDto {
   @ValidateIf((dto: AddStudentDto) => !dto.studentId && !dto.studentCode)

@@ -1,4 +1,7 @@
-import { BadGatewayException, UnprocessableEntityException } from '@nestjs/common';
+import {
+  BadGatewayException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { OmrClientService } from '../../../src/modules/omr/services/omr-client.service';

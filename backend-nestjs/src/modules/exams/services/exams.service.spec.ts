@@ -79,8 +79,12 @@ describe('ExamsService', () => {
   });
 
   it('rejects create when question map references a missing answer key number', async () => {
-    examsRepository.findTeacherClassesByIds.mockResolvedValue([{ id: 'class-a' }]);
-    examsRepository.findTeacherQuestionsByIds.mockResolvedValue([{ id: 'question-1' }]);
+    examsRepository.findTeacherClassesByIds.mockResolvedValue([
+      { id: 'class-a' },
+    ]);
+    examsRepository.findTeacherQuestionsByIds.mockResolvedValue([
+      { id: 'question-1' },
+    ]);
 
     await expect(
       service.createExam(teacherId, {
@@ -122,8 +126,12 @@ describe('ExamsService', () => {
       submissionCount: 2,
       batchCount: 1,
     });
-    examsRepository.findTeacherClassesByIds.mockResolvedValue([{ id: 'class-a' }]);
-    examsRepository.updateExam.mockResolvedValue(buildExamEntity({ title: 'Updated title' }));
+    examsRepository.findTeacherClassesByIds.mockResolvedValue([
+      { id: 'class-a' },
+    ]);
+    examsRepository.updateExam.mockResolvedValue(
+      buildExamEntity({ title: 'Updated title' }),
+    );
 
     await service.updateExam(examId, teacherId, {
       title: 'Updated title',

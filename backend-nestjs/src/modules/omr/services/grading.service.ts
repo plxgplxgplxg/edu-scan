@@ -43,7 +43,10 @@ export type PreparedSubmission = {
 
 @Injectable()
 export class GradingService {
-  resolveVariant(exam: OmrExam, detectedTestId: string | null | undefined): TestCodeResolution {
+  resolveVariant(
+    exam: OmrExam,
+    detectedTestId: string | null | undefined,
+  ): TestCodeResolution {
     const normalizedDetectedTestId = this.normalizeTestCode(detectedTestId);
 
     if (!normalizedDetectedTestId) {
@@ -96,7 +99,9 @@ export class GradingService {
       );
     }
 
-    const normalizedStudentCode = this.normalizeStudentCode(payload.studentCode);
+    const normalizedStudentCode = this.normalizeStudentCode(
+      payload.studentCode,
+    );
     const normalizedAnswers = this.normalizeDetectedAnswers(
       payload.answers,
       answerKeys,
@@ -211,7 +216,8 @@ export class GradingService {
     answers: OmrAnswerResult[],
     answerKeys: VariantAnswerKey | null,
   ): PreparedSubmissionDetail[] {
-    const answerKeyNumbers = answerKeys?.map((item) => item.questionNumber) ?? [];
+    const answerKeyNumbers =
+      answerKeys?.map((item) => item.questionNumber) ?? [];
     const answerNumberSet = new Set(answerKeyNumbers);
     const seenQuestionNumbers = new Set<number>();
     const payloadAnswerMap = new Map<

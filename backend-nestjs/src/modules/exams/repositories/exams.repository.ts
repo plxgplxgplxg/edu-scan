@@ -181,14 +181,16 @@ export class ExamsRepository {
   }
 
   async countExamDependencies(examId: string) {
-    const [submissionCount, batchCount] = await this.prismaService.$transaction([
-      this.prismaService.submission.count({
-        where: { examId },
-      }),
-      this.prismaService.omrBatch.count({
-        where: { examId },
-      }),
-    ]);
+    const [submissionCount, batchCount] = await this.prismaService.$transaction(
+      [
+        this.prismaService.submission.count({
+          where: { examId },
+        }),
+        this.prismaService.omrBatch.count({
+          where: { examId },
+        }),
+      ],
+    );
 
     return {
       submissionCount,

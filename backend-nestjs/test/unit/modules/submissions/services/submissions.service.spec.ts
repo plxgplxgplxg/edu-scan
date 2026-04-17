@@ -1,9 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { SubmissionsService } from './submissions.service';
-import { SubmissionsRepository } from '../repositories/submissions.repository';
-import { PrismaService } from '../../../database/prisma.service';
+import { SubmissionsService } from '../../../../../src/modules/submissions/services/submissions.service';
+import { SubmissionsRepository } from '../../../../../src/modules/submissions/repositories/submissions.repository';
+import { PrismaService } from '../../../../../src/database/prisma.service';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
-import { Role, SubmissionStatus, TestCodeResolutionStatus, AnswerChoice } from '@prisma/client';
+import {
+  Role,
+  SubmissionStatus,
+  TestCodeResolutionStatus,
+  AnswerChoice,
+} from '@prisma/client';
 
 describe('SubmissionsService', () => {
   let service: SubmissionsService;
@@ -47,7 +52,10 @@ describe('SubmissionsService', () => {
     it('should throw NotFoundException if submission not found', async () => {
       jest.spyOn(repository, 'findOneWithDetails').mockResolvedValue(null);
       await expect(
-        service.findOneWithScore('invalid-id', { id: 'admin1', role: Role.ADMIN }),
+        service.findOneWithScore('invalid-id', {
+          id: 'admin1',
+          role: Role.ADMIN,
+        }),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -59,7 +67,10 @@ describe('SubmissionsService', () => {
       } as any);
 
       await expect(
-        service.findOneWithScore('sub-1', { id: 'my-student', role: Role.STUDENT }),
+        service.findOneWithScore('sub-1', {
+          id: 'my-student',
+          role: Role.STUDENT,
+        }),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -80,9 +91,14 @@ describe('SubmissionsService', () => {
         },
       };
 
-      jest.spyOn(repository, 'findOneWithDetails').mockResolvedValue(mockSubmission as any);
+      jest
+        .spyOn(repository, 'findOneWithDetails')
+        .mockResolvedValue(mockSubmission as any);
 
-      const result = await service.findOneWithScore('sub-1', { id: 'teacher-1', role: Role.TEACHER });
+      const result = await service.findOneWithScore('sub-1', {
+        id: 'teacher-1',
+        role: Role.TEACHER,
+      });
 
       expect(result.score.totalCorrect).toBe(1);
       expect(result.score.maxScore).toBe(10);
@@ -95,10 +111,17 @@ describe('SubmissionsService', () => {
   describe('manualOverride', () => {
     it('should update submission correctly', async () => {
       const mockSubmission = { id: 'sub-1', details: [] };
-      jest.spyOn(repository, 'findOneWithDetails').mockResolvedValue(mockSubmission as any);
-      jest.spyOn(repository, 'update').mockResolvedValue({ ...mockSubmission, status: SubmissionStatus.GRADED } as any);
-      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue({ id: 'student-1' } as any);
-      
+      jest
+        .spyOn(repository, 'findOneWithDetails')
+        .mockResolvedValue(mockSubmission as any);
+      jest.spyOn(repository, 'update').mockResolvedValue({
+        ...mockSubmission,
+        status: SubmissionStatus.GRADED,
+      } as any);
+      jest
+        .spyOn(prisma.user, 'findUnique')
+        .mockResolvedValue({ id: 'student-1' } as any);
+
       const dto = {
         studentCode: '12345',
         resolvedVariantId: 'variant-1',
@@ -107,15 +130,24 @@ describe('SubmissionsService', () => {
 
       await service.manualOverride('sub-1', dto);
 
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { studentCode: '12345' } });
-      expect(repository.update).toHaveBeenCalledWith('sub-1', expect.objectContaining({
-        studentId: 'student-1',
-        studentCode: '12345',
-        resolvedVariantId: 'variant-1',
-        testCodeResolutionStatus: TestCodeResolutionStatus.MATCHED,
-        status: SubmissionStatus.GRADED,
-      }));
-      expect(repository.updateSubmissionDetail).toHaveBeenCalledWith('sub-1', 1, { finalAnswer: AnswerChoice.B });
+      expect(prisma.user.findUnique).toHaveBeenCalledWith({
+        where: { studentCode: '12345' },
+      });
+      expect(repository.update).toHaveBeenCalledWith(
+        'sub-1',
+        expect.objectContaining({
+          studentId: 'student-1',
+          studentCode: '12345',
+          resolvedVariantId: 'variant-1',
+          testCodeResolutionStatus: TestCodeResolutionStatus.MATCHED,
+          status: SubmissionStatus.GRADED,
+        }),
+      );
+      expect(repository.updateSubmissionDetail).toHaveBeenCalledWith(
+        'sub-1',
+        1,
+        { finalAnswer: AnswerChoice.B },
+      );
     });
   });
 });

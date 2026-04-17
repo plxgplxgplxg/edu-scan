@@ -34,7 +34,10 @@ export class ExamsService {
     const normalized = this.normalizeExamPayload(createExamDto);
 
     await this.ensureTeacherOwnsClasses(teacherId, normalized.classIds);
-    await this.ensureTeacherOwnsMappedQuestions(teacherId, normalized.questionMap);
+    await this.ensureTeacherOwnsMappedQuestions(
+      teacherId,
+      normalized.questionMap,
+    );
     this.ensureQuestionMapMatchesVariants(
       normalized.variants,
       normalized.questionMap.map((item) => item.questionNumber),
@@ -62,7 +65,10 @@ export class ExamsService {
     examId: string,
     teacherId: string,
   ): Promise<ExamResponseDto> {
-    const exam = await this.examsRepository.findTeacherExamById(examId, teacherId);
+    const exam = await this.examsRepository.findTeacherExamById(
+      examId,
+      teacherId,
+    );
 
     if (!exam) {
       throw new NotFoundException('Exam not found');
@@ -76,7 +82,10 @@ export class ExamsService {
     teacherId: string,
     updateExamDto: UpdateExamDto,
   ): Promise<ExamResponseDto> {
-    const existingExam = await this.examsRepository.findTeacherExamById(examId, teacherId);
+    const existingExam = await this.examsRepository.findTeacherExamById(
+      examId,
+      teacherId,
+    );
 
     if (!existingExam) {
       throw new NotFoundException('Exam not found');
@@ -106,18 +115,17 @@ export class ExamsService {
         })),
     });
 
-    const dependencies = await this.examsRepository.countExamDependencies(examId);
+    const dependencies =
+      await this.examsRepository.countExamDependencies(examId);
     const hasDependentData =
       dependencies.submissionCount > 0 || dependencies.batchCount > 0;
 
     if (
       hasDependentData &&
-      (
-        updateExamDto.answerKeys !== undefined ||
+      (updateExamDto.answerKeys !== undefined ||
         updateExamDto.variants !== undefined ||
         updateExamDto.classIds !== undefined ||
-        updateExamDto.questionMap !== undefined
-      )
+        updateExamDto.questionMap !== undefined)
     ) {
       throw new BadRequestException(
         'Cannot change classes, variants, answer keys, or question mapping after submissions or OMR batches already exist',
@@ -125,7 +133,10 @@ export class ExamsService {
     }
 
     await this.ensureTeacherOwnsClasses(teacherId, normalized.classIds);
-    await this.ensureTeacherOwnsMappedQuestions(teacherId, normalized.questionMap);
+    await this.ensureTeacherOwnsMappedQuestions(
+      teacherId,
+      normalized.questionMap,
+    );
     this.ensureQuestionMapMatchesVariants(
       normalized.variants,
       normalized.questionMap.map((item) => item.questionNumber),
@@ -146,13 +157,17 @@ export class ExamsService {
     examId: string,
     teacherId: string,
   ): Promise<DeleteExamResponseDto> {
-    const exam = await this.examsRepository.findTeacherExamById(examId, teacherId);
+    const exam = await this.examsRepository.findTeacherExamById(
+      examId,
+      teacherId,
+    );
 
     if (!exam) {
       throw new NotFoundException('Exam not found');
     }
 
-    const dependencies = await this.examsRepository.countExamDependencies(examId);
+    const dependencies =
+      await this.examsRepository.countExamDependencies(examId);
 
     if (dependencies.submissionCount > 0 || dependencies.batchCount > 0) {
       throw new BadRequestException(
@@ -191,10 +206,15 @@ export class ExamsService {
     const classIds = [...new Set(payload.classIds.map((item) => item.trim()))];
 
     if (classIds.length === 0) {
-      throw new BadRequestException('At least one class must be assigned to the exam');
+      throw new BadRequestException(
+        'At least one class must be assigned to the exam',
+      );
     }
 
-    const variants = this.normalizeVariants(payload.variants, payload.answerKeys);
+    const variants = this.normalizeVariants(
+      payload.variants,
+      payload.answerKeys,
+    );
     const questionMap = [...(payload.questionMap ?? [])]
       .map((item) => ({
         questionNumber: item.questionNumber,
@@ -212,7 +232,9 @@ export class ExamsService {
       .filter((item): item is string => !!item);
 
     if (mappedQuestionIds.length !== new Set(mappedQuestionIds).size) {
-      throw new BadRequestException('A question can only be mapped once in the same exam');
+      throw new BadRequestException(
+        'A question can only be mapped once in the same exam',
+      );
     }
 
     return {
@@ -225,17 +247,21 @@ export class ExamsService {
   }
 
   private normalizeVariants(
-    variants: Array<{
-      testCode: string;
-      answerKeys: Array<{
-        questionNumber: number;
-        correctAnswer: AnswerChoice;
-      }>;
-    }> | undefined,
-    legacyAnswerKeys: Array<{
-      questionNumber: number;
-      correctAnswer: AnswerChoice;
-    }> | undefined,
+    variants:
+      | Array<{
+          testCode: string;
+          answerKeys: Array<{
+            questionNumber: number;
+            correctAnswer: AnswerChoice;
+          }>;
+        }>
+      | undefined,
+    legacyAnswerKeys:
+      | Array<{
+          questionNumber: number;
+          correctAnswer: AnswerChoice;
+        }>
+      | undefined,
   ): NormalizedVariant[] {
     if ((variants?.length ?? 0) > 0 && (legacyAnswerKeys?.length ?? 0) > 0) {
       throw new BadRequestException(
@@ -330,8 +356,14 @@ export class ExamsService {
     }
   }
 
-  private async ensureTeacherOwnsClasses(teacherId: string, classIds: string[]) {
-    const classes = await this.examsRepository.findTeacherClassesByIds(teacherId, classIds);
+  private async ensureTeacherOwnsClasses(
+    teacherId: string,
+    classIds: string[],
+  ) {
+    const classes = await this.examsRepository.findTeacherClassesByIds(
+      teacherId,
+      classIds,
+    );
 
     if (classes.length !== classIds.length) {
       throw new BadRequestException(

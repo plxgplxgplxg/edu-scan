@@ -1,4 +1,13 @@
-import { Controller, Get, Param, Patch, Body, Query, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Body,
+  Query,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { SubmissionsService } from '../services/submissions.service';
 import { GetSubmissionsQueryDto } from '../dtos/get-submissions-query.dto';
 import { UpdateSubmissionOverrideDto } from '../dtos/update-override.dto';
@@ -26,7 +35,10 @@ export class SubmissionsController {
 
   @Patch(':id/override')
   @Roles(Role.ADMIN, Role.TEACHER)
-  manualOverride(@Param('id') id: string, @Body() dto: UpdateSubmissionOverrideDto) {
+  manualOverride(
+    @Param('id') id: string,
+    @Body() dto: UpdateSubmissionOverrideDto,
+  ) {
     return this.submissionsService.manualOverride(id, dto);
   }
 }

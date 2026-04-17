@@ -30,10 +30,14 @@ export class UpdateUserDto {
   @IsOptional()
   role?: Role;
 
-  @ValidateIf((dto: UpdateUserDto) => dto.role === Role.STUDENT || dto.studentCode !== undefined)
+  @ValidateIf(
+    (dto: UpdateUserDto) =>
+      dto.role === Role.STUDENT || dto.studentCode !== undefined,
+  )
   @IsString()
   @Matches(/^[A-Z0-9_-]{4,30}$/, {
-    message: 'studentCode must contain 4-30 uppercase letters, numbers, "_" or "-"',
+    message:
+      'studentCode must contain 4-30 uppercase letters, numbers, "_" or "-"',
   })
   @IsOptional()
   studentCode?: string;

@@ -44,9 +44,9 @@ export class OmrProcessor {
         );
         const resolvedVariant =
           variantResolution.status === TestCodeResolutionStatus.MATCHED
-            ? input.exam.variants.find(
+            ? (input.exam.variants.find(
                 (variant) => variant.id === variantResolution.resolvedVariantId,
-              ) ?? null
+              ) ?? null)
             : null;
         const preparedSubmission = this.gradingService.prepareSubmission(
           resolvedVariant?.answerKeys ?? null,
