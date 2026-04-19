@@ -31,6 +31,7 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/event-emitter": "^3.0.1",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/swagger": "^11.2.1",
     "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.5.0",
     "axios": "^1.13.6",
@@ -43,7 +44,8 @@
     "pdfkit": "^0.17.2",
     "pg": "^8.20.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -58,8 +60,8 @@
     "@types/jest": "^30.0.0",
     "@types/multer": "^2.1.0",
     "@types/node": "^22.10.7",
-    "@types/pdfkit": "^0.17.3",
     "@types/passport-jwt": "^4.0.1",
+    "@types/pdfkit": "^0.17.3",
     "@types/pg": "^8.18.0",
     "@types/supertest": "^6.0.2",
     "bcrypt": "^6.0.0",

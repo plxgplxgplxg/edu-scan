@@ -1,30 +1,66 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { AnswerChoice, Difficulty, Prisma } from '@prisma/client';
 
 export class QuestionResponseDto {
+  @ApiProperty({ format: 'uuid' })
   id!: string;
+
+  @ApiProperty()
   content!: string;
+
+  @ApiProperty()
   optionA!: string;
+
+  @ApiProperty()
   optionB!: string;
+
+  @ApiProperty()
   optionC!: string;
+
+  @ApiProperty()
   optionD!: string;
+
+  @ApiProperty({ enum: AnswerChoice, enumName: 'AnswerChoice' })
   correctAnswer!: AnswerChoice;
+
+  @ApiProperty()
   subject!: string;
+
+  @ApiProperty({ enum: Difficulty, enumName: 'Difficulty' })
   difficulty!: Difficulty;
+
+  @ApiProperty({ type: [String] })
   tags!: string[];
+
+  @ApiProperty({ type: String, format: 'date-time' })
   createdAt!: Date;
+
+  @ApiProperty({ type: String, format: 'date-time' })
   updatedAt!: Date;
 }
 
 export class QuestionListResponseDto {
+  @ApiProperty({ type: [QuestionResponseDto] })
   items!: QuestionResponseDto[];
+
+  @ApiProperty()
   total!: number;
+
+  @ApiProperty()
   page!: number;
+
+  @ApiProperty()
   limit!: number;
+
+  @ApiProperty()
   totalPages!: number;
 }
 
 export class DeleteQuestionResponseDto {
+  @ApiProperty({ format: 'uuid' })
   id!: string;
+
+  @ApiProperty()
   deleted!: boolean;
 }
 
