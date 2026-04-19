@@ -18,7 +18,10 @@ export class RemarksRepository {
     });
   }
 
-  async findPendingRemarkForDetail(submissionDetailId: string, studentId: string) {
+  async findPendingRemarkForDetail(
+    submissionDetailId: string,
+    studentId: string,
+  ) {
     return this.prisma.remarkRequest.findFirst({
       where: {
         submissionDetailId,

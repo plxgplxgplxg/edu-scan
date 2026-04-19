@@ -124,6 +124,21 @@ type SubmissionDetailInput = {
   reviewReason: string | null;
 };
 
+export const resolveFinalBatchStatus = (
+  successCount: number,
+  failedCount: number,
+) => {
+  if (failedCount === 0) {
+    return OmrBatchStatus.COMPLETED;
+  }
+
+  if (successCount === 0) {
+    return OmrBatchStatus.FAILED;
+  }
+
+  return OmrBatchStatus.PARTIAL_FAILED;
+};
+
 @Injectable()
 export class OmrRepository {
   constructor(private readonly prismaService: PrismaService) {}
@@ -343,7 +358,7 @@ export class OmrRepository {
       });
     }
 
-    const status = this.resolveFinalBatchStatus(
+    const status = resolveFinalBatchStatus(
       batch.successCount,
       batch.failedCount,
     );
@@ -355,17 +370,5 @@ export class OmrRepository {
         completedAt: new Date(),
       },
     });
-  }
-
-  private resolveFinalBatchStatus(successCount: number, failedCount: number) {
-    if (failedCount === 0) {
-      return OmrBatchStatus.COMPLETED;
-    }
-
-    if (successCount === 0) {
-      return OmrBatchStatus.FAILED;
-    }
-
-    return OmrBatchStatus.PARTIAL_FAILED;
   }
 }

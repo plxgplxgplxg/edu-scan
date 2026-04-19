@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { RemarksRepository } from '../repositories/remarks.repository';
 import { CreateRemarkRequestDto } from '../dtos/create-remark.dto';
 import { ReviewRemarkRequestDto } from '../dtos/review-remark.dto';
@@ -14,14 +19,25 @@ export class RemarksService {
   ) {}
 
   async createRemark(studentId: string, dto: CreateRemarkRequestDto) {
-    const detail = await this.remarksRepository.findSubmissionDetail(dto.submissionDetailId, studentId);
+    const detail = await this.remarksRepository.findSubmissionDetail(
+      dto.submissionDetailId,
+      studentId,
+    );
     if (!detail) {
-      throw new NotFoundException('Submission detail not found or does not belong to you');
+      throw new NotFoundException(
+        'Submission detail not found or does not belong to you',
+      );
     }
 
-    const pendingRemark = await this.remarksRepository.findPendingRemarkForDetail(dto.submissionDetailId, studentId);
+    const pendingRemark =
+      await this.remarksRepository.findPendingRemarkForDetail(
+        dto.submissionDetailId,
+        studentId,
+      );
     if (pendingRemark) {
-      throw new ConflictException('You already have a pending remark request for this question');
+      throw new ConflictException(
+        'You already have a pending remark request for this question',
+      );
     }
 
     return this.remarksRepository.createRemark(studentId, dto);
@@ -31,7 +47,11 @@ export class RemarksService {
     return this.remarksRepository.findAllRemarks(status);
   }
 
-  async reviewRemark(remarkId: string, teacherId: string, dto: ReviewRemarkRequestDto) {
+  async reviewRemark(
+    remarkId: string,
+    teacherId: string,
+    dto: ReviewRemarkRequestDto,
+  ) {
     const remark = await this.remarksRepository.findRemarkById(remarkId);
     if (!remark) {
       throw new NotFoundException('Remark request not found');
@@ -42,7 +62,9 @@ export class RemarksService {
     }
 
     if (dto.status === RemarkStatus.APPROVED && !dto.finalAnswer) {
-      throw new BadRequestException('finalAnswer is required when approving a remark request');
+      throw new BadRequestException(
+        'finalAnswer is required when approving a remark request',
+      );
     }
 
     const updatedRemark = await this.remarksRepository.updateRemark(remarkId, {

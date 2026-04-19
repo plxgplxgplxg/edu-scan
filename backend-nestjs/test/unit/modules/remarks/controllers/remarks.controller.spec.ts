@@ -18,9 +18,7 @@ describe('RemarksController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [RemarksController],
-      providers: [
-        { provide: RemarksService, useValue: mockService },
-      ],
+      providers: [{ provide: RemarksService, useValue: mockService }],
     }).compile();
 
     controller = module.get<RemarksController>(RemarksController);
@@ -31,12 +29,18 @@ describe('RemarksController', () => {
   describe('createRemark (Student)', () => {
     it('should call service with studentId and return result', async () => {
       const mockReq = { user: { id: 'student-id' } };
-      const dto: CreateRemarkRequestDto = { submissionDetailId: 'detail', reason: 'reason' };
+      const dto: CreateRemarkRequestDto = {
+        submissionDetailId: 'detail',
+        reason: 'reason',
+      };
       service.createRemark.mockResolvedValue({ id: 'remark-id' } as any);
 
       const result = await controller.createRemark(mockReq, dto);
 
-      expect(result).toEqual({ message: 'Remark request created successfully', data: { id: 'remark-id' } });
+      expect(result).toEqual({
+        message: 'Remark request created successfully',
+        data: { id: 'remark-id' },
+      });
       expect(service.createRemark).toHaveBeenCalledWith('student-id', dto);
     });
   });
@@ -47,7 +51,10 @@ describe('RemarksController', () => {
 
       const result = await controller.getRemarks(RemarkStatus.PENDING);
 
-      expect(result).toEqual({ message: 'Remarks retrieved successfully', data: [{ id: 'remark-id' }] });
+      expect(result).toEqual({
+        message: 'Remarks retrieved successfully',
+        data: [{ id: 'remark-id' }],
+      });
       expect(service.getRemarks).toHaveBeenCalledWith(RemarkStatus.PENDING);
     });
   });
@@ -55,13 +62,26 @@ describe('RemarksController', () => {
   describe('reviewRemark (Teacher)', () => {
     it('should call service with teacherId and payload', async () => {
       const mockReq = { user: { id: 'teacher-id' } };
-      const dto: ReviewRemarkRequestDto = { status: RemarkStatus.APPROVED, finalAnswer: AnswerChoice.B };
-      service.reviewRemark.mockResolvedValue({ id: 'remark-id', status: RemarkStatus.APPROVED } as any);
+      const dto: ReviewRemarkRequestDto = {
+        status: RemarkStatus.APPROVED,
+        finalAnswer: AnswerChoice.B,
+      };
+      service.reviewRemark.mockResolvedValue({
+        id: 'remark-id',
+        status: RemarkStatus.APPROVED,
+      } as any);
 
       const result = await controller.reviewRemark('remark-id', mockReq, dto);
 
-      expect(result).toEqual({ message: 'Remark reviewed successfully', data: { id: 'remark-id', status: RemarkStatus.APPROVED } });
-      expect(service.reviewRemark).toHaveBeenCalledWith('remark-id', 'teacher-id', dto);
+      expect(result).toEqual({
+        message: 'Remark reviewed successfully',
+        data: { id: 'remark-id', status: RemarkStatus.APPROVED },
+      });
+      expect(service.reviewRemark).toHaveBeenCalledWith(
+        'remark-id',
+        'teacher-id',
+        dto,
+      );
     });
   });
 });

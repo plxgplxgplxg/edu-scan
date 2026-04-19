@@ -8,7 +8,7 @@ import { BatchService } from './batch.service';
 import { UploadOmrDto } from '../dto/request/upload-omr.dto';
 import { ImageUploadService } from './image-upload.service';
 import { OmrRepository } from '../repositories/omr.repository';
-import { OmrProcessor } from '../processors/omr.processor';
+import { OmrQueueService } from './omr-queue.service';
 
 @Injectable()
 export class OmrService {
@@ -18,7 +18,7 @@ export class OmrService {
     private readonly omrRepository: OmrRepository,
     private readonly imageUploadService: ImageUploadService,
     private readonly batchService: BatchService,
-    private readonly omrProcessor: OmrProcessor,
+    private readonly omrQueueService: OmrQueueService,
   ) {}
 
   async uploadExamSheets(
@@ -44,17 +44,17 @@ export class OmrService {
       files.length,
     );
 
-    void this.omrProcessor
-      .processBatch({
+    void this.omrQueueService
+      .enqueueBatch({
         batchId: batch.id,
-        exam,
+        examId: exam.id,
         files,
         templateName: uploadOmrDto.templateName,
       })
       .catch((error: unknown) => {
         const message =
           error instanceof Error ? error.message : 'Unknown batch error';
-        this.logger.error(`OMR batch ${batch.id} failed: ${message}`);
+        this.logger.error(`OMR batch ${batch.id} enqueue failed: ${message}`);
       });
 
     return this.batchService.getTeacherBatchById(batch.id, teacherId);

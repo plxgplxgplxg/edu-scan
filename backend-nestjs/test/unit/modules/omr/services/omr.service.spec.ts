@@ -22,8 +22,8 @@ describe('OmrService', () => {
     getTeacherSubmissionById: jest.fn(),
   };
 
-  const omrProcessor = {
-    processBatch: jest.fn(),
+  const omrQueueService = {
+    enqueueBatch: jest.fn(),
   };
 
   beforeEach(() => {
@@ -32,9 +32,9 @@ describe('OmrService', () => {
       omrRepository as never,
       imageUploadService as never,
       batchService as never,
-      omrProcessor as never,
+      omrQueueService as never,
     );
-    omrProcessor.processBatch.mockResolvedValue(undefined);
+    omrQueueService.enqueueBatch.mockResolvedValue(undefined);
   });
 
   it('throws not found when exam does not exist', async () => {
@@ -62,7 +62,7 @@ describe('OmrService', () => {
     ).rejects.toThrow(ForbiddenException);
   });
 
-  it('creates batch and starts processor for valid upload', async () => {
+  it('creates batch and enqueues jobs for valid upload', async () => {
     const exam = buildExam();
     imageUploadService.validateFiles.mockReturnValue(undefined);
     omrRepository.findExamById.mockResolvedValue(exam);
@@ -80,10 +80,11 @@ describe('OmrService', () => {
       TEST_TEACHER_ID,
       1,
     );
-    expect(omrProcessor.processBatch).toHaveBeenCalledWith({
+    expect(omrQueueService.enqueueBatch).toHaveBeenCalledWith({
       batchId: 'batch-1',
-      exam,
+      examId: exam.id,
       files: [buildFile()],
+      templateName: undefined,
     });
     expect(result).toEqual({ id: 'batch-1' });
   });

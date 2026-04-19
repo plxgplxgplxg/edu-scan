@@ -2,7 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { RemarksService } from '../../../../../src/modules/remarks/services/remarks.service';
 import { RemarksRepository } from '../../../../../src/modules/remarks/repositories/remarks.repository';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { RemarkStatus, AnswerChoice } from '@prisma/client';
 
 describe('RemarksService', () => {
@@ -45,18 +49,28 @@ describe('RemarksService', () => {
     it('should throw NotFoundException if submission detail does not exist or belong to student', async () => {
       repository.findSubmissionDetail.mockResolvedValue(null);
 
-      await expect(service.createRemark(studentId, dto)).rejects.toThrow(NotFoundException);
+      await expect(service.createRemark(studentId, dto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw ConflictException if a pending remark already exists', async () => {
-      repository.findSubmissionDetail.mockResolvedValue({ id: 'detail-id' } as any);
-      repository.findPendingRemarkForDetail.mockResolvedValue({ id: 'existing-remark' } as any);
+      repository.findSubmissionDetail.mockResolvedValue({
+        id: 'detail-id',
+      } as any);
+      repository.findPendingRemarkForDetail.mockResolvedValue({
+        id: 'existing-remark',
+      } as any);
 
-      await expect(service.createRemark(studentId, dto)).rejects.toThrow(ConflictException);
+      await expect(service.createRemark(studentId, dto)).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('should create and return a PENDING remark', async () => {
-      repository.findSubmissionDetail.mockResolvedValue({ id: 'detail-id' } as any);
+      repository.findSubmissionDetail.mockResolvedValue({
+        id: 'detail-id',
+      } as any);
       repository.findPendingRemarkForDetail.mockResolvedValue(null);
       const expectedRemark = { id: 'new-remark', status: RemarkStatus.PENDING };
       repository.createRemark.mockResolvedValue(expectedRemark as any);
@@ -75,27 +89,48 @@ describe('RemarksService', () => {
     it('should throw NotFoundException if remark is not found', async () => {
       repository.findRemarkById.mockResolvedValue(null);
 
-      await expect(service.reviewRemark(remarkId, teacherId, { status: RemarkStatus.APPROVED })).rejects.toThrow(NotFoundException);
+      await expect(
+        service.reviewRemark(remarkId, teacherId, {
+          status: RemarkStatus.APPROVED,
+        }),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw ConflictException if remark is not PENDING', async () => {
-      repository.findRemarkById.mockResolvedValue({ status: RemarkStatus.APPROVED } as any);
+      repository.findRemarkById.mockResolvedValue({
+        status: RemarkStatus.APPROVED,
+      } as any);
 
-      await expect(service.reviewRemark(remarkId, teacherId, { status: RemarkStatus.REJECTED })).rejects.toThrow(ConflictException);
+      await expect(
+        service.reviewRemark(remarkId, teacherId, {
+          status: RemarkStatus.REJECTED,
+        }),
+      ).rejects.toThrow(ConflictException);
     });
 
     it('should throw BadRequestException if approving without finalAnswer', async () => {
-      repository.findRemarkById.mockResolvedValue({ status: RemarkStatus.PENDING } as any);
+      repository.findRemarkById.mockResolvedValue({
+        status: RemarkStatus.PENDING,
+      } as any);
 
-      await expect(service.reviewRemark(remarkId, teacherId, { status: RemarkStatus.APPROVED })).rejects.toThrow(BadRequestException);
+      await expect(
+        service.reviewRemark(remarkId, teacherId, {
+          status: RemarkStatus.APPROVED,
+        }),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should reject remark and not emit event', async () => {
-      repository.findRemarkById.mockResolvedValue({ status: RemarkStatus.PENDING } as any);
+      repository.findRemarkById.mockResolvedValue({
+        status: RemarkStatus.PENDING,
+      } as any);
       const updatedRemark = { id: remarkId, status: RemarkStatus.REJECTED };
       repository.updateRemark.mockResolvedValue(updatedRemark as any);
 
-      const result = await service.reviewRemark(remarkId, teacherId, { status: RemarkStatus.REJECTED, teacherComment: 'Wrong' });
+      const result = await service.reviewRemark(remarkId, teacherId, {
+        status: RemarkStatus.REJECTED,
+        teacherComment: 'Wrong',
+      });
 
       expect(result).toEqual(updatedRemark);
       expect(repository.updateRemark).toHaveBeenCalledWith(remarkId, {
@@ -108,7 +143,11 @@ describe('RemarksService', () => {
     });
 
     it('should approve remark and emit event', async () => {
-      const mockRemark = { id: remarkId, submissionDetailId: 'detail-id', status: RemarkStatus.PENDING };
+      const mockRemark = {
+        id: remarkId,
+        submissionDetailId: 'detail-id',
+        status: RemarkStatus.PENDING,
+      };
       repository.findRemarkById.mockResolvedValue(mockRemark as any);
       const updatedRemark = { id: remarkId, status: RemarkStatus.APPROVED };
       repository.updateRemark.mockResolvedValue(updatedRemark as any);
@@ -125,10 +164,13 @@ describe('RemarksService', () => {
         teacherComment: undefined,
         reviewedAt: expect.any(Date),
       });
-      expect(eventEmitter.emit).toHaveBeenCalledWith('remark.approved', expect.objectContaining({
-        submissionDetailId: 'detail-id',
-        finalAnswer: AnswerChoice.A,
-      }));
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'remark.approved',
+        expect.objectContaining({
+          submissionDetailId: 'detail-id',
+          finalAnswer: AnswerChoice.A,
+        }),
+      );
     });
   });
 });

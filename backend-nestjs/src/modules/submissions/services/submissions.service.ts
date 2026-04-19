@@ -6,11 +6,13 @@ import {
 import { SubmissionsRepository } from '../repositories/submissions.repository';
 import { GetSubmissionsQueryDto } from '../dtos/get-submissions-query.dto';
 import { UpdateSubmissionOverrideDto } from '../dtos/update-override.dto';
+import { QueryMySubmissionsDto } from '../dtos/query-my-submissions.dto';
 import {
   Role,
   SubmissionStatus,
   TestCodeResolutionStatus,
   AnswerChoice,
+  Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma.service';
 import { OnEvent } from '@nestjs/event-emitter';
@@ -44,22 +46,12 @@ export class SubmissionsService {
       throw new ForbiddenException('You can only access your own submissions');
     }
 
-    let calculatedScore = 0;
-    const maxScore = submission.exam.maxScore;
-    const totalQuestions = submission.details.length;
-    let correctCount = 0;
-
-    const answerKeysMap = new Map<number, AnswerChoice>();
-    if (submission.resolvedVariant?.answerKeys) {
-      for (const key of submission.resolvedVariant.answerKeys) {
-        answerKeysMap.set(key.questionNumber, key.correctAnswer);
-      }
-    }
+    const score = this.calculateSubmissionScore(submission);
+    const answerKeysMap = score.answerKeysMap;
 
     const processedDetails = submission.details.map((detail) => {
       const correctAnswer = answerKeysMap.get(detail.questionNumber);
       const isCorrect = correctAnswer && detail.finalAnswer === correctAnswer;
-      if (isCorrect) correctCount++;
       return {
         ...detail,
         isCorrect,
@@ -67,19 +59,93 @@ export class SubmissionsService {
       };
     });
 
-    if (totalQuestions > 0 && answerKeysMap.size > 0) {
-      calculatedScore = (correctCount / answerKeysMap.size) * maxScore;
-    }
-
     return {
       ...submission,
       details: processedDetails,
       score: {
-        totalCorrect: correctCount,
-        maxScore,
-        calculatedScore,
+        totalCorrect: score.totalCorrect,
+        maxScore: score.maxScore,
+        calculatedScore: score.calculatedScore,
       },
     };
+  }
+
+  async findMySubmissions(
+    requestUser: { id: string; role: string },
+    query: QueryMySubmissionsDto,
+  ) {
+    this.assertStudentRequest(requestUser);
+
+    const page = Math.max(1, query.page ?? 1);
+    const limit = Math.min(100, Math.max(1, query.limit ?? 20));
+
+    const [items, total] = await Promise.all([
+      this.submissionsRepository.findStudentSubmissionsPaginated({
+        studentId: requestUser.id,
+        examId: query.examId,
+        classId: query.classId,
+        status: query.status,
+        page,
+        limit,
+      }),
+      this.submissionsRepository.countStudentSubmissions({
+        studentId: requestUser.id,
+        examId: query.examId,
+        classId: query.classId,
+        status: query.status,
+      }),
+    ]);
+
+    return {
+      items: items.map((submission) => {
+        const score = this.calculateSubmissionScore(submission);
+        const needsReview = submission.status === SubmissionStatus.NEEDS_REVIEW;
+        return {
+          id: submission.id,
+          examId: submission.examId,
+          examTitle: submission.exam.title,
+          status: submission.status,
+          createdAt: submission.createdAt,
+          reviewedAt: submission.reviewedAt,
+          score: score.calculatedScore,
+          maxScore: score.maxScore,
+          totalCorrect: score.totalCorrect,
+          totalQuestions: score.totalQuestions,
+          needsReview,
+          reviewNote: needsReview ? 'Pending manual review' : null,
+        };
+      }),
+      total,
+      page,
+      limit,
+      totalPages: total === 0 ? 0 : Math.ceil(total / limit),
+    };
+  }
+
+  async getMyProgress(requestUser: { id: string; role: string }) {
+    this.assertStudentRequest(requestUser);
+
+    const submissions =
+      await this.submissionsRepository.findStudentSubmissionsForProgress(
+        requestUser.id,
+      );
+
+    return submissions.map((submission) => {
+      const score = this.calculateSubmissionScore(submission);
+      const needsReview = submission.status === SubmissionStatus.NEEDS_REVIEW;
+
+      return {
+        date: (submission.reviewedAt ?? submission.createdAt).toISOString(),
+        score: score.calculatedScore,
+        maxScore: score.maxScore,
+        examId: submission.exam.id,
+        examTitle: submission.exam.title,
+        submissionId: submission.id,
+        status: submission.status,
+        needsReview,
+        reviewNote: needsReview ? 'Pending manual review' : null,
+      };
+    });
   }
 
   async manualOverride(id: string, dto: UpdateSubmissionOverrideDto) {
@@ -89,7 +155,7 @@ export class SubmissionsService {
       throw new NotFoundException('Submission not found');
     }
 
-    const updateData: any = {};
+    const updateData: Prisma.SubmissionUncheckedUpdateInput = {};
     if (dto.studentCode) {
       updateData.studentCode = dto.studentCode;
       const student = await this.prisma.user.findUnique({
@@ -112,10 +178,7 @@ export class SubmissionsService {
     updateData.status = SubmissionStatus.GRADED;
     updateData.reviewedAt = new Date();
 
-    const updatedSubmission = await this.submissionsRepository.update(
-      id,
-      updateData,
-    );
+    await this.submissionsRepository.update(id, updateData);
 
     if (dto.details && dto.details.length > 0) {
       for (const detail of dto.details) {
@@ -138,18 +201,71 @@ export class SubmissionsService {
     const detail = await this.prisma.submissionDetail.findUnique({
       where: { id: payload.submissionDetailId },
     });
-    
+
     if (detail) {
       await this.submissionsRepository.updateSubmissionDetail(
         detail.submissionId,
         detail.questionNumber,
-        { finalAnswer: payload.finalAnswer }
+        { finalAnswer: payload.finalAnswer },
       );
-      // Wait, updateSubmissionDetail takes (id, questionNumber, data) 
+      // Wait, updateSubmissionDetail takes (id, questionNumber, data)
       // where id is submissionId.
       // After updating, since the score is dynamically calculated in findOneWithScore currently (it seems the system calculates on the fly based on answer keys), we don't need to save score to the Submission table. Wait, grade is in Submission if there's a score field... Wait, the schema "Submission" doesn't have a score field.
       // Let's check the schema for Submission. Schema: Submission has no score field. Score calculation is dynamic.
       // So updating the detail is enough!
     }
+  }
+
+  private assertStudentRequest(requestUser: { id: string; role: string }) {
+    if (requestUser.role !== Role.STUDENT) {
+      throw new ForbiddenException(
+        'This endpoint is only available for students',
+      );
+    }
+  }
+
+  private calculateSubmissionScore(submission: {
+    exam: { maxScore: number };
+    details: Array<{
+      questionNumber: number;
+      finalAnswer: AnswerChoice | null;
+    }>;
+    resolvedVariant?: {
+      answerKeys: Array<{
+        questionNumber: number;
+        correctAnswer: AnswerChoice;
+      }>;
+    } | null;
+  }) {
+    const maxScore = submission.exam.maxScore;
+    const totalQuestions = submission.details.length;
+    let totalCorrect = 0;
+
+    const answerKeysMap = new Map<number, AnswerChoice>();
+    if (submission.resolvedVariant?.answerKeys) {
+      for (const key of submission.resolvedVariant.answerKeys) {
+        answerKeysMap.set(key.questionNumber, key.correctAnswer);
+      }
+    }
+
+    for (const detail of submission.details) {
+      const correctAnswer = answerKeysMap.get(detail.questionNumber);
+      if (correctAnswer && detail.finalAnswer === correctAnswer) {
+        totalCorrect++;
+      }
+    }
+
+    const calculatedScore =
+      totalQuestions > 0 && answerKeysMap.size > 0
+        ? (totalCorrect / answerKeysMap.size) * maxScore
+        : 0;
+
+    return {
+      totalCorrect,
+      maxScore,
+      totalQuestions,
+      calculatedScore,
+      answerKeysMap,
+    };
   }
 }
