@@ -44,13 +44,13 @@ export class QuestionsController {
 
   @Post()
   @ApiBearerOperation({
-    summary: 'Tao cau hoi moi trong question bank',
+    summary: 'Tạo câu hỏi mới trong ngân hàng câu hỏi',
     roles: [Role.TEACHER],
   })
   @ApiBody({ type: CreateQuestionDto })
   @ApiWrappedCreatedResponse({
     type: QuestionResponseDto,
-    description: 'Tao cau hoi thanh cong.',
+    description: 'Tạo câu hỏi thành công.',
   })
   @ApiStandardErrorResponses(400, 401, 403, 500)
   async createQuestion(
@@ -62,9 +62,10 @@ export class QuestionsController {
 
   @Get()
   @ApiBearerOperation({
-    summary: 'Lay danh sach cau hoi cua giao vien',
+    summary: 'Lấy danh sách câu hỏi của giáo viên',
     roles: [Role.TEACHER],
-    notes: 'Ho tro filter theo subject, difficulty, tags, keyword va sap xep.',
+    notes:
+      'Hỗ trợ phân trang, lọc theo môn học, độ khó, tags, từ khóa và sắp xếp kết quả.',
   })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -74,14 +75,15 @@ export class QuestionsController {
     name: 'tags',
     required: false,
     type: String,
-    description: 'Comma-separated tags or repeated query param',
+    description:
+      'Danh sách tag, hỗ trợ dạng chuỗi phân tách bằng dấu phẩy hoặc lặp lại query param',
   })
   @ApiQuery({ name: 'keyword', required: false, type: String })
   @ApiQuery({ name: 'sortBy', required: false, enum: QuestionSortBy })
   @ApiQuery({ name: 'sortOrder', required: false, enum: SortOrder })
   @ApiWrappedOkResponse({
     type: QuestionListResponseDto,
-    description: 'Lay danh sach cau hoi thanh cong.',
+    description: 'Lấy danh sách câu hỏi thành công.',
   })
   @ApiStandardErrorResponses(400, 401, 403, 500)
   async listQuestions(
@@ -93,13 +95,13 @@ export class QuestionsController {
 
   @Get(':id')
   @ApiBearerOperation({
-    summary: 'Lay chi tiet cau hoi',
+    summary: 'Lấy chi tiết câu hỏi',
     roles: [Role.TEACHER],
   })
-  @ApiParam({ name: 'id', description: 'Question id', format: 'uuid' })
+  @ApiParam({ name: 'id', description: 'ID câu hỏi', format: 'uuid' })
   @ApiWrappedOkResponse({
     type: QuestionResponseDto,
-    description: 'Lay chi tiet cau hoi thanh cong.',
+    description: 'Lấy chi tiết câu hỏi thành công.',
   })
   @ApiStandardErrorResponses(401, 403, 404, 500)
   async getQuestionById(
@@ -111,14 +113,14 @@ export class QuestionsController {
 
   @Patch(':id')
   @ApiBearerOperation({
-    summary: 'Cap nhat cau hoi',
+    summary: 'Cập nhật câu hỏi',
     roles: [Role.TEACHER],
   })
-  @ApiParam({ name: 'id', description: 'Question id', format: 'uuid' })
+  @ApiParam({ name: 'id', description: 'ID câu hỏi', format: 'uuid' })
   @ApiBody({ type: UpdateQuestionDto })
   @ApiWrappedOkResponse({
     type: QuestionResponseDto,
-    description: 'Cap nhat cau hoi thanh cong.',
+    description: 'Cập nhật câu hỏi thành công.',
   })
   @ApiStandardErrorResponses(400, 401, 403, 404, 500)
   async updateQuestion(
@@ -135,13 +137,13 @@ export class QuestionsController {
 
   @Delete(':id')
   @ApiBearerOperation({
-    summary: 'Xoa cau hoi',
+    summary: 'Xóa câu hỏi',
     roles: [Role.TEACHER],
   })
-  @ApiParam({ name: 'id', description: 'Question id', format: 'uuid' })
+  @ApiParam({ name: 'id', description: 'ID câu hỏi', format: 'uuid' })
   @ApiWrappedOkResponse({
     type: DeleteQuestionResponseDto,
-    description: 'Xoa cau hoi thanh cong.',
+    description: 'Xóa câu hỏi thành công.',
   })
   @ApiStandardErrorResponses(401, 403, 404, 500)
   async deleteQuestion(

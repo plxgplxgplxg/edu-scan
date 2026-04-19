@@ -3,7 +3,7 @@ import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 
 export function buildAccessDescription(roles: Role[], notes?: string): string {
-  const lines = [`Roles duoc phep: ${roles.join(', ')}.`];
+  const lines = [`Vai trò được phép truy cập: ${roles.join(', ')}.`];
 
   if (notes) {
     lines.push(notes);
@@ -32,6 +32,7 @@ export function ApiPublicOperation(options: {
 }) {
   return ApiOperation({
     summary: options.summary,
-    description: options.notes,
+    description:
+      options.notes ?? 'Endpoint công khai, không yêu cầu Bearer access token.',
   });
 }

@@ -91,7 +91,8 @@ export function ApiStandardErrorResponses(
       case HttpStatus.BAD_REQUEST:
         decorators.push(
           ApiBadRequestResponse({
-            description: 'Yeu cau khong hop le hoặc validation failed.',
+            description:
+              'Dữ liệu gửi lên không hợp lệ, thiếu trường bắt buộc hoặc không vượt qua validation.',
             type: ApiErrorResponseDto,
           }),
         );
@@ -99,7 +100,8 @@ export function ApiStandardErrorResponses(
       case HttpStatus.UNAUTHORIZED:
         decorators.push(
           ApiUnauthorizedResponse({
-            description: 'Thieu token hoặc token khong hop le.',
+            description:
+              'Thiếu token xác thực, token không hợp lệ hoặc token đã hết hạn.',
             type: ApiErrorResponseDto,
           }),
         );
@@ -107,7 +109,8 @@ export function ApiStandardErrorResponses(
       case HttpStatus.FORBIDDEN:
         decorators.push(
           ApiForbiddenResponse({
-            description: 'Nguoi dung khong du quyen truy cap endpoint.',
+            description:
+              'Người dùng đã xác thực nhưng không có đủ quyền để truy cập endpoint này.',
             type: ApiErrorResponseDto,
           }),
         );
@@ -115,7 +118,8 @@ export function ApiStandardErrorResponses(
       case HttpStatus.NOT_FOUND:
         decorators.push(
           ApiNotFoundResponse({
-            description: 'Khong tim thay tai nguyen.',
+            description:
+              'Không tìm thấy tài nguyên tương ứng với tham số truyền vào.',
             type: ApiErrorResponseDto,
           }),
         );
@@ -123,7 +127,8 @@ export function ApiStandardErrorResponses(
       case HttpStatus.CONFLICT:
         decorators.push(
           ApiConflictResponse({
-            description: 'Xung dot du lieu hoặc tai nguyen da ton tai.',
+            description:
+              'Phát sinh xung đột dữ liệu hoặc tài nguyên đã tồn tại theo ràng buộc nghiệp vụ.',
             type: ApiErrorResponseDto,
           }),
         );
@@ -131,7 +136,8 @@ export function ApiStandardErrorResponses(
       case HttpStatus.INTERNAL_SERVER_ERROR:
         decorators.push(
           ApiInternalServerErrorResponse({
-            description: 'Loi he thong khong mong doi.',
+            description:
+              'Lỗi hệ thống ngoài dự kiến trong quá trình xử lý yêu cầu.',
             type: ApiErrorResponseDto,
           }),
         );
@@ -140,7 +146,7 @@ export function ApiStandardErrorResponses(
         decorators.push(
           ApiResponse({
             status,
-            description: 'Loi API',
+            description: 'Lỗi API',
             type: ApiErrorResponseDto,
           }),
         );

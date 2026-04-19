@@ -38,10 +38,10 @@ export class OmrController {
   @Post('upload')
   @UseInterceptors(FilesInterceptor('files', 50))
   @ApiBearerOperation({
-    summary: 'Upload batch anh OMR cho mot exam',
+    summary: 'Tải lên batch ảnh OMR cho một đề thi',
     roles: [Role.TEACHER],
     notes:
-      'Multipart/form-data. Truong files chap nhan toi da 50 file trong mot batch.',
+      'Gửi `multipart/form-data`. Trường `files` chấp nhận tối đa 50 file trong một batch upload.',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -60,7 +60,7 @@ export class OmrController {
   })
   @ApiWrappedCreatedResponse({
     type: OmrBatchResponseDto,
-    description: 'Tao batch upload OMR thanh cong.',
+    description: 'Tạo batch upload OMR thành công.',
   })
   @ApiStandardErrorResponses(400, 401, 403, 404, 500)
   async uploadOmrBatch(
@@ -73,13 +73,15 @@ export class OmrController {
 
   @Get('batch/:batchId')
   @ApiBearerOperation({
-    summary: 'Lay chi tiet batch OMR',
+    summary: 'Lấy chi tiết batch OMR',
     roles: [Role.TEACHER],
+    notes:
+      'Trả về trạng thái batch, số lượng file, thống kê xử lý và danh sách submission được sinh từ batch.',
   })
-  @ApiParam({ name: 'batchId', description: 'OMR batch id', format: 'uuid' })
+  @ApiParam({ name: 'batchId', description: 'ID batch OMR', format: 'uuid' })
   @ApiWrappedOkResponse({
     type: OmrBatchResponseDto,
-    description: 'Lay chi tiet batch OMR thanh cong.',
+    description: 'Lấy chi tiết batch OMR thành công.',
   })
   @ApiStandardErrorResponses(401, 403, 404, 500)
   async getBatchById(
@@ -91,17 +93,19 @@ export class OmrController {
 
   @Get('submissions/:submissionId')
   @ApiBearerOperation({
-    summary: 'Lay chi tiet submission OMR',
+    summary: 'Lấy chi tiết submission OMR',
     roles: [Role.TEACHER],
+    notes:
+      'Dùng để xem kết quả nhận dạng, mã đề được resolve, đáp án từng câu và các file ảnh liên quan.',
   })
   @ApiParam({
     name: 'submissionId',
-    description: 'Submission id',
+    description: 'ID bài làm OMR',
     format: 'uuid',
   })
   @ApiWrappedOkResponse({
     type: OmrSubmissionDetailViewResponseDto,
-    description: 'Lay chi tiet submission OMR thanh cong.',
+    description: 'Lấy chi tiết submission OMR thành công.',
   })
   @ApiStandardErrorResponses(401, 403, 404, 500)
   async getSubmissionById(

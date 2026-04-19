@@ -47,7 +47,7 @@ WHERE "testCodeResolutionStatus" IS NULL;
 ALTER TABLE "AnswerKey" ALTER COLUMN "variantId" SET NOT NULL;
 ALTER TABLE "Submission" ALTER COLUMN "testCodeResolutionStatus" SET NOT NULL;
 
-ALTER TABLE "AnswerKey" DROP CONSTRAINT "AnswerKey_examId_questionNumber_key";
+DROP INDEX IF EXISTS "AnswerKey_examId_questionNumber_key";
 ALTER TABLE "AnswerKey" DROP COLUMN "examId";
 
 CREATE UNIQUE INDEX "ExamVariant_examId_testCode_key" ON "ExamVariant"("examId", "testCode");

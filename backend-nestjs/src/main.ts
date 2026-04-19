@@ -22,12 +22,13 @@ async function bootstrap() {
   app.enableCors();
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('Edu Scan Backend API')
+    .setTitle('Tài liệu API Edu Scan Backend')
     .setDescription(
       [
-        'OpenAPI specification for the Edu Scan NestJS backend.',
-        'Success responses are wrapped as { message, statusCode, data } by the global response interceptor.',
-        'Error responses are normalized as { statusCode, timestamp, path, message, error } by the global exception filter.',
+        'Tài liệu OpenAPI cho backend NestJS của hệ thống Edu Scan.',
+        'Mọi response thành công được chuẩn hóa theo dạng `{ message, statusCode, data }` bởi global response interceptor.',
+        'Mọi response lỗi được chuẩn hóa theo dạng `{ statusCode, timestamp, path, message, error }` bởi global exception filter.',
+        'Các endpoint có biểu tượng ổ khóa yêu cầu JWT Bearer access token lấy từ endpoint `POST /auth/login`.',
       ].join('\n\n'),
     )
     .setVersion('1.0.0')
@@ -36,23 +37,24 @@ async function bootstrap() {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        description: 'Paste access token issued by POST /auth/login.',
+        description:
+          'Dán access token JWT được cấp từ endpoint POST /auth/login để thử các endpoint cần xác thực.',
       },
       'bearer',
     )
-    .addTag('auth', 'Authentication and token refresh flows')
-    .addTag('users', 'Admin-only user management')
-    .addTag('classes', 'Teacher-managed class roster operations')
-    .addTag('exams', 'Teacher-managed exams, variants, and answer keys')
-    .addTag('questions', 'Teacher question bank management')
+    .addTag('auth', 'Xác thực đăng nhập và làm mới token')
+    .addTag('users', 'Quản trị người dùng dành cho ADMIN')
+    .addTag('classes', 'Quản lý lớp học, danh sách học sinh và mã tham gia lớp')
+    .addTag('exams', 'Quản lý đề thi, mã đề, đáp án và sơ đồ câu hỏi')
+    .addTag('questions', 'Ngân hàng câu hỏi của giáo viên')
     .addTag(
       'submissions',
-      'Submission review, progress, and override operations',
+      'Tra cứu bài làm, tiến độ làm bài và override thủ công',
     )
-    .addTag('omr', 'OMR batch upload and result inspection')
-    .addTag('remarks', 'Student remark requests and teacher review workflow')
-    .addTag('reports', 'Teacher export endpoints for class reports')
-    .addTag('assignments', 'Assignment creation, submission, and grading')
+    .addTag('omr', 'Tải lên batch OMR, chấm bài và xem kết quả xử lý')
+    .addTag('remarks', 'Yêu cầu phúc khảo của học sinh và quy trình duyệt')
+    .addTag('reports', 'Xuất báo cáo lớp học cho giáo viên')
+    .addTag('assignments', 'Quản lý bài tập, nộp bài và chấm điểm')
     .build();
 
   const openApiDocument = SwaggerModule.createDocument(app, swaggerConfig, {
@@ -66,7 +68,7 @@ async function bootstrap() {
   );
 
   SwaggerModule.setup('api/docs', app, openApiDocument, {
-    customSiteTitle: 'Edu Scan API Docs',
+    customSiteTitle: 'Swagger UI - Edu Scan Backend',
     swaggerOptions: {
       persistAuthorization: true,
       displayRequestDuration: true,

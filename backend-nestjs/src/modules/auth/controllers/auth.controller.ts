@@ -26,14 +26,14 @@ export class AuthController {
 
   @Post('login')
   @ApiPublicOperation({
-    summary: 'Dang nhap bang email va password',
+    summary: 'Đăng nhập bằng email và mật khẩu',
     notes:
-      'Public endpoint. Tra ve access token JWT Bearer va refresh token de su dung cho cac endpoint protected.',
+      'Endpoint công khai. Trả về access token JWT Bearer và refresh token để gọi các endpoint cần xác thực.',
   })
   @ApiBody({ type: LoginDto })
   @ApiWrappedOkResponse({
     type: AuthTokensResponseDto,
-    description: 'Dang nhap thanh cong.',
+    description: 'Đăng nhập thành công và trả về bộ token xác thực.',
   })
   @ApiStandardErrorResponses(400, 401, 500)
   async login(@Body() loginDto: LoginDto) {
@@ -43,17 +43,18 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt-refresh'))
   @Post('refresh')
   @ApiPublicOperation({
-    summary: 'Lam moi access token bang refresh token',
+    summary: 'Làm mới access token bằng refresh token',
     notes:
-      'Endpoint nay duoc bao ve boi refresh token trong body request, khong su dung Bearer access token.',
+      'Endpoint này xác thực bằng refresh token trong body request, không dùng Bearer access token ở header Authorization.',
   })
   @ApiBody({ type: RefreshTokenDto })
   @ApiWrappedOkResponse({
     type: AuthTokensResponseDto,
-    description: 'Lam moi token thanh cong.',
+    description: 'Làm mới token thành công và trả về bộ token mới.',
   })
   @ApiUnauthorizedResponse({
-    description: 'Refresh token khong hop le hoac het han.',
+    description:
+      'Refresh token không hợp lệ, không khớp người dùng hoặc đã hết hạn.',
   })
   @ApiStandardErrorResponses(400, 401, 500)
   async refresh(

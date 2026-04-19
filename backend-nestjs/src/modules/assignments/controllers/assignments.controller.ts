@@ -46,13 +46,15 @@ export class AssignmentsController {
   @Post()
   @Roles(Role.TEACHER)
   @ApiBearerOperation({
-    summary: 'Tao assignment moi',
+    summary: 'Tạo bài tập mới',
     roles: [Role.TEACHER],
+    notes:
+      'Giáo viên tạo bài tập, hạn nộp và cấu hình chấm điểm cho học sinh trong lớp.',
   })
   @ApiBody({ type: CreateAssignmentDto })
   @ApiWrappedCreatedResponse({
     type: AssignmentResponseDto,
-    description: 'Tao assignment thanh cong.',
+    description: 'Tạo bài tập thành công.',
   })
   @ApiStandardErrorResponses(400, 401, 403, 500)
   create(@Body() dto: CreateAssignmentDto, @Req() req: AssignmentRequest) {
@@ -62,15 +64,15 @@ export class AssignmentsController {
   @Get()
   @Roles(Role.TEACHER, Role.STUDENT)
   @ApiBearerOperation({
-    summary: 'Lay danh sach assignment theo vai tro hien tai',
+    summary: 'Lấy danh sách bài tập theo vai trò hiện tại',
     roles: [Role.TEACHER, Role.STUDENT],
     notes:
-      'TEACHER nhan danh sach assignment cua minh kem _count.submits. STUDENT nhan assignment duoc giao kem submits cua chinh minh.',
+      'TEACHER nhận danh sách bài tập mình tạo kèm thống kê số lượt nộp. STUDENT nhận danh sách bài tập được giao kèm bài nộp của chính mình nếu đã nộp.',
   })
   @ApiWrappedOkResponse({
     type: AssignmentResponseDto,
     isArray: true,
-    description: 'Lay danh sach assignment thanh cong.',
+    description: 'Lấy danh sách bài tập thành công.',
   })
   @ApiStandardErrorResponses(401, 403, 500)
   findAll(@Req() req: AssignmentRequest) {
@@ -83,14 +85,16 @@ export class AssignmentsController {
   @Get(':id/submits')
   @Roles(Role.TEACHER)
   @ApiBearerOperation({
-    summary: 'Lay danh sach bai nop cua assignment',
+    summary: 'Lấy danh sách bài nộp của bài tập',
     roles: [Role.TEACHER],
+    notes:
+      'Giáo viên dùng endpoint này để xem toàn bộ bài nộp thuộc một bài tập cụ thể.',
   })
-  @ApiParam({ name: 'id', description: 'Assignment id', format: 'uuid' })
+  @ApiParam({ name: 'id', description: 'ID bài tập', format: 'uuid' })
   @ApiWrappedOkResponse({
     type: AssignmentSubmitResponseDto,
     isArray: true,
-    description: 'Lay danh sach bai nop thanh cong.',
+    description: 'Lấy danh sách bài nộp thành công.',
   })
   @ApiStandardErrorResponses(401, 403, 404, 500)
   getSubmits(@Param('id') id: string, @Req() req: AssignmentRequest) {
@@ -100,14 +104,16 @@ export class AssignmentsController {
   @Post(':id/submits')
   @Roles(Role.STUDENT)
   @ApiBearerOperation({
-    summary: 'Hoc sinh nop bai assignment',
+    summary: 'Học sinh nộp bài tập',
     roles: [Role.STUDENT],
+    notes:
+      'Học sinh nộp bài cho đúng bài tập theo `id`. Dữ liệu nộp phải tuân theo cấu trúc của `SubmitAssignmentDto`.',
   })
-  @ApiParam({ name: 'id', description: 'Assignment id', format: 'uuid' })
+  @ApiParam({ name: 'id', description: 'ID bài tập', format: 'uuid' })
   @ApiBody({ type: SubmitAssignmentDto })
   @ApiWrappedCreatedResponse({
     type: AssignmentSubmitResponseDto,
-    description: 'Nop bai assignment thanh cong.',
+    description: 'Nộp bài tập thành công.',
   })
   @ApiStandardErrorResponses(400, 401, 403, 404, 500)
   submit(
@@ -121,13 +127,13 @@ export class AssignmentsController {
   @Get(':id/submits/me')
   @Roles(Role.STUDENT)
   @ApiBearerOperation({
-    summary: 'Lay bai nop cua hoc sinh hien tai cho assignment',
+    summary: 'Lấy bài nộp của học sinh hiện tại cho bài tập',
     roles: [Role.STUDENT],
   })
-  @ApiParam({ name: 'id', description: 'Assignment id', format: 'uuid' })
+  @ApiParam({ name: 'id', description: 'ID bài tập', format: 'uuid' })
   @ApiWrappedOkResponse({
     type: AssignmentSubmitResponseDto,
-    description: 'Lay bai nop cua hoc sinh thanh cong.',
+    description: 'Lấy bài nộp của học sinh thành công.',
   })
   @ApiStandardErrorResponses(401, 403, 404, 500)
   getMySubmit(@Param('id') id: string, @Req() req: AssignmentRequest) {
@@ -137,19 +143,21 @@ export class AssignmentsController {
   @Patch(':id/submits/:submitId/grade')
   @Roles(Role.TEACHER)
   @ApiBearerOperation({
-    summary: 'Cham diem bai nop assignment',
+    summary: 'Chấm điểm bài nộp',
     roles: [Role.TEACHER],
+    notes:
+      'Giáo viên cập nhật điểm và nhận xét cho một bài nộp cụ thể của học sinh.',
   })
-  @ApiParam({ name: 'id', description: 'Assignment id', format: 'uuid' })
+  @ApiParam({ name: 'id', description: 'ID bài tập', format: 'uuid' })
   @ApiParam({
     name: 'submitId',
-    description: 'Assignment submit id',
+    description: 'ID bài nộp',
     format: 'uuid',
   })
   @ApiBody({ type: GradeSubmitDto })
   @ApiWrappedOkResponse({
     type: AssignmentSubmitResponseDto,
-    description: 'Cham diem bai nop thanh cong.',
+    description: 'Chấm điểm bài nộp thành công.',
   })
   @ApiStandardErrorResponses(400, 401, 403, 404, 500)
   grade(

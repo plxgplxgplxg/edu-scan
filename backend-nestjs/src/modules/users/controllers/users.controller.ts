@@ -36,14 +36,15 @@ export class UsersController {
 
   @Get()
   @ApiBearerOperation({
-    summary: 'Lay danh sach nguoi dung',
+    summary: 'Lấy danh sách người dùng',
     roles: [Role.ADMIN],
-    notes: 'Chi ADMIN duoc xem danh sach tai khoan va trang thai kich hoat.',
+    notes:
+      'Chỉ ADMIN được phép xem toàn bộ tài khoản cùng vai trò, mã học sinh và trạng thái kích hoạt hiện tại.',
   })
   @ApiWrappedOkResponse({
     type: UserResponseDto,
     isArray: true,
-    description: 'Lay danh sach nguoi dung thanh cong.',
+    description: 'Lấy danh sách người dùng thành công.',
   })
   @ApiStandardErrorResponses(401, 403, 500)
   async listUsers(@CurrentUser() currentUser: AuthenticatedUser) {
@@ -53,13 +54,15 @@ export class UsersController {
 
   @Get(':id')
   @ApiBearerOperation({
-    summary: 'Lay chi tiet nguoi dung theo id',
+    summary: 'Lấy chi tiết người dùng theo ID',
     roles: [Role.ADMIN],
+    notes:
+      'Dùng để tra cứu chi tiết một tài khoản cụ thể theo khóa định danh UUID.',
   })
-  @ApiParam({ name: 'id', description: 'User id', format: 'uuid' })
+  @ApiParam({ name: 'id', description: 'ID người dùng', format: 'uuid' })
   @ApiWrappedOkResponse({
     type: UserResponseDto,
-    description: 'Lay chi tiet nguoi dung thanh cong.',
+    description: 'Lấy chi tiết người dùng thành công.',
   })
   @ApiStandardErrorResponses(401, 403, 404, 500)
   async getUserById(
@@ -72,15 +75,15 @@ export class UsersController {
 
   @Post()
   @ApiBearerOperation({
-    summary: 'Tao nguoi dung moi',
+    summary: 'Tạo người dùng mới',
     roles: [Role.ADMIN],
     notes:
-      'ADMIN co the tao ADMIN/TEACHER/STUDENT. studentCode bat buoc khi role la STUDENT.',
+      'ADMIN có thể tạo tài khoản ADMIN, TEACHER hoặc STUDENT. `studentCode` là bắt buộc khi role là STUDENT.',
   })
   @ApiBody({ type: CreateUserDto })
   @ApiWrappedCreatedResponse({
     type: UserResponseDto,
-    description: 'Tao nguoi dung thanh cong.',
+    description: 'Tạo người dùng thành công.',
   })
   @ApiStandardErrorResponses(400, 401, 403, 409, 500)
   async createUser(
@@ -93,16 +96,16 @@ export class UsersController {
 
   @Patch(':id')
   @ApiBearerOperation({
-    summary: 'Cap nhat thong tin nguoi dung',
+    summary: 'Cập nhật thông tin người dùng',
     roles: [Role.ADMIN],
     notes:
-      'ADMIN co the doi role, thong tin tai khoan va trang thai kich hoat. studentCode phai hop le neu user la STUDENT.',
+      'ADMIN có thể đổi vai trò, thông tin tài khoản và trạng thái kích hoạt. `studentCode` phải hợp lệ nếu tài khoản là STUDENT.',
   })
-  @ApiParam({ name: 'id', description: 'User id', format: 'uuid' })
+  @ApiParam({ name: 'id', description: 'ID người dùng', format: 'uuid' })
   @ApiBody({ type: UpdateUserDto })
   @ApiWrappedOkResponse({
     type: UserResponseDto,
-    description: 'Cap nhat nguoi dung thanh cong.',
+    description: 'Cập nhật người dùng thành công.',
   })
   @ApiStandardErrorResponses(400, 401, 403, 404, 409, 500)
   async updateUser(
@@ -116,15 +119,15 @@ export class UsersController {
 
   @Delete(':id')
   @ApiBearerOperation({
-    summary: 'Vo hieu hoa tai khoan nguoi dung',
+    summary: 'Vô hiệu hóa tài khoản người dùng',
     roles: [Role.ADMIN],
     notes:
-      'Business logic hien tai la soft-delete bang cach dat isActive = false.',
+      'Business logic hiện tại là soft-delete: tài khoản không bị xóa cứng mà được cập nhật `isActive = false`.',
   })
-  @ApiParam({ name: 'id', description: 'User id', format: 'uuid' })
+  @ApiParam({ name: 'id', description: 'ID người dùng', format: 'uuid' })
   @ApiWrappedOkResponse({
     type: UserResponseDto,
-    description: 'Vo hieu hoa nguoi dung thanh cong.',
+    description: 'Vô hiệu hóa người dùng thành công.',
   })
   @ApiStandardErrorResponses(400, 401, 403, 404, 500)
   async deleteUser(

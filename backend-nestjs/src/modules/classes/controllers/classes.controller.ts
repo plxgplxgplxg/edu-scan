@@ -37,13 +37,15 @@ export class ClassesController {
   @Post()
   @Roles(Role.TEACHER)
   @ApiBearerOperation({
-    summary: 'Tao lop hoc moi',
+    summary: 'Tạo lớp học mới',
     roles: [Role.TEACHER],
+    notes:
+      'Giáo viên tạo lớp học mới và hệ thống sinh mã lớp để học sinh tham gia.',
   })
   @ApiBody({ type: CreateClassDto })
   @ApiWrappedCreatedResponse({
     type: ClassResponseDto,
-    description: 'Tao lop hoc thanh cong.',
+    description: 'Tạo lớp học thành công.',
   })
   @ApiStandardErrorResponses(400, 401, 403, 500)
   async createClass(
@@ -57,13 +59,13 @@ export class ClassesController {
   @Get('my')
   @Roles(Role.TEACHER)
   @ApiBearerOperation({
-    summary: 'Lay danh sach lop hoc cua giao vien hien tai',
+    summary: 'Lấy danh sách lớp học của giáo viên hiện tại',
     roles: [Role.TEACHER],
   })
   @ApiWrappedOkResponse({
     type: ClassResponseDto,
     isArray: true,
-    description: 'Lay danh sach lop hoc thanh cong.',
+    description: 'Lấy danh sách lớp học thành công.',
   })
   @ApiStandardErrorResponses(401, 403, 500)
   async getMyClasses(@CurrentUser() currentUser: AuthenticatedUser) {
@@ -74,13 +76,15 @@ export class ClassesController {
   @Get(':id')
   @Roles(Role.TEACHER)
   @ApiBearerOperation({
-    summary: 'Lay chi tiet lop hoc theo id',
+    summary: 'Lấy chi tiết lớp học theo ID',
     roles: [Role.TEACHER],
+    notes:
+      'Trả về thông tin lớp, giáo viên phụ trách và danh sách học sinh đã ghi danh.',
   })
-  @ApiParam({ name: 'id', description: 'Class id', format: 'uuid' })
+  @ApiParam({ name: 'id', description: 'ID lớp học', format: 'uuid' })
   @ApiWrappedOkResponse({
     type: ClassResponseDto,
-    description: 'Lay chi tiet lop hoc thanh cong.',
+    description: 'Lấy chi tiết lớp học thành công.',
   })
   @ApiStandardErrorResponses(401, 403, 404, 500)
   async getClassById(
@@ -94,14 +98,14 @@ export class ClassesController {
   @Patch(':id')
   @Roles(Role.TEACHER)
   @ApiBearerOperation({
-    summary: 'Cap nhat thong tin lop hoc',
+    summary: 'Cập nhật thông tin lớp học',
     roles: [Role.TEACHER],
   })
-  @ApiParam({ name: 'id', description: 'Class id', format: 'uuid' })
+  @ApiParam({ name: 'id', description: 'ID lớp học', format: 'uuid' })
   @ApiBody({ type: UpdateClassDto })
   @ApiWrappedOkResponse({
     type: ClassResponseDto,
-    description: 'Cap nhat lop hoc thanh cong.',
+    description: 'Cập nhật lớp học thành công.',
   })
   @ApiStandardErrorResponses(400, 401, 403, 404, 500)
   async updateClass(
@@ -120,16 +124,16 @@ export class ClassesController {
   @Post(':id/students')
   @Roles(Role.TEACHER)
   @ApiBearerOperation({
-    summary: 'Them hoc sinh vao lop hoc',
+    summary: 'Thêm học sinh vào lớp học',
     roles: [Role.TEACHER],
     notes:
-      'Hoc sinh co the duoc xac dinh bang email, studentId hoac studentCode. Chi can mot identifier hop le.',
+      'Học sinh có thể được xác định bằng `email`, `studentId` hoặc `studentCode`. Chỉ cần cung cấp một định danh hợp lệ.',
   })
-  @ApiParam({ name: 'id', description: 'Class id', format: 'uuid' })
+  @ApiParam({ name: 'id', description: 'ID lớp học', format: 'uuid' })
   @ApiBody({ type: AddStudentDto })
   @ApiWrappedOkResponse({
     type: ClassResponseDto,
-    description: 'Them hoc sinh vao lop thanh cong.',
+    description: 'Thêm học sinh vào lớp thành công.',
   })
   @ApiStandardErrorResponses(400, 401, 403, 404, 500)
   async addStudentToClass(
@@ -148,14 +152,14 @@ export class ClassesController {
   @Delete(':id/students/:studentId')
   @Roles(Role.TEACHER)
   @ApiBearerOperation({
-    summary: 'Xoa hoc sinh khoi lop hoc',
+    summary: 'Xóa học sinh khỏi lớp học',
     roles: [Role.TEACHER],
   })
-  @ApiParam({ name: 'id', description: 'Class id', format: 'uuid' })
-  @ApiParam({ name: 'studentId', description: 'Student id', format: 'uuid' })
+  @ApiParam({ name: 'id', description: 'ID lớp học', format: 'uuid' })
+  @ApiParam({ name: 'studentId', description: 'ID học sinh', format: 'uuid' })
   @ApiWrappedOkResponse({
     type: ClassResponseDto,
-    description: 'Xoa hoc sinh khoi lop thanh cong.',
+    description: 'Xóa học sinh khỏi lớp thành công.',
   })
   @ApiStandardErrorResponses(400, 401, 403, 404, 500)
   async removeStudentFromClass(
@@ -174,13 +178,15 @@ export class ClassesController {
   @Post('join/:code')
   @Roles(Role.STUDENT)
   @ApiBearerOperation({
-    summary: 'Hoc sinh tham gia lop bang ma code',
+    summary: 'Học sinh tham gia lớp bằng mã lớp',
     roles: [Role.STUDENT],
+    notes:
+      'Mã lớp được giáo viên tạo sẵn. Học sinh sẽ được thêm vào danh sách ghi danh của lớp nếu mã hợp lệ.',
   })
-  @ApiParam({ name: 'code', description: 'Class join code' })
+  @ApiParam({ name: 'code', description: 'Mã tham gia lớp học' })
   @ApiWrappedOkResponse({
     type: ClassResponseDto,
-    description: 'Tham gia lop thanh cong.',
+    description: 'Tham gia lớp thành công.',
   })
   @ApiStandardErrorResponses(400, 401, 403, 404, 500)
   async joinClassByCode(

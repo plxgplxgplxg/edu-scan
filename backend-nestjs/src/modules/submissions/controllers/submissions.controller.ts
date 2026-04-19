@@ -45,10 +45,10 @@ export class SubmissionsController {
   @Get()
   @Roles(Role.ADMIN, Role.TEACHER)
   @ApiBearerOperation({
-    summary: 'Lay danh sach submissions',
+    summary: 'Lấy danh sách bài làm',
     roles: [Role.ADMIN, Role.TEACHER],
     notes:
-      'TEACHER va ADMIN co the loc theo examId, classId, batchId, studentId, status va testCodeResolutionStatus.',
+      'ADMIN và TEACHER có thể lọc theo `examId`, `classId`, `batchId`, `studentId`, `status` và `testCodeResolutionStatus` để phục vụ tra cứu và rà soát chấm bài.',
   })
   @ApiQuery({ name: 'examId', required: false, type: String })
   @ApiQuery({ name: 'classId', required: false, type: String })
@@ -63,7 +63,7 @@ export class SubmissionsController {
   @ApiWrappedOkResponse({
     type: SubmissionListItemResponseDto,
     isArray: true,
-    description: 'Lay danh sach submissions thanh cong.',
+    description: 'Lấy danh sách bài làm thành công.',
   })
   @ApiStandardErrorResponses(401, 403, 500)
   findAll(@Query() query: GetSubmissionsQueryDto) {
@@ -73,8 +73,10 @@ export class SubmissionsController {
   @Get('me')
   @Roles(Role.STUDENT)
   @ApiBearerOperation({
-    summary: 'Lay danh sach submissions cua sinh vien hien tai',
+    summary: 'Lấy danh sách bài làm của học sinh hiện tại',
     roles: [Role.STUDENT],
+    notes:
+      'Chỉ trả về bài làm của chính học sinh đang đăng nhập, có hỗ trợ phân trang và lọc theo lớp, đề thi, trạng thái.',
   })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -83,7 +85,7 @@ export class SubmissionsController {
   @ApiQuery({ name: 'status', required: false, enum: SubmissionStatus })
   @ApiWrappedOkResponse({
     type: StudentSubmissionListResponseDto,
-    description: 'Lay danh sach submissions cua sinh vien thanh cong.',
+    description: 'Lấy danh sách bài làm của học sinh thành công.',
   })
   @ApiStandardErrorResponses(400, 401, 403, 500)
   findMySubmissions(
@@ -96,13 +98,15 @@ export class SubmissionsController {
   @Get('me/progress')
   @Roles(Role.STUDENT)
   @ApiBearerOperation({
-    summary: 'Lay du lieu tien do diem so cua sinh vien hien tai',
+    summary: 'Lấy dữ liệu tiến độ điểm số của học sinh hiện tại',
     roles: [Role.STUDENT],
+    notes:
+      'Dùng để hiển thị tiến độ làm bài và tổng quan kết quả theo thời gian của học sinh hiện tại.',
   })
   @ApiWrappedOkResponse({
     type: StudentSubmissionProgressItemResponseDto,
     isArray: true,
-    description: 'Lay du lieu tien do thanh cong.',
+    description: 'Lấy dữ liệu tiến độ thành công.',
   })
   @ApiStandardErrorResponses(401, 403, 500)
   getMyProgress(@Request() req: AuthenticatedRequest) {
@@ -112,15 +116,15 @@ export class SubmissionsController {
   @Get(':id')
   @Roles(Role.ADMIN, Role.TEACHER, Role.STUDENT)
   @ApiBearerOperation({
-    summary: 'Lay chi tiet submission',
+    summary: 'Lấy chi tiết bài làm',
     roles: [Role.ADMIN, Role.TEACHER, Role.STUDENT],
     notes:
-      'STUDENT chi xem duoc submission cua chinh minh. TEACHER/ADMIN xem duoc du lieu chi tiet kem score da tinh.',
+      'STUDENT chỉ xem được bài làm của chính mình. TEACHER và ADMIN được xem dữ liệu chi tiết, đáp án từng câu và điểm đã tính.',
   })
-  @ApiParam({ name: 'id', description: 'Submission id', format: 'uuid' })
+  @ApiParam({ name: 'id', description: 'ID bài làm', format: 'uuid' })
   @ApiWrappedOkResponse({
     type: SubmissionDetailResponseDto,
-    description: 'Lay chi tiet submission thanh cong.',
+    description: 'Lấy chi tiết bài làm thành công.',
   })
   @ApiStandardErrorResponses(401, 403, 404, 500)
   findOne(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
@@ -130,16 +134,16 @@ export class SubmissionsController {
   @Patch(':id/override')
   @Roles(Role.ADMIN, Role.TEACHER)
   @ApiBearerOperation({
-    summary: 'Override thu cong submission',
+    summary: 'Override thủ công bài làm',
     roles: [Role.ADMIN, Role.TEACHER],
     notes:
-      'Cho phep cap nhat studentCode, resolvedTestCode, resolvedVariantId va finalAnswer theo tung question.',
+      'Cho phép cập nhật `studentCode`, `resolvedTestCode`, `resolvedVariantId` và `finalAnswer` theo từng câu khi cần xử lý ngoại lệ thủ công.',
   })
-  @ApiParam({ name: 'id', description: 'Submission id', format: 'uuid' })
+  @ApiParam({ name: 'id', description: 'ID bài làm', format: 'uuid' })
   @ApiBody({ type: UpdateSubmissionOverrideDto })
   @ApiWrappedOkResponse({
     type: SubmissionDetailResponseDto,
-    description: 'Override submission thanh cong.',
+    description: 'Override bài làm thành công.',
   })
   @ApiStandardErrorResponses(400, 401, 403, 404, 500)
   manualOverride(

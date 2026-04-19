@@ -3,11 +3,45 @@
 require('dotenv/config');
 
 const { spawnSync } = require('node:child_process');
+const { existsSync, readdirSync } = require('node:fs');
+const { join } = require('node:path');
 const { URL } = require('node:url');
 const { Client } = require('pg');
 
 function quoteIdentifier(identifier) {
   return `"${identifier.replace(/"/g, '""')}"`;
+}
+
+function runPrismaCommand(args, label) {
+  console.log(`[prepare-db] Running ${label}`);
+
+  const result = spawnSync(
+    process.platform === 'win32' ? 'npx.cmd' : 'npx',
+    ['prisma', ...args],
+    {
+      stdio: 'inherit',
+      env: process.env,
+      cwd: process.cwd(),
+    },
+  );
+
+  if (result.status !== 0) {
+    process.exit(result.status ?? 1);
+  }
+}
+
+function hasMigrationFiles() {
+  const migrationsDir = join(process.cwd(), 'prisma', 'migrations');
+
+  if (!existsSync(migrationsDir)) {
+    return false;
+  }
+
+  return readdirSync(migrationsDir, { withFileTypes: true }).some(
+    (entry) =>
+      entry.isDirectory() &&
+      existsSync(join(migrationsDir, entry.name, 'migration.sql')),
+  );
 }
 
 async function ensureDatabaseExists() {
@@ -48,27 +82,18 @@ async function ensureDatabaseExists() {
   }
 }
 
-function pushSchema() {
-  console.log('[prepare-db] Running prisma db push');
-
-  const result = spawnSync(
-    process.platform === 'win32' ? 'npx.cmd' : 'npx',
-    ['prisma', 'db', 'push'],
-    {
-      stdio: 'inherit',
-      env: process.env,
-      cwd: process.cwd(),
-    },
-  );
-
-  if (result.status !== 0) {
-    process.exit(result.status ?? 1);
+function prepareSchema() {
+  if (hasMigrationFiles()) {
+    runPrismaCommand(['migrate', 'deploy'], 'prisma migrate deploy');
+    return;
   }
+
+  runPrismaCommand(['db', 'push'], 'prisma db push');
 }
 
 async function main() {
   await ensureDatabaseExists();
-  pushSchema();
+  prepareSchema();
 }
 
 main().catch((error) => {

@@ -37,15 +37,15 @@ export class ExamsController {
 
   @Post()
   @ApiBearerOperation({
-    summary: 'Tao de thi moi',
+    summary: 'Tạo đề thi mới',
     roles: [Role.TEACHER],
     notes:
-      'Teacher tao exam, gan cho class, variants, answer keys va question map. Khong duoc gui ca answerKeys legacy va variants cung luc.',
+      'Giáo viên tạo đề thi, gán cho lớp học, cấu hình mã đề, đáp án và sơ đồ câu hỏi. Không được gửi đồng thời `answerKeys` legacy và `variants` trong cùng request.',
   })
   @ApiBody({ type: CreateExamDto })
   @ApiWrappedCreatedResponse({
     type: ExamResponseDto,
-    description: 'Tao de thi thanh cong.',
+    description: 'Tạo đề thi thành công.',
   })
   @ApiStandardErrorResponses(400, 401, 403, 500)
   async createExam(
@@ -57,13 +57,13 @@ export class ExamsController {
 
   @Get('my')
   @ApiBearerOperation({
-    summary: 'Lay danh sach de thi cua giao vien',
+    summary: 'Lấy danh sách đề thi của giáo viên',
     roles: [Role.TEACHER],
   })
   @ApiWrappedOkResponse({
     type: ExamResponseDto,
     isArray: true,
-    description: 'Lay danh sach de thi thanh cong.',
+    description: 'Lấy danh sách đề thi thành công.',
   })
   @ApiStandardErrorResponses(401, 403, 500)
   async listTeacherExams(@CurrentUser('id') teacherId: string) {
@@ -72,13 +72,15 @@ export class ExamsController {
 
   @Get(':id')
   @ApiBearerOperation({
-    summary: 'Lay chi tiet de thi',
+    summary: 'Lấy chi tiết đề thi',
     roles: [Role.TEACHER],
+    notes:
+      'Trả về đầy đủ thông tin đề thi, bao gồm lớp áp dụng, danh sách mã đề, đáp án và question map nếu có.',
   })
-  @ApiParam({ name: 'id', description: 'Exam id', format: 'uuid' })
+  @ApiParam({ name: 'id', description: 'ID đề thi', format: 'uuid' })
   @ApiWrappedOkResponse({
     type: ExamResponseDto,
-    description: 'Lay chi tiet de thi thanh cong.',
+    description: 'Lấy chi tiết đề thi thành công.',
   })
   @ApiStandardErrorResponses(401, 403, 404, 500)
   async getTeacherExamById(
@@ -90,16 +92,16 @@ export class ExamsController {
 
   @Patch(':id')
   @ApiBearerOperation({
-    summary: 'Cap nhat de thi',
+    summary: 'Cập nhật đề thi',
     roles: [Role.TEACHER],
     notes:
-      'Neu exam da co submissions hoac OMR batches, service se chan thay doi classIds, variants, answer keys va questionMap.',
+      'Nếu đề thi đã có submissions hoặc OMR batches, service sẽ chặn thay đổi `classIds`, `variants`, `answerKeys` và `questionMap` để bảo toàn dữ liệu chấm bài.',
   })
-  @ApiParam({ name: 'id', description: 'Exam id', format: 'uuid' })
+  @ApiParam({ name: 'id', description: 'ID đề thi', format: 'uuid' })
   @ApiBody({ type: UpdateExamDto })
   @ApiWrappedOkResponse({
     type: ExamResponseDto,
-    description: 'Cap nhat de thi thanh cong.',
+    description: 'Cập nhật đề thi thành công.',
   })
   @ApiStandardErrorResponses(400, 401, 403, 404, 500)
   async updateExam(
@@ -112,14 +114,15 @@ export class ExamsController {
 
   @Delete(':id')
   @ApiBearerOperation({
-    summary: 'Xoa de thi',
+    summary: 'Xóa đề thi',
     roles: [Role.TEACHER],
-    notes: 'Chi xoa duoc khi exam chua co submissions va chua co OMR batches.',
+    notes:
+      'Chỉ được xóa khi đề thi chưa phát sinh submissions và chưa có batch OMR liên quan.',
   })
-  @ApiParam({ name: 'id', description: 'Exam id', format: 'uuid' })
+  @ApiParam({ name: 'id', description: 'ID đề thi', format: 'uuid' })
   @ApiWrappedOkResponse({
     type: DeleteExamResponseDto,
-    description: 'Xoa de thi thanh cong.',
+    description: 'Xóa đề thi thành công.',
   })
   @ApiStandardErrorResponses(400, 401, 403, 404, 500)
   async deleteExam(

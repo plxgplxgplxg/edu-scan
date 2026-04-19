@@ -27,7 +27,7 @@ import { RemarksService } from '../services/remarks.service';
 
 type RemarkRequestUser = {
   id: string;
-  role: Role;
+  role?: Role;
 };
 
 type RemarkRequest = {
@@ -43,13 +43,15 @@ export class RemarksController {
   @Post()
   @Roles(Role.STUDENT)
   @ApiBearerOperation({
-    summary: 'Sinh vien tao yeu cau phuc khao',
+    summary: 'Học sinh tạo yêu cầu phúc khảo',
     roles: [Role.STUDENT],
+    notes:
+      'Học sinh gửi yêu cầu phúc khảo cho một bài làm hoặc một câu hỏi cụ thể theo dữ liệu trong request body.',
   })
   @ApiBody({ type: CreateRemarkRequestDto })
   @ApiWrappedCreatedResponse({
     type: RemarkResponseDto,
-    description: 'Tao yeu cau phuc khao thanh cong.',
+    description: 'Tạo yêu cầu phúc khảo thành công.',
   })
   @ApiStandardErrorResponses(400, 401, 403, 404, 409, 500)
   async createRemark(
@@ -58,7 +60,7 @@ export class RemarksController {
   ) {
     const data = await this.remarksService.createRemark(req.user.id, dto);
     return {
-      message: 'Remark request created successfully',
+      message: 'Tạo yêu cầu phúc khảo thành công',
       data,
     };
   }
@@ -66,20 +68,27 @@ export class RemarksController {
   @Get()
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiBearerOperation({
-    summary: 'Lay danh sach yeu cau phuc khao',
+    summary: 'Lấy danh sách yêu cầu phúc khảo',
     roles: [Role.TEACHER, Role.ADMIN],
+    notes:
+      'TEACHER và ADMIN có thể lọc theo trạng thái để theo dõi luồng xử lý phúc khảo.',
   })
-  @ApiQuery({ name: 'status', required: false, enum: RemarkStatus })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: RemarkStatus,
+    description: 'Lọc yêu cầu phúc khảo theo trạng thái xử lý',
+  })
   @ApiWrappedOkResponse({
     type: RemarkResponseDto,
     isArray: true,
-    description: 'Lay danh sach yeu cau phuc khao thanh cong.',
+    description: 'Lấy danh sách yêu cầu phúc khảo thành công.',
   })
   @ApiStandardErrorResponses(401, 403, 500)
   async getRemarks(@Query('status') status?: RemarkStatus) {
     const data = await this.remarksService.getRemarks(status);
     return {
-      message: 'Remarks retrieved successfully',
+      message: 'Lấy danh sách yêu cầu phúc khảo thành công',
       data,
     };
   }
@@ -87,16 +96,20 @@ export class RemarksController {
   @Patch(':id/review')
   @Roles(Role.TEACHER, Role.ADMIN)
   @ApiBearerOperation({
-    summary: 'Review yeu cau phuc khao',
+    summary: 'Duyệt yêu cầu phúc khảo',
     roles: [Role.TEACHER, Role.ADMIN],
     notes:
-      'APPROVED yeu cau finalAnswer. REJECTED yeu cau teacherComment theo business rule hien tai.',
+      'Khi `APPROVED` cần cung cấp `finalAnswer`. Khi `REJECTED` cần cung cấp `teacherComment` theo business rule hiện tại.',
   })
-  @ApiParam({ name: 'id', description: 'Remark request id', format: 'uuid' })
+  @ApiParam({
+    name: 'id',
+    description: 'ID yêu cầu phúc khảo',
+    format: 'uuid',
+  })
   @ApiBody({ type: ReviewRemarkRequestDto })
   @ApiWrappedOkResponse({
     type: RemarkResponseDto,
-    description: 'Review yeu cau phuc khao thanh cong.',
+    description: 'Duyệt yêu cầu phúc khảo thành công.',
   })
   @ApiStandardErrorResponses(400, 401, 403, 404, 409, 500)
   async reviewRemark(
@@ -106,7 +119,7 @@ export class RemarksController {
   ) {
     const data = await this.remarksService.reviewRemark(id, req.user.id, dto);
     return {
-      message: 'Remark reviewed successfully',
+      message: 'Duyệt yêu cầu phúc khảo thành công',
       data,
     };
   }

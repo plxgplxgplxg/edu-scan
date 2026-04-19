@@ -40,20 +40,29 @@ export class ReportsController {
 
   @Get('class/:classId')
   @ApiBearerOperation({
-    summary: 'Export bao cao lop hoc',
+    summary: 'Xuất báo cáo lớp học',
     roles: [Role.TEACHER],
     notes:
-      'Tra ve file nhi phan. format=xlsx cho Excel, format=pdf cho PDF. scope hien tai chi ho tro all trong DTO.',
+      'Trả về file nhị phân trực tiếp trong response. `format=xlsx` để xuất Excel, `format=pdf` để xuất PDF. `scope` hiện tại chỉ hỗ trợ `all` theo logic hiện có.',
   })
-  @ApiParam({ name: 'classId', description: 'Class id', format: 'uuid' })
-  @ApiQuery({ name: 'format', enum: ReportFormat })
-  @ApiQuery({ name: 'scope', required: false, enum: ReportScope })
+  @ApiParam({ name: 'classId', description: 'ID lớp học', format: 'uuid' })
+  @ApiQuery({
+    name: 'format',
+    enum: ReportFormat,
+    description: 'Định dạng file báo cáo cần xuất',
+  })
+  @ApiQuery({
+    name: 'scope',
+    required: false,
+    enum: ReportScope,
+    description: 'Phạm vi dữ liệu báo cáo',
+  })
   @ApiProduces(
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     'application/pdf',
   )
   @ApiOkResponse({
-    description: 'File report duoc tra ve truc tiep trong response body.',
+    description: 'File báo cáo được trả về trực tiếp trong response body.',
     schema: {
       type: 'string',
       format: 'binary',
