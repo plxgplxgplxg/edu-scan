@@ -1,9 +1,9 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { ReportsService } from './reports.service';
+import { ReportsService } from '../../../../../src/modules/reports/services/reports.service';
 import {
   ReportFormat,
   ReportScope,
-} from '../dto/request/export-class-report-query.dto';
+} from '../../../../../src/modules/reports/dto/request/export-class-report-query.dto';
 
 describe('ReportsService', () => {
   const repository = {

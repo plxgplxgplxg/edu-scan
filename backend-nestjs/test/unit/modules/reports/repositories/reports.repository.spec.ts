@@ -1,4 +1,4 @@
-import { ReportsRepository } from './reports.repository';
+import { ReportsRepository } from '../../../../../src/modules/reports/repositories/reports.repository';
 
 describe('ReportsRepository', () => {
   const prisma = {

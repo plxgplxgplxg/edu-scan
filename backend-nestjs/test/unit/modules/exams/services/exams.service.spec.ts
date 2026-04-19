@@ -1,7 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { AnswerChoice } from '@prisma/client';
-import { CreateExamDto } from '../dto/request/create-exam.dto';
-import { ExamsService } from './exams.service';
+import { CreateExamDto } from '../../../../../src/modules/exams/dto/request/create-exam.dto';
+import { ExamsService } from '../../../../../src/modules/exams/services/exams.service';
 
 describe('ExamsService', () => {
   let service: ExamsService;

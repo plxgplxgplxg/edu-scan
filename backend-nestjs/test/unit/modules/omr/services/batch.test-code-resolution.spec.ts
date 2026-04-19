@@ -3,8 +3,8 @@ import {
   SubmissionStatus,
   TestCodeResolutionStatus,
 } from '@prisma/client';
-import { BatchService } from './batch.service';
-import { GradingService } from './grading.service';
+import { BatchService } from '../../../../../src/modules/omr/services/batch.service';
+import { GradingService } from '../../../../../src/modules/omr/services/grading.service';
 
 describe('BatchService', () => {
   const omrRepository = {
@@ -18,10 +18,17 @@ describe('BatchService', () => {
   };
 
   let service: BatchService;
+  const eventEmitter = {
+    emit: jest.fn(),
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new BatchService(omrRepository as never, new GradingService());
+    service = new BatchService(
+      omrRepository as never,
+      new GradingService(),
+      eventEmitter as never,
+    );
   });
 
   it('returns test-code resolution fields in batch list', async () => {

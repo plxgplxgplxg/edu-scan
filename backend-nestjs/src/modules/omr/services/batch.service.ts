@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   OmrBatchStatus,
   SubmissionStatus,
@@ -25,6 +26,7 @@ export class BatchService {
   constructor(
     private readonly omrRepository: OmrRepository,
     private readonly gradingService: GradingService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async createBatch(examId: string, teacherId: string, totalFiles: number) {
@@ -59,11 +61,15 @@ export class BatchService {
     warpOverlayUrl?: string | null;
     answerScoresUrl?: string | null;
   }) {
-    return this.omrRepository.recordSuccessfulFile(data);
+    const batch = await this.omrRepository.recordSuccessfulFile(data);
+    this.emitBatchCompletionIfFinal(batch);
+    return batch;
   }
 
   async recordFailedFile(batchId: string) {
-    return this.omrRepository.recordFailedFile(batchId);
+    const batch = await this.omrRepository.recordFailedFile(batchId);
+    this.emitBatchCompletionIfFinal(batch);
+    return batch;
   }
 
   async getTeacherBatchById(
@@ -233,5 +239,32 @@ export class BatchService {
         reviewReason,
       };
     });
+  }
+
+  private emitBatchCompletionIfFinal(batch: {
+    id?: string;
+    status?: OmrBatchStatus;
+    processedFiles?: number;
+    totalFiles?: number;
+  }) {
+    if (
+      !batch?.id ||
+      batch.processedFiles === undefined ||
+      batch.totalFiles === undefined ||
+      batch.processedFiles < batch.totalFiles
+    ) {
+      return;
+    }
+
+    if (
+      batch.status === OmrBatchStatus.COMPLETED ||
+      batch.status === OmrBatchStatus.PARTIAL_FAILED ||
+      batch.status === OmrBatchStatus.FAILED
+    ) {
+      this.eventEmitter.emit('omr.batch.completed', {
+        batchId: batch.id,
+        status: batch.status,
+      });
+    }
   }
 }

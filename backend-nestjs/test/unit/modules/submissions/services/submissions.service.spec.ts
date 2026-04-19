@@ -3,6 +3,7 @@ import { SubmissionsService } from '../../../../../src/modules/submissions/servi
 import { SubmissionsRepository } from '../../../../../src/modules/submissions/repositories/submissions.repository';
 import { PrismaService } from '../../../../../src/database/prisma.service';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   Role,
   SubmissionStatus,
@@ -34,9 +35,23 @@ describe('SubmissionsService', () => {
         {
           provide: PrismaService,
           useValue: {
+            $transaction: jest.fn(),
             user: {
               findUnique: jest.fn(),
             },
+            submission: {
+              update: jest.fn(),
+            },
+            submissionDetail: {
+              update: jest.fn(),
+              findUnique: jest.fn(),
+            },
+          },
+        },
+        {
+          provide: EventEmitter2,
+          useValue: {
+            emit: jest.fn(),
           },
         },
       ],
@@ -117,16 +132,22 @@ describe('SubmissionsService', () => {
       jest
         .spyOn(repository, 'findOneWithDetails')
         .mockResolvedValue(mockSubmission as any);
-      const updateSpy = jest.spyOn(repository, 'update').mockResolvedValue({
-        ...mockSubmission,
-        status: SubmissionStatus.GRADED,
-      } as any);
-      const findUniqueSpy = jest
-        .spyOn(prisma.user, 'findUnique')
-        .mockResolvedValue({ id: 'student-1' } as any);
-      const updateSubmissionDetailSpy = jest.spyOn(
-        repository,
-        'updateSubmissionDetail',
+      const tx = {
+        user: {
+          findUnique: jest.fn().mockResolvedValue({ id: 'student-1' }),
+        },
+        submission: {
+          update: jest.fn().mockResolvedValue({
+            ...mockSubmission,
+            status: SubmissionStatus.GRADED,
+          }),
+        },
+        submissionDetail: {
+          update: jest.fn().mockResolvedValue({}),
+        },
+      };
+      (prisma.$transaction as jest.Mock).mockImplementation(async (cb: any) =>
+        cb(tx),
       );
 
       const dto = {
@@ -137,21 +158,61 @@ describe('SubmissionsService', () => {
 
       await service.manualOverride('sub-1', dto);
 
-      expect(findUniqueSpy).toHaveBeenCalledWith({
+      expect(tx.user.findUnique).toHaveBeenCalledWith({
         where: { studentCode: '12345' },
       });
-      expect(updateSpy).toHaveBeenCalledWith(
-        'sub-1',
-        expect.objectContaining({
+      expect(tx.submission.update).toHaveBeenCalledWith({
+        where: { id: 'sub-1' },
+        data: expect.objectContaining({
           studentId: 'student-1',
           studentCode: '12345',
           resolvedVariantId: 'variant-1',
           testCodeResolutionStatus: TestCodeResolutionStatus.MATCHED,
           status: SubmissionStatus.GRADED,
         }),
-      );
-      expect(updateSubmissionDetailSpy).toHaveBeenCalledWith('sub-1', 1, {
-        finalAnswer: AnswerChoice.B,
+      });
+      expect(tx.submissionDetail.update).toHaveBeenCalledWith({
+        where: {
+          submissionId_questionNumber: {
+            submissionId: 'sub-1',
+            questionNumber: 1,
+          },
+        },
+        data: {
+          finalAnswer: AnswerChoice.B,
+        },
+      });
+    });
+  });
+
+  describe('handleRemarkApprovedEvent', () => {
+    it('updates submission detail and emits update event', async () => {
+      const emitSpy = jest.spyOn(
+        (service as any).eventEmitter,
+        'emit',
+      ) as jest.Mock;
+      jest.spyOn(prisma.submissionDetail, 'findUnique').mockResolvedValue({
+        id: 'detail-1',
+        submissionId: 'sub-1',
+        questionNumber: 2,
+      } as any);
+      const updateSpy = jest
+        .spyOn(repository, 'updateSubmissionDetail')
+        .mockResolvedValue({} as any);
+
+      await service.handleRemarkApprovedEvent({
+        submissionDetailId: 'detail-1',
+        finalAnswer: AnswerChoice.C,
+      } as any);
+
+      expect(updateSpy).toHaveBeenCalledWith('sub-1', 2, {
+        finalAnswer: AnswerChoice.C,
+      });
+      expect(emitSpy).toHaveBeenCalledWith('submission.detail.updated', {
+        submissionId: 'sub-1',
+        questionNumber: 2,
+        finalAnswer: AnswerChoice.C,
+        source: 'remark.approved',
       });
     });
   });

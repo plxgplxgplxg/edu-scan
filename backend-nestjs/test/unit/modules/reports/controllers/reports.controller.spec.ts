@@ -1,10 +1,10 @@
 import { StreamableFile } from '@nestjs/common';
 import { Role } from '@prisma/client';
-import { ReportsController } from './reports.controller';
+import { ReportsController } from '../../../../../src/modules/reports/controllers/reports.controller';
 import {
   ReportFormat,
   ReportScope,
-} from '../dto/request/export-class-report-query.dto';
+} from '../../../../../src/modules/reports/dto/request/export-class-report-query.dto';
 
 describe('ReportsController', () => {
   const reportsService = {

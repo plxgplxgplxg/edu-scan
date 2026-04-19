@@ -19,10 +19,17 @@ describe('BatchService', () => {
     calculateScore: jest.fn(),
     summarizeSubmission: jest.fn(),
   };
+  const eventEmitter = {
+    emit: jest.fn(),
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new BatchService(omrRepository as never, gradingService as never);
+    service = new BatchService(
+      omrRepository as never,
+      gradingService as never,
+      eventEmitter as never,
+    );
     gradingService.calculateScore.mockReturnValue(7.5);
     gradingService.summarizeSubmission.mockReturnValue({
       score: 7.5,
@@ -105,7 +112,35 @@ describe('BatchService', () => {
       detectedAnswer: AnswerChoice.B,
       finalAnswer: AnswerChoice.C,
       isCorrect: false,
-      reviewReason: null,
+      reviewReason: undefined,
+    });
+  });
+
+  it('emits completion event when successful file completes batch', async () => {
+    omrRepository.recordSuccessfulFile.mockResolvedValue({
+      id: 'batch-1',
+      status: OmrBatchStatus.COMPLETED,
+      processedFiles: 1,
+      totalFiles: 1,
+    });
+
+    await service.recordSuccessfulFile({
+      batchId: 'batch-1',
+      examId: 'exam-1',
+      resolvedVariantId: null,
+      imageUrl: 'https://example.com/file.png',
+      studentId: null,
+      studentCode: null,
+      detectedTestId: null,
+      resolvedTestCode: null,
+      testCodeResolutionStatus: 'MISSING_TEST_CODE' as any,
+      status: SubmissionStatus.NEEDS_REVIEW,
+      details: [],
+    });
+
+    expect(eventEmitter.emit).toHaveBeenCalledWith('omr.batch.completed', {
+      batchId: 'batch-1',
+      status: OmrBatchStatus.COMPLETED,
     });
   });
 });
@@ -145,6 +180,12 @@ function buildBatch() {
           id: 'student-1',
           name: 'Student One',
           studentCode: 'STU-001',
+        },
+        resolvedVariant: {
+          answerKeys: [
+            { questionNumber: 1, correctAnswer: AnswerChoice.A },
+            { questionNumber: 2, correctAnswer: AnswerChoice.B },
+          ],
         },
         details: [
           {

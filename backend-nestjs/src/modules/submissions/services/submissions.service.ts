@@ -17,11 +17,13 @@ import {
 import { PrismaService } from '../../../database/prisma.service';
 import { OnEvent } from '@nestjs/event-emitter';
 import { RemarkApprovedEvent } from '../../remarks/events/remark-approved.event';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 @Injectable()
 export class SubmissionsService {
   constructor(
     private readonly submissionsRepository: SubmissionsRepository,
     private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async findAll(query: GetSubmissionsQueryDto) {
@@ -155,44 +157,55 @@ export class SubmissionsService {
       throw new NotFoundException('Submission not found');
     }
 
-    const updateData: Prisma.SubmissionUncheckedUpdateInput = {};
-    if (dto.studentCode) {
-      updateData.studentCode = dto.studentCode;
-      const student = await this.prisma.user.findUnique({
-        where: { studentCode: dto.studentCode },
+    await this.prisma.$transaction(async (tx) => {
+      const updateData: Prisma.SubmissionUncheckedUpdateInput = {};
+
+      if (dto.studentCode) {
+        updateData.studentCode = dto.studentCode;
+        const student = await tx.user.findUnique({
+          where: { studentCode: dto.studentCode },
+        });
+        if (student) {
+          updateData.studentId = student.id;
+        }
+      }
+
+      if (dto.resolvedTestCode) {
+        updateData.resolvedTestCode = dto.resolvedTestCode;
+      }
+      if (dto.resolvedVariantId) {
+        updateData.resolvedVariantId = dto.resolvedVariantId;
+      }
+
+      if (dto.resolvedTestCode || dto.resolvedVariantId) {
+        updateData.testCodeResolutionStatus = TestCodeResolutionStatus.MATCHED;
+      }
+
+      updateData.status = SubmissionStatus.GRADED;
+      updateData.reviewedAt = new Date();
+
+      await tx.submission.update({
+        where: { id },
+        data: updateData,
       });
-      if (student) {
-        updateData.studentId = student.id;
+
+      if (dto.details && dto.details.length > 0) {
+        for (const detail of dto.details) {
+          await tx.submissionDetail.update({
+            where: {
+              submissionId_questionNumber: {
+                submissionId: id,
+                questionNumber: detail.questionNumber,
+              },
+            },
+            data: {
+              finalAnswer: detail.finalAnswer,
+            },
+          });
+        }
       }
-    }
+    });
 
-    if (dto.resolvedTestCode)
-      updateData.resolvedTestCode = dto.resolvedTestCode;
-    if (dto.resolvedVariantId)
-      updateData.resolvedVariantId = dto.resolvedVariantId;
-
-    if (dto.resolvedTestCode || dto.resolvedVariantId) {
-      updateData.testCodeResolutionStatus = TestCodeResolutionStatus.MATCHED;
-    }
-
-    updateData.status = SubmissionStatus.GRADED;
-    updateData.reviewedAt = new Date();
-
-    await this.submissionsRepository.update(id, updateData);
-
-    if (dto.details && dto.details.length > 0) {
-      for (const detail of dto.details) {
-        await this.submissionsRepository.updateSubmissionDetail(
-          id,
-          detail.questionNumber,
-          {
-            finalAnswer: detail.finalAnswer,
-          },
-        );
-      }
-    }
-
-    // Optionally refetch or return the updated data directly
     return this.submissionsRepository.findOneWithDetails(id);
   }
 
@@ -208,11 +221,12 @@ export class SubmissionsService {
         detail.questionNumber,
         { finalAnswer: payload.finalAnswer },
       );
-      // Wait, updateSubmissionDetail takes (id, questionNumber, data)
-      // where id is submissionId.
-      // After updating, since the score is dynamically calculated in findOneWithScore currently (it seems the system calculates on the fly based on answer keys), we don't need to save score to the Submission table. Wait, grade is in Submission if there's a score field... Wait, the schema "Submission" doesn't have a score field.
-      // Let's check the schema for Submission. Schema: Submission has no score field. Score calculation is dynamic.
-      // So updating the detail is enough!
+      this.eventEmitter.emit('submission.detail.updated', {
+        submissionId: detail.submissionId,
+        questionNumber: detail.questionNumber,
+        finalAnswer: payload.finalAnswer,
+        source: 'remark.approved',
+      });
     }
   }
 

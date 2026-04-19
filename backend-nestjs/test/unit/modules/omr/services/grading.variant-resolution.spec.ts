@@ -1,5 +1,5 @@
 import { AnswerChoice, TestCodeResolutionStatus } from '@prisma/client';
-import { GradingService } from './grading.service';
+import { GradingService } from '../../../../../src/modules/omr/services/grading.service';
 
 describe('GradingService', () => {
   const service = new GradingService();

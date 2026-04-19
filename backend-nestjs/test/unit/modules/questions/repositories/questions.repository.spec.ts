@@ -1,5 +1,5 @@
 import { AnswerChoice, Difficulty } from '@prisma/client';
-import { QuestionsRepository } from './questions.repository';
+import { QuestionsRepository } from '../../../../../src/modules/questions/repositories/questions.repository';
 
 describe('QuestionsRepository', () => {
   const tx = {

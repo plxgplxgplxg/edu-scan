@@ -4,10 +4,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AnswerChoice, Difficulty } from '@prisma/client';
-import { CreateQuestionDto } from '../dtos/create-question.dto';
-import { QueryQuestionsDto } from '../dtos/query-questions.dto';
-import { UpdateQuestionDto } from '../dtos/update-question.dto';
-import { QuestionsService } from './questions.service';
+import { CreateQuestionDto } from '../../../../../src/modules/questions/dtos/create-question.dto';
+import { QueryQuestionsDto } from '../../../../../src/modules/questions/dtos/query-questions.dto';
+import { UpdateQuestionDto } from '../../../../../src/modules/questions/dtos/update-question.dto';
+import { QuestionsService } from '../../../../../src/modules/questions/services/questions.service';
 
 describe('QuestionsService', () => {
   let service: QuestionsService;
