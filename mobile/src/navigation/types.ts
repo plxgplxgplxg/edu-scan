@@ -1,0 +1,23 @@
+export type RootStackParamList = {
+  Login: undefined;
+  TeacherDashboard: undefined;
+  TeacherClasses: undefined;
+  TeacherClassDetail: { classId?: string } | undefined;
+  TeacherExams: undefined;
+  TeacherOMR: undefined;
+  TeacherAssignments: undefined;
+  TeacherRemarks: undefined;
+  TeacherQuestions: undefined;
+  StudentDashboard: undefined;
+  StudentClasses: undefined;
+  StudentClassDetail: { classId?: string } | undefined;
+  StudentResults: undefined;
+  StudentResultDetail: { resultId?: string } | undefined;
+  StudentAssignments: undefined;
+  StudentRemarks: undefined;
+  StudentProgress: undefined;
+  AdminDashboard: undefined;
+  AdminUsers: undefined;
+  SharedProfile: undefined;
+  SharedNotifications: undefined;
+};
