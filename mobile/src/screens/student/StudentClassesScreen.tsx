@@ -8,16 +8,19 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { studentClasses } from '../../api/mockData';
+import { joinClassByCode, listAssignments, listClasses, mapClassSummary } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
 import { BottomNav } from '../../components/BottomNav';
 import { ModalSheet } from '../../components/ModalSheet';
 import { PageHeader } from '../../components/PageHeader';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { ErrorState, LoadingState } from '../../components/RequestState';
 import { Screen } from '../../components/Screen';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { TextInputField } from '../../components/TextInputField';
+import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { useAppContent } from '../../hooks/useAppContent';
+import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
@@ -27,9 +30,28 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export function StudentClassesScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
+  const { accessToken, role } = useAuth();
   const layout = useResponsiveLayout();
   const [showJoin, setShowJoin] = useState(false);
   const [classCode, setClassCode] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const { data, loading, error, reload } = useAsyncResource(
+    async () => {
+      if (!accessToken) {
+        return [];
+      }
+
+      const [classes, assignments] = await Promise.all([
+        listClasses(accessToken),
+        listAssignments(accessToken),
+      ]);
+
+      return classes.map((item) => mapClassSummary(item, assignments, 'STUDENT'));
+    },
+    [accessToken],
+  );
+  const studentClasses = data ?? [];
 
   return (
     <Screen>
@@ -55,6 +77,15 @@ export function StudentClassesScreen() {
           },
         ]}
       >
+        {loading ? <LoadingState label={content.common.labels.loading} /> : null}
+        {error ? (
+          <ErrorState
+            message={error}
+            retryLabel={content.common.buttons.confirm}
+            onRetry={reload}
+          />
+        ) : null}
+
         {studentClasses.map(item => (
           <Pressable
             key={item.id}
@@ -130,12 +161,38 @@ export function StudentClassesScreen() {
         />
         <PrimaryButton
           label={content.common.buttons.joinClass}
-          onPress={() => setShowJoin(false)}
+          loading={submitting}
+          onPress={async () => {
+            if (!accessToken) {
+              return;
+            }
+
+            setSubmitting(true);
+            setSubmitError(null);
+
+            try {
+              await joinClassByCode(accessToken, classCode.trim());
+              setClassCode('');
+              setShowJoin(false);
+              await reload();
+            } catch (err) {
+              setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+            } finally {
+              setSubmitting(false);
+            }
+          }}
           style={styles.sheetButton}
         />
+        {submitError ? (
+          <AppText variant="caption" color={palette.destructive}>
+            {submitError}
+          </AppText>
+        ) : null}
       </ModalSheet>
 
-      <BottomNav role="STUDENT" currentScreen="StudentClasses" currentModule="classes" />
+      {role ? (
+        <BottomNav role={role} currentScreen="StudentClasses" currentModule="classes" />
+      ) : null}
     </Screen>
   );
 }

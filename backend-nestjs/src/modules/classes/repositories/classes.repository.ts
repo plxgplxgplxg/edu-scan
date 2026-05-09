@@ -55,11 +55,59 @@ export class ClassesRepository {
     });
   }
 
+  async listStudentClasses(studentId: string) {
+    return this.prismaService.class.findMany({
+      where: {
+        enrollments: {
+          some: {
+            studentId,
+          },
+        },
+      },
+      include: classDetailInclude,
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  async listAllClasses() {
+    return this.prismaService.class.findMany({
+      include: classDetailInclude,
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
   async findTeacherClassById(classId: string, teacherId: string) {
     return this.prismaService.class.findFirst({
       where: {
         id: classId,
         teacherId,
+      },
+      include: classDetailInclude,
+    });
+  }
+
+  async findStudentClassById(classId: string, studentId: string) {
+    return this.prismaService.class.findFirst({
+      where: {
+        id: classId,
+        enrollments: {
+          some: {
+            studentId,
+          },
+        },
+      },
+      include: classDetailInclude,
+    });
+  }
+
+  async findClassById(classId: string) {
+    return this.prismaService.class.findUnique({
+      where: {
+        id: classId,
       },
       include: classDetailInclude,
     });

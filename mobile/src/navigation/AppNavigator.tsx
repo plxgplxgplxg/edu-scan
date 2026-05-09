@@ -69,6 +69,7 @@ export function AppNavigator() {
             <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
             <Stack.Screen name="AdminUsers" component={AdminUsersScreen} />
             <Stack.Screen name="TeacherClasses" component={TeacherClassesScreen} />
+            <Stack.Screen name="TeacherClassDetail" component={TeacherClassDetailScreen} />
           </>
         ) : null}
 

@@ -32,11 +32,36 @@ export const SubmissionsSwagger = {
         notes:
           'Quản trị viên và giáo viên có thể lọc theo `examId`, `classId`, `batchId`, `studentId`, `status` và `testCodeResolutionStatus` để phục vụ tra cứu và rà soát chấm bài.',
       }),
-      ApiQuery({ name: 'examId', required: false, type: String, description: 'Lọc theo ID đề thi' }),
-      ApiQuery({ name: 'classId', required: false, type: String, description: 'Lọc theo ID lớp học' }),
-      ApiQuery({ name: 'batchId', required: false, type: String, description: 'Lọc theo ID batch OMR' }),
-      ApiQuery({ name: 'studentId', required: false, type: String, description: 'Lọc theo ID học sinh' }),
-      ApiQuery({ name: 'status', required: false, enum: SubmissionStatus, description: 'Lọc theo trạng thái bài làm' }),
+      ApiQuery({
+        name: 'examId',
+        required: false,
+        type: String,
+        description: 'Lọc theo ID đề thi',
+      }),
+      ApiQuery({
+        name: 'classId',
+        required: false,
+        type: String,
+        description: 'Lọc theo ID lớp học',
+      }),
+      ApiQuery({
+        name: 'batchId',
+        required: false,
+        type: String,
+        description: 'Lọc theo ID batch OMR',
+      }),
+      ApiQuery({
+        name: 'studentId',
+        required: false,
+        type: String,
+        description: 'Lọc theo ID học sinh',
+      }),
+      ApiQuery({
+        name: 'status',
+        required: false,
+        enum: SubmissionStatus,
+        description: 'Lọc theo trạng thái bài làm',
+      }),
       ApiQuery({
         name: 'testCodeResolutionStatus',
         required: false,
@@ -59,11 +84,36 @@ export const SubmissionsSwagger = {
         notes:
           'Chỉ trả về bài làm của chính học sinh đang đăng nhập, có hỗ trợ phân trang và lọc theo lớp, đề thi, trạng thái.',
       }),
-      ApiQuery({ name: 'page', required: false, type: Number, description: 'Số trang hiện tại' }),
-      ApiQuery({ name: 'limit', required: false, type: Number, description: 'Số lượng phần tử trên mỗi trang' }),
-      ApiQuery({ name: 'classId', required: false, type: String, description: 'Lọc theo ID lớp học' }),
-      ApiQuery({ name: 'examId', required: false, type: String, description: 'Lọc theo ID đề thi' }),
-      ApiQuery({ name: 'status', required: false, enum: SubmissionStatus, description: 'Lọc theo trạng thái bài làm' }),
+      ApiQuery({
+        name: 'page',
+        required: false,
+        type: Number,
+        description: 'Số trang hiện tại',
+      }),
+      ApiQuery({
+        name: 'limit',
+        required: false,
+        type: Number,
+        description: 'Số lượng phần tử trên mỗi trang',
+      }),
+      ApiQuery({
+        name: 'classId',
+        required: false,
+        type: String,
+        description: 'Lọc theo ID lớp học',
+      }),
+      ApiQuery({
+        name: 'examId',
+        required: false,
+        type: String,
+        description: 'Lọc theo ID đề thi',
+      }),
+      ApiQuery({
+        name: 'status',
+        required: false,
+        enum: SubmissionStatus,
+        description: 'Lọc theo trạng thái bài làm',
+      }),
       ApiWrappedOkResponse({
         type: StudentSubmissionListResponseDto,
         description: 'Lấy danh sách bài làm của học sinh thành công.',

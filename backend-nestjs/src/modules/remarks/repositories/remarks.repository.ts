@@ -62,6 +62,27 @@ export class RemarksRepository {
     });
   }
 
+  async findStudentRemarks(studentId: string) {
+    return this.prisma.remarkRequest.findMany({
+      where: {
+        studentId,
+      },
+      include: {
+        submissionDetail: {
+          include: {
+            submission: {
+              include: {
+                exam: { select: { title: true } },
+                student: { select: { name: true, studentCode: true } },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async findRemarkById(id: string) {
     return this.prisma.remarkRequest.findUnique({
       where: { id },

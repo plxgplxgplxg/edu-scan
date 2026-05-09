@@ -10,6 +10,12 @@ export class AuthUserDto {
 
   @ApiProperty({ enum: Role, enumName: 'Role' })
   role!: Role;
+
+  @ApiProperty({ example: 'Nguyen Van A' })
+  name!: string;
+
+  @ApiProperty({ example: 'STU001', nullable: true })
+  studentCode!: string | null;
 }
 
 export class AuthTokensResponseDto {

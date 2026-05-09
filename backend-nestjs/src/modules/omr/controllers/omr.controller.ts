@@ -25,6 +25,12 @@ import { OmrService } from '../services/omr.service';
 export class OmrController {
   constructor(private readonly omrService: OmrService) {}
 
+  @Get('batches')
+  @OmrSwagger.LayDanhSachBatchOmr()
+  async listTeacherBatches(@CurrentUser('id') teacherId: string) {
+    return this.omrService.listTeacherBatches(teacherId);
+  }
+
   @Post('upload')
   @UseInterceptors(FilesInterceptor('files', 50))
   @OmrSwagger.TaiLenBatchOmr()

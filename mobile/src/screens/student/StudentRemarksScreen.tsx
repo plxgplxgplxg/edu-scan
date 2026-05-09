@@ -4,16 +4,24 @@ import { ArrowLeft, Plus } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { studentRemarks } from '../../api/mockData';
+import {
+  createRemark,
+  getSubmissionDetail,
+  listStudentRemarks,
+  mapRemarkSummary,
+} from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
 import { BottomNav } from '../../components/BottomNav';
 import { ModalSheet } from '../../components/ModalSheet';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { ErrorState, LoadingState } from '../../components/RequestState';
 import { Screen } from '../../components/Screen';
 import { StatusBadge } from '../../components/StatusBadge';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { TextInputField } from '../../components/TextInputField';
+import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { useAppContent } from '../../hooks/useAppContent';
+import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import { formatVietnameseDate } from '../../utils/format';
@@ -24,8 +32,28 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export function StudentRemarksScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
+  const { accessToken, role } = useAuth();
   const layout = useResponsiveLayout();
   const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState({
+    resultId: '',
+    questionNumber: '',
+    reason: '',
+  });
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const { data, loading, error, reload } = useAsyncResource(
+    async () => {
+      if (!accessToken) {
+        return [];
+      }
+
+      const remarks = await listStudentRemarks(accessToken);
+      return remarks.map(mapRemarkSummary);
+    },
+    [accessToken],
+  );
+  const studentRemarks = data ?? [];
 
   return (
     <Screen>
@@ -70,6 +98,14 @@ export function StudentRemarksScreen() {
           },
         ]}
       >
+        {loading ? <LoadingState label={content.common.labels.loading} /> : null}
+        {error ? (
+          <ErrorState
+            message={error}
+            retryLabel={content.common.buttons.confirm}
+            onRetry={reload}
+          />
+        ) : null}
         {studentRemarks.map(item => (
           <SurfaceCard key={item.id} style={styles.card}>
             <View style={[styles.rowBetween, layout.isCompact ? styles.rowWrap : null]}>
@@ -112,31 +148,75 @@ export function StudentRemarksScreen() {
         </AppText>
         <View style={styles.sheetBody}>
           <TextInputField
-            label={content.common.form.exam}
-            value=""
-            onChangeText={() => undefined}
-            placeholder={content.common.placeholders.examTitle}
+            label="Result ID"
+            value={form.resultId}
+            onChangeText={value => setForm((current) => ({ ...current, resultId: value }))}
+            placeholder="Nhập ID kết quả"
           />
           <TextInputField
             label={content.common.form.questionNumber}
-            value=""
-            onChangeText={() => undefined}
+            value={form.questionNumber}
+            onChangeText={value =>
+              setForm((current) => ({ ...current, questionNumber: value }))
+            }
             placeholder={content.common.placeholders.questionNumber}
           />
           <TextInputField
             label={content.common.form.reason}
-            value=""
-            onChangeText={() => undefined}
+            value={form.reason}
+            onChangeText={value => setForm((current) => ({ ...current, reason: value }))}
             placeholder={content.common.placeholders.remarkReason}
           />
           <PrimaryButton
             label={content.common.buttons.sendRequest}
-            onPress={() => setShowCreate(false)}
+            loading={submitting}
+            onPress={async () => {
+              if (!accessToken) {
+                return;
+              }
+
+              setSubmitting(true);
+              setSubmitError(null);
+
+              try {
+                const detail = await getSubmissionDetail(accessToken, form.resultId.trim());
+                const question = detail.details.find(
+                  (item) => item.questionNumber === Number(form.questionNumber),
+                );
+
+                if (!question) {
+                  throw new Error('Không tìm thấy câu hỏi trong bài làm');
+                }
+
+                await createRemark(accessToken, {
+                  submissionDetailId: question.id,
+                  reason: form.reason.trim(),
+                });
+                setShowCreate(false);
+                setForm({
+                  resultId: '',
+                  questionNumber: '',
+                  reason: '',
+                });
+                await reload();
+              } catch (err) {
+                setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+              } finally {
+                setSubmitting(false);
+              }
+            }}
           />
+          {submitError ? (
+            <AppText variant="caption" color={palette.destructive}>
+              {submitError}
+            </AppText>
+          ) : null}
         </View>
       </ModalSheet>
 
-      <BottomNav role="STUDENT" currentScreen="StudentRemarks" currentModule="remarks" />
+      {role ? (
+        <BottomNav role={role} currentScreen="StudentRemarks" currentModule="remarks" />
+      ) : null}
     </Screen>
   );
 }

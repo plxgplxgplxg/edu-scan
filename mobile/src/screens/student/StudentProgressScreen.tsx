@@ -4,14 +4,17 @@ import { Award, Target, TrendingUp } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { progressPoints } from '../../api/mockData';
+import { listStudentProgress, mapProgressPoint } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
 import { BottomNav } from '../../components/BottomNav';
 import { PageHeader } from '../../components/PageHeader';
+import { ErrorState, LoadingState } from '../../components/RequestState';
 import { Screen } from '../../components/Screen';
 import { SimpleLineChart } from '../../components/SimpleLineChart';
 import { SurfaceCard } from '../../components/SurfaceCard';
+import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { useAppContent } from '../../hooks/useAppContent';
+import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
@@ -21,21 +24,37 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export function StudentProgressScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
+  const { accessToken, role } = useAuth();
   const layout = useResponsiveLayout();
+  const { data, loading, error, reload } = useAsyncResource(
+    async () => {
+      if (!accessToken) {
+        return [];
+      }
+
+      const progress = await listStudentProgress(accessToken);
+      return progress.map(mapProgressPoint);
+    },
+    [accessToken],
+  );
+  const progressPoints = data ?? [];
+  const scores = progressPoints.map((point) => point.score);
+  const averageScore = scores.reduce((sum, score) => sum + score, 0) / Math.max(scores.length, 1);
+  const highestScore = scores.length ? Math.max(...scores) : 0;
 
   const summaryCards = [
     {
       key: 'average',
       icon: <TrendingUp size={18} color={palette.primary} />,
       label: content.student.progress.summaryAverage,
-      value: '7.8',
+      value: averageScore.toFixed(1),
       backgroundColor: '#EEF0FF',
     },
     {
       key: 'highest',
       icon: <Award size={18} color={palette.success} />,
       label: content.student.progress.summaryHighest,
-      value: '9.0',
+      value: highestScore.toFixed(1),
       backgroundColor: '#ECFDF5',
     },
     {
@@ -70,6 +89,14 @@ export function StudentProgressScreen() {
           },
         ]}
       >
+        {loading ? <LoadingState label={content.common.labels.loading} /> : null}
+        {error ? (
+          <ErrorState
+            message={error}
+            retryLabel={content.common.buttons.confirm}
+            onRetry={reload}
+          />
+        ) : null}
         {summaryCards.map(card => (
           <SurfaceCard key={card.key} style={[styles.summaryCard, { backgroundColor: card.backgroundColor }]}>
             {card.icon}
@@ -125,7 +152,9 @@ export function StudentProgressScreen() {
         ))}
       </View>
 
-      <BottomNav role="STUDENT" currentScreen="StudentProgress" currentModule="progress" />
+      {role ? (
+        <BottomNav role={role} currentScreen="StudentProgress" currentModule="progress" />
+      ) : null}
     </Screen>
   );
 }

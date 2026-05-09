@@ -98,6 +98,11 @@ export class BatchService {
     return this.toBatchResponseDto(teacherBatch);
   }
 
+  async listTeacherBatches(teacherId: string): Promise<OmrBatchResponseDto[]> {
+    const batches = await this.omrRepository.listTeacherBatches(teacherId);
+    return batches.map((batch) => this.toBatchResponseDto(batch));
+  }
+
   async getTeacherSubmissionById(
     submissionId: string,
     teacherId: string,
@@ -120,6 +125,7 @@ export class BatchService {
     return {
       id: batch.id,
       examId: batch.examId,
+      examTitle: batch.exam.title,
       teacherId: batch.teacherId,
       status: batch.status,
       totalFiles: batch.totalFiles,

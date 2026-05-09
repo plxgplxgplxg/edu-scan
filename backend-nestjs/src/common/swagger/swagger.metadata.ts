@@ -44,24 +44,28 @@ export const SWAGGER_GLOBAL_METADATA = {
     'Mỗi phân hệ có tài liệu Swagger riêng để người dùng tập trung vào đúng phạm vi chức năng cần tra cứu.',
 } as const;
 
-export const SWAGGER_MODULES_METADATA: Record<SwaggerModuleKey, SwaggerModuleMetadata> = {
+export const SWAGGER_MODULES_METADATA: Record<
+  SwaggerModuleKey,
+  SwaggerModuleMetadata
+> = {
   auth: {
     key: 'auth',
-    title: 'Phân hệ xác thực',
+    title: 'auth',
     description:
       'Tài liệu dành cho đăng nhập, làm mới token và các luồng xác thực người dùng.',
-    tagName: 'Xác thực',
-    tagDescription: 'Đăng nhập, làm mới token và các thao tác xác thực người dùng.',
+    tagName: 'auth',
+    tagDescription:
+      'Đăng nhập, làm mới token và các thao tác xác thực người dùng.',
     docsPath: '/api/docs/auth',
     jsonPath: '/api/docs-json/auth',
     exportFileName: 'openapi.auth.json',
   },
   users: {
     key: 'users',
-    title: 'Phân hệ người dùng',
+    title: 'users',
     description:
       'Tài liệu dành cho quản trị người dùng, bao gồm tạo mới, cập nhật, tra cứu và vô hiệu hóa tài khoản.',
-    tagName: 'Người dùng',
+    tagName: 'users',
     tagDescription: 'Quản trị tài khoản người dùng dành cho quản trị viên.',
     docsPath: '/api/docs/users',
     jsonPath: '/api/docs-json/users',
@@ -69,10 +73,10 @@ export const SWAGGER_MODULES_METADATA: Record<SwaggerModuleKey, SwaggerModuleMet
   },
   classes: {
     key: 'classes',
-    title: 'Phân hệ lớp học',
+    title: 'classes',
     description:
       'Tài liệu dành cho quản lý lớp học, danh sách học sinh và quy trình tham gia lớp.',
-    tagName: 'Lớp học',
+    tagName: 'classes',
     tagDescription: 'Quản lý lớp học, học sinh và mã tham gia lớp.',
     docsPath: '/api/docs/classes',
     jsonPath: '/api/docs-json/classes',
@@ -80,10 +84,10 @@ export const SWAGGER_MODULES_METADATA: Record<SwaggerModuleKey, SwaggerModuleMet
   },
   exams: {
     key: 'exams',
-    title: 'Phân hệ đề thi',
+    title: 'exams',
     description:
       'Tài liệu dành cho quản lý đề thi, mã đề, đáp án và cấu hình ánh xạ câu hỏi.',
-    tagName: 'Đề thi',
+    tagName: 'exams',
     tagDescription: 'Quản lý đề thi, mã đề, đáp án và sơ đồ câu hỏi.',
     docsPath: '/api/docs/exams',
     jsonPath: '/api/docs-json/exams',
@@ -91,10 +95,10 @@ export const SWAGGER_MODULES_METADATA: Record<SwaggerModuleKey, SwaggerModuleMet
   },
   questions: {
     key: 'questions',
-    title: 'Phân hệ câu hỏi',
+    title: 'questions',
     description:
       'Tài liệu dành cho ngân hàng câu hỏi của giáo viên, bao gồm tạo mới, lọc, cập nhật và xóa câu hỏi.',
-    tagName: 'Câu hỏi',
+    tagName: 'questions',
     tagDescription: 'Ngân hàng câu hỏi của giáo viên.',
     docsPath: '/api/docs/questions',
     jsonPath: '/api/docs-json/questions',
@@ -102,10 +106,10 @@ export const SWAGGER_MODULES_METADATA: Record<SwaggerModuleKey, SwaggerModuleMet
   },
   submissions: {
     key: 'submissions',
-    title: 'Phân hệ bài làm',
+    title: 'submissions',
     description:
       'Tài liệu dành cho tra cứu bài làm, theo dõi tiến độ và xử lý override thủ công.',
-    tagName: 'Bài làm',
+    tagName: 'submissions',
     tagDescription: 'Tra cứu bài làm, tiến độ làm bài và override thủ công.',
     docsPath: '/api/docs/submissions',
     jsonPath: '/api/docs-json/submissions',
@@ -113,10 +117,10 @@ export const SWAGGER_MODULES_METADATA: Record<SwaggerModuleKey, SwaggerModuleMet
   },
   assignments: {
     key: 'assignments',
-    title: 'Phân hệ bài tập',
+    title: 'assignments',
     description:
       'Tài liệu dành cho quản lý bài tập, nộp bài và chấm điểm giữa giáo viên và học sinh.',
-    tagName: 'Bài tập',
+    tagName: 'assignments',
     tagDescription: 'Quản lý bài tập, bài nộp và chấm điểm.',
     docsPath: '/api/docs/assignments',
     jsonPath: '/api/docs-json/assignments',
@@ -124,7 +128,7 @@ export const SWAGGER_MODULES_METADATA: Record<SwaggerModuleKey, SwaggerModuleMet
   },
   omr: {
     key: 'omr',
-    title: 'Phân hệ OMR',
+    title: 'omr',
     description:
       'Tài liệu dành cho tải lên batch ảnh OMR, theo dõi xử lý và xem chi tiết kết quả nhận dạng.',
     tagName: 'OMR',
@@ -135,10 +139,10 @@ export const SWAGGER_MODULES_METADATA: Record<SwaggerModuleKey, SwaggerModuleMet
   },
   remarks: {
     key: 'remarks',
-    title: 'Phân hệ phúc khảo',
+    title: 'remarks',
     description:
       'Tài liệu dành cho tạo yêu cầu phúc khảo và duyệt kết quả phúc khảo.',
-    tagName: 'Phúc khảo',
+    tagName: 'remarks',
     tagDescription: 'Yêu cầu phúc khảo của học sinh và quy trình duyệt.',
     docsPath: '/api/docs/remarks',
     jsonPath: '/api/docs-json/remarks',
@@ -146,10 +150,10 @@ export const SWAGGER_MODULES_METADATA: Record<SwaggerModuleKey, SwaggerModuleMet
   },
   reports: {
     key: 'reports',
-    title: 'Phân hệ báo cáo',
+    title: 'reports',
     description:
       'Tài liệu dành cho xuất báo cáo lớp học dưới dạng tệp Excel hoặc PDF.',
-    tagName: 'Báo cáo',
+    tagName: 'reports',
     tagDescription: 'Xuất báo cáo lớp học cho giáo viên.',
     docsPath: '/api/docs/reports',
     jsonPath: '/api/docs-json/reports',

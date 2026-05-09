@@ -4,17 +4,22 @@ import { contentByLanguage } from '../content';
 import { demoAccounts } from '../api/mockData';
 import type { AppContent } from '../content';
 import type { LanguageCode, UserRole } from '../types/app';
+import { login as loginRequest } from '../api/edu-scan';
 
 interface AuthState {
+  userId: string | null;
   role: UserRole | null;
   profileName: string;
   email: string;
+  studentCode: string | null;
+  accessToken: string | null;
+  refreshToken: string | null;
   language: LanguageCode;
 }
 
 interface AuthContextValue extends AuthState {
   content: AppContent;
-  login: (email: string) => UserRole;
+  login: (email: string, password: string) => Promise<UserRole>;
   loginAs: (role: UserRole) => void;
   logout: () => void;
   setLanguage: (language: LanguageCode) => void;
@@ -26,9 +31,13 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>({
+    userId: null,
     role: null,
     profileName: defaultAccount.profileName,
     email: defaultAccount.email,
+    studentCode: null,
+    accessToken: null,
+    refreshToken: null,
     language: 'vi',
   });
 
@@ -38,35 +47,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       ...state,
       content,
-      login: email => {
-        const normalized = email.toLowerCase();
-        const account =
-          demoAccounts.find(item => normalized.includes(item.role.toLowerCase())) ??
-          demoAccounts[0];
+      login: async (email, password) => {
+        const session = await loginRequest(email, password);
 
         setState(current => ({
           ...current,
-          role: account.role,
-          profileName: account.profileName,
-          email: email || account.email,
+          userId: session.user.id,
+          role: session.user.role,
+          profileName: session.user.name,
+          email: session.user.email,
+          studentCode: session.user.studentCode,
+          accessToken: session.accessToken,
+          refreshToken: session.refreshToken,
         }));
 
-        return account.role;
+        return session.user.role;
       },
       loginAs: role => {
         const account =
           demoAccounts.find(item => item.role === role) ?? demoAccounts[0];
         setState(current => ({
           ...current,
+          userId: null,
           role,
           profileName: account.profileName,
           email: account.email,
+          studentCode: null,
+          accessToken: null,
+          refreshToken: null,
         }));
       },
       logout: () => {
         setState(current => ({
           ...current,
+          userId: null,
           role: null,
+          studentCode: null,
+          accessToken: null,
+          refreshToken: null,
         }));
       },
       setLanguage: language => {

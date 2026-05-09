@@ -58,6 +58,17 @@ export class RemarksController {
     };
   }
 
+  @Get('me')
+  @Roles(Role.STUDENT)
+  @RemarksSwagger.LayDanhSachYeuCauPhucKhaoCuaToi()
+  async getMyRemarks(@Req() req: RemarkRequest) {
+    const data = await this.remarksService.getMyRemarks(req.user.id);
+    return {
+      message: 'Lấy danh sách yêu cầu phúc khảo của tôi thành công',
+      data,
+    };
+  }
+
   @Patch(':id/review')
   @Roles(Role.TEACHER, Role.ADMIN)
   @RemarksSwagger.DuyetYeuCauPhucKhao()

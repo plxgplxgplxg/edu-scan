@@ -8,18 +8,26 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { studentAssignments } from '../../api/mockData';
+import {
+  listAssignments,
+  listClasses,
+  mapStudentAssignmentSummary,
+  submitAssignment,
+} from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
 import { BottomNav } from '../../components/BottomNav';
 import { FilterChips } from '../../components/FilterChips';
 import { ModalSheet } from '../../components/ModalSheet';
 import { PageHeader } from '../../components/PageHeader';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { ErrorState, LoadingState } from '../../components/RequestState';
 import { Screen } from '../../components/Screen';
 import { StatusBadge } from '../../components/StatusBadge';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { TextInputField } from '../../components/TextInputField';
+import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { useAppContent } from '../../hooks/useAppContent';
+import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import { formatVietnameseDate, isExpired } from '../../utils/format';
@@ -31,10 +39,30 @@ type FilterKey = 'all' | 'pending' | 'overdue' | 'submitted';
 export function StudentAssignmentsScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
+  const { accessToken, role } = useAuth();
   const layout = useResponsiveLayout();
   const [filter, setFilter] = useState<FilterKey>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [fileUrl, setFileUrl] = useState('');
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const { data, loading, error, reload } = useAsyncResource(
+    async () => {
+      if (!accessToken) {
+        return [];
+      }
+
+      const [classes, assignments] = await Promise.all([
+        listClasses(accessToken),
+        listAssignments(accessToken),
+      ]);
+
+      const classMap = new Map(classes.map((item) => [item.id, item]));
+      return assignments.map((item) => mapStudentAssignmentSummary(item, classMap));
+    },
+    [accessToken],
+  );
+  const studentAssignments = data ?? [];
 
   const pendingCount = studentAssignments.filter(item => !item.submitted).length;
   const overdueCount = studentAssignments.filter(
@@ -80,6 +108,15 @@ export function StudentAssignmentsScreen() {
           },
         ]}
       >
+        {loading ? <LoadingState label={content.common.labels.loading} /> : null}
+        {error ? (
+          <ErrorState
+            message={error}
+            retryLabel={content.common.buttons.confirm}
+            onRetry={reload}
+          />
+        ) : null}
+
         <FilterChips
           value={filter}
           items={[
@@ -159,9 +196,39 @@ export function StudentAssignmentsScreen() {
           {content.common.messages.assignmentUploadHintAlt}
         </AppText>
         <PrimaryButton label={content.common.buttons.confirm} onPress={() => setSelectedId(null)} />
+        <PrimaryButton
+          label={content.common.buttons.submitAssignment}
+          loading={submitting}
+          onPress={async () => {
+            if (!accessToken || !selectedId) {
+              return;
+            }
+
+            setSubmitting(true);
+            setSubmitError(null);
+
+            try {
+              await submitAssignment(accessToken, selectedId, fileUrl.trim());
+              setSelectedId(null);
+              setFileUrl('');
+              await reload();
+            } catch (err) {
+              setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+            } finally {
+              setSubmitting(false);
+            }
+          }}
+        />
+        {submitError ? (
+          <AppText variant="caption" color={palette.destructive}>
+            {submitError}
+          </AppText>
+        ) : null}
       </ModalSheet>
 
-      <BottomNav role="STUDENT" currentScreen="StudentAssignments" currentModule="assignments" />
+      {role ? (
+        <BottomNav role={role} currentScreen="StudentAssignments" currentModule="assignments" />
+      ) : null}
     </Screen>
   );
 }

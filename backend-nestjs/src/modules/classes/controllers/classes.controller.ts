@@ -46,15 +46,23 @@ export class ClassesController {
     return this.classesService.listTeacherClasses(currentUser.id);
   }
 
+  @Get()
+  @Roles(Role.TEACHER, Role.STUDENT, Role.ADMIN)
+  @ClassesSwagger.LayDanhSachLopHocTheoVaiTro()
+  async listClasses(@CurrentUser() currentUser: AuthenticatedUser) {
+    assertUserRole(currentUser, [Role.TEACHER, Role.STUDENT, Role.ADMIN]);
+    return this.classesService.listClasses(currentUser);
+  }
+
   @Get(':id')
-  @Roles(Role.TEACHER)
+  @Roles(Role.TEACHER, Role.STUDENT, Role.ADMIN)
   @ClassesSwagger.LayChiTietLopHoc()
   async getClassById(
     @Param('id') classId: string,
     @CurrentUser() currentUser: AuthenticatedUser,
   ) {
-    assertUserRole(currentUser, [Role.TEACHER]);
-    return this.classesService.getTeacherClassById(classId, currentUser.id);
+    assertUserRole(currentUser, [Role.TEACHER, Role.STUDENT, Role.ADMIN]);
+    return this.classesService.getClassById(classId, currentUser);
   }
 
   @Patch(':id')

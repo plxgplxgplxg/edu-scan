@@ -123,7 +123,10 @@ describe('Cross-module hardening flows', () => {
           BatchService,
           { provide: OmrProcessor, useValue: omrProcessor },
           { provide: OmrRepository, useValue: omrRepository },
-          { provide: GradingService, useValue: { summarizeSubmission: jest.fn() } },
+          {
+            provide: GradingService,
+            useValue: { summarizeSubmission: jest.fn() },
+          },
         ],
       }).compile();
 
@@ -172,11 +175,14 @@ describe('Cross-module hardening flows', () => {
 
       const examsRepository = {
         createExam: jest.fn().mockResolvedValue(buildExamEntity()),
-        findTeacherClassesByIds: jest.fn().mockResolvedValue([{ id: 'class-1' }]),
+        findTeacherClassesByIds: jest
+          .fn()
+          .mockResolvedValue([{ id: 'class-1' }]),
         findTeacherQuestionsByIds: jest
           .fn()
-          .mockImplementation(async (_teacherId: string, questionIds: string[]) =>
-            questionIds.map((id) => ({ id })),
+          .mockImplementation(
+            async (_teacherId: string, questionIds: string[]) =>
+              questionIds.map((id) => ({ id })),
           ),
         findTeacherExamById: jest.fn().mockResolvedValue(buildExamEntity()),
         countExamDependencies: jest

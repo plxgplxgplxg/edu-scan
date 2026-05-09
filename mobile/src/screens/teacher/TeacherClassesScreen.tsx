@@ -9,17 +9,20 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { teacherClasses } from '../../api/mockData';
+import { createClass, listClasses, mapClassSummary } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
 import { BottomNav } from '../../components/BottomNav';
 import { EmptyState } from '../../components/EmptyState';
 import { ModalSheet } from '../../components/ModalSheet';
 import { PageHeader } from '../../components/PageHeader';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { ErrorState, LoadingState } from '../../components/RequestState';
 import { Screen } from '../../components/Screen';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { TextInputField } from '../../components/TextInputField';
+import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { useAppContent } from '../../hooks/useAppContent';
+import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
@@ -36,6 +39,7 @@ const subjectStyles: Record<string, { backgroundColor: string; color: string }> 
 export function TeacherClassesScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
+  const { accessToken, role } = useAuth();
   const layout = useResponsiveLayout();
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
@@ -44,17 +48,31 @@ export function TeacherClassesScreen() {
     subject: '',
     schoolYear: '2025-2026',
   });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const { data, loading, error, reload } = useAsyncResource(
+    async () => {
+      if (!accessToken || !role) {
+        return [];
+      }
+
+      const classes = await listClasses(accessToken);
+      return classes.map((item) => mapClassSummary(item, [], role));
+    },
+    [accessToken, role],
+  );
 
   const filteredItems = useMemo(
     () =>
-      teacherClasses.filter(item => {
+      (data ?? []).filter(item => {
         const keyword = search.toLowerCase();
         return (
           item.name.toLowerCase().includes(keyword) ||
           item.subject.toLowerCase().includes(keyword)
         );
       }),
-    [search],
+    [data, search],
   );
 
   return (
@@ -62,9 +80,11 @@ export function TeacherClassesScreen() {
       <PageHeader
         backLabel={content.common.buttons.backToHome}
         title={content.teacher.classes.title}
-        subtitle={`${String(filteredItems.length)} ${content.teacher.classes.studentCountSuffix}`}
+        subtitle={`${String(filteredItems.length)} lớp`}
         gradient={['#5B5BD6', '#7C5CFC']}
-        onBack={() => navigation.navigate('TeacherDashboard')}
+        onBack={() =>
+          navigation.navigate(role === 'ADMIN' ? 'AdminDashboard' : 'TeacherDashboard')
+        }
       />
 
       <View
@@ -87,6 +107,15 @@ export function TeacherClassesScreen() {
           placeholder={content.common.search.classes}
           trailing={<Search size={18} color={palette.mutedForeground} />}
         />
+
+        {loading ? <LoadingState label={content.common.labels.loading} /> : null}
+        {error ? (
+          <ErrorState
+            message={error}
+            retryLabel={content.common.buttons.confirm}
+            onRetry={reload}
+          />
+        ) : null}
 
         {filteredItems.map(item => {
           const subjectStyle = subjectStyles[item.subject] ?? {
@@ -143,12 +172,14 @@ export function TeacherClassesScreen() {
           />
         ) : null}
 
-        <PrimaryButton
-          variant="outline"
-          label={content.teacher.classes.createTitle}
-          icon={<Plus size={18} color={palette.primary} />}
-          onPress={() => setShowCreate(true)}
-        />
+        {role === 'TEACHER' ? (
+          <PrimaryButton
+            variant="outline"
+            label={content.teacher.classes.createTitle}
+            icon={<Plus size={18} color={palette.primary} />}
+            onPress={() => setShowCreate(true)}
+          />
+        ) : null}
       </View>
 
       <ModalSheet visible={showCreate} onClose={() => setShowCreate(false)}>
@@ -178,12 +209,42 @@ export function TeacherClassesScreen() {
           />
           <PrimaryButton
             label={content.common.buttons.createClass}
-            onPress={() => setShowCreate(false)}
+            loading={submitting}
+            onPress={async () => {
+              if (!accessToken) {
+                return;
+              }
+
+              setSubmitting(true);
+              setSubmitError(null);
+
+              try {
+                await createClass(accessToken, formState);
+                setShowCreate(false);
+                setFormState({
+                  name: '',
+                  subject: '',
+                  schoolYear: '2025-2026',
+                });
+                await reload();
+              } catch (err) {
+                setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+              } finally {
+                setSubmitting(false);
+              }
+            }}
           />
+          {submitError ? (
+            <AppText variant="caption" color={palette.destructive}>
+              {submitError}
+            </AppText>
+          ) : null}
         </View>
       </ModalSheet>
 
-      <BottomNav role="TEACHER" currentScreen="TeacherClasses" currentModule="classes" />
+      {role ? (
+        <BottomNav role={role} currentScreen="TeacherClasses" currentModule="classes" />
+      ) : null}
     </Screen>
   );
 }

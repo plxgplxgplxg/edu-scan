@@ -165,6 +165,18 @@ export class OmrRepository {
     });
   }
 
+  async listTeacherBatches(teacherId: string) {
+    return this.prismaService.omrBatch.findMany({
+      where: {
+        teacherId,
+      },
+      include: omrBatchDetailInclude,
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
   async markBatchStatus(batchId: string, status: OmrBatchStatus) {
     return this.prismaService.omrBatch.update({
       where: { id: batchId },

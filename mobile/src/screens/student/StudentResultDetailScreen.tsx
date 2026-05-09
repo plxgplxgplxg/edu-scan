@@ -4,11 +4,14 @@ import { AlertTriangle, ArrowLeft, CheckCircle, XCircle } from 'lucide-react-nat
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { resultDetails, studentResults } from '../../api/mockData';
+import { getSubmissionDetail, mapResultDetail, mapResultSummary } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
+import { ErrorState, LoadingState } from '../../components/RequestState';
 import { Screen } from '../../components/Screen';
 import { SurfaceCard } from '../../components/SurfaceCard';
+import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { useAppContent } from '../../hooks/useAppContent';
+import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
@@ -20,12 +23,74 @@ export function StudentResultDetailScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<RouteProp<RootStackParamList, 'StudentResultDetail'>>();
   const content = useAppContent();
+  const { accessToken } = useAuth();
   const layout = useResponsiveLayout();
+  const resultId = route.params?.resultId;
+  const { data, loading, error, reload } = useAsyncResource(
+    async () => {
+      if (!accessToken || !resultId) {
+        return null;
+      }
+
+      const detail = await getSubmissionDetail(accessToken, resultId);
+      const result = mapResultSummary({
+        id: detail.id,
+        examId: detail.examId,
+        examTitle: detail.exam.title,
+        status: detail.status,
+        createdAt: detail.createdAt,
+        reviewedAt: null,
+        score: detail.score.calculatedScore,
+        maxScore: detail.score.maxScore,
+        totalCorrect: detail.score.totalCorrect,
+        totalQuestions: detail.details.length,
+        needsReview: detail.details.some((item) => item.needsReview),
+        reviewNote: null,
+      });
+
+      return {
+        selectedResult: result,
+        resultDetails: mapResultDetail(detail),
+      };
+    },
+    [accessToken, resultId],
+  );
+
+  if (!data && loading) {
+    return (
+      <Screen>
+        <LoadingState label={content.common.labels.loading} />
+      </Screen>
+    );
+  }
+
+  if (!data && error) {
+    return (
+      <Screen>
+        <ErrorState
+          message={error}
+          retryLabel={content.common.buttons.confirm}
+          onRetry={reload}
+        />
+      </Screen>
+    );
+  }
+
+  if (!data) {
+    return (
+      <Screen>
+        <ErrorState
+          message="Không tìm thấy kết quả"
+          retryLabel={content.common.buttons.back}
+          onRetry={() => navigation.goBack()}
+        />
+      </Screen>
+    );
+  }
+
+  const { selectedResult, resultDetails } = data;
   const correctCount = resultDetails.filter(item => item.isCorrect).length;
   const reviewCount = resultDetails.filter(item => item.needsReview).length;
-  const resultId = route.params?.resultId;
-  const selectedResult =
-    studentResults.find(item => item.id === resultId) ?? studentResults[0];
 
   return (
     <Screen>

@@ -11,21 +11,31 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { teacherDashboardModules } from '../../api/mockData';
 import { BottomNav } from '../../components/BottomNav';
 import { DashboardModuleCard } from '../../components/DashboardModuleCard';
 import { AppText } from '../../components/AppText';
 import { PageHeader } from '../../components/PageHeader';
 import { Screen } from '../../components/Screen';
+import { ErrorState, LoadingState } from '../../components/RequestState';
 import { useAppContent } from '../../hooks/useAppContent';
 import { useAuth } from '../../store/auth-store';
 import { appTheme } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
-import { teacherClasses, teacherExams, teacherRemarks } from '../../api/mockData';
 import { getInitials } from '../../utils/string';
+import { listClasses, listExams, listTeacherRemarks } from '../../api/edu-scan';
+import { useAsyncResource } from '../../hooks/useAsyncResource';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
+
+const teacherDashboardModules = [
+  { id: 'classes', gradient: ['#5B5BD6', '#7C5CFC'] },
+  { id: 'exams', gradient: ['#3B82F6', '#06B6D4'] },
+  { id: 'omr', gradient: ['#8B5CF6', '#A855F7'] },
+  { id: 'remarks', gradient: ['#F59E0B', '#F97316'] },
+  { id: 'questions', gradient: ['#10B981', '#14B8A6'] },
+  { id: 'stats', gradient: ['#EC4899', '#F43F5E'] },
+] as const;
 
 const moduleIcons = {
   classes: <BookOpen size={28} color={appTheme.palette.white} />,
@@ -39,8 +49,38 @@ const moduleIcons = {
 export function TeacherDashboardScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
-  const { profileName } = useAuth();
+  const { accessToken, profileName } = useAuth();
   const layout = useResponsiveLayout();
+  const { data, loading, error, reload } = useAsyncResource(
+    async () => {
+      if (!accessToken) {
+        return {
+          classCount: 0,
+          examCount: 0,
+          remarkCount: 0,
+        };
+      }
+
+      const [classes, exams, remarks] = await Promise.all([
+        listClasses(accessToken),
+        listExams(accessToken),
+        listTeacherRemarks(accessToken),
+      ]);
+
+      return {
+        classCount: classes.length,
+        examCount: exams.length,
+        remarkCount: remarks.length,
+      };
+    },
+    [accessToken],
+  );
+
+  const metrics = data ?? {
+    classCount: 0,
+    examCount: 0,
+    remarkCount: 0,
+  };
 
   return (
     <Screen>
@@ -53,9 +93,9 @@ export function TeacherDashboardScreen() {
         onNotificationPress={() => navigation.navigate('SharedNotifications')}
         avatarLabel={getInitials(profileName)}
         metrics={[
-          { label: content.teacher.dashboard.metrics.classes, value: String(teacherClasses.length) },
-          { label: content.teacher.dashboard.metrics.exams, value: String(teacherExams.length) },
-          { label: content.teacher.dashboard.metrics.remarks, value: String(teacherRemarks.length) },
+          { label: content.teacher.dashboard.metrics.classes, value: String(metrics.classCount) },
+          { label: content.teacher.dashboard.metrics.exams, value: String(metrics.examCount) },
+          { label: content.teacher.dashboard.metrics.remarks, value: String(metrics.remarkCount) },
         ]}
       />
 
@@ -81,7 +121,15 @@ export function TeacherDashboardScreen() {
               key={module.id}
               icon={moduleIcons[module.id as keyof typeof moduleIcons]}
               title={content.teacher.dashboard.modules[module.id as keyof typeof content.teacher.dashboard.modules]}
-              subtitle={content.teacher.dashboard.moduleCounts[module.id as keyof typeof content.teacher.dashboard.moduleCounts]}
+              subtitle={
+                module.id === 'classes'
+                  ? `${String(metrics.classCount)} lớp`
+                  : module.id === 'exams'
+                    ? `${String(metrics.examCount)} đề`
+                    : module.id === 'remarks'
+                      ? `${String(metrics.remarkCount)} yêu cầu`
+                      : content.teacher.dashboard.moduleCounts[module.id as keyof typeof content.teacher.dashboard.moduleCounts]
+              }
               colors={module.gradient}
               onPress={() => {
                 if (module.id === 'classes') navigation.navigate('TeacherClasses');
@@ -94,6 +142,14 @@ export function TeacherDashboardScreen() {
             />
           ))}
         </View>
+        {loading ? <LoadingState label={content.common.labels.loading} /> : null}
+        {error ? (
+          <ErrorState
+            message={error}
+            retryLabel={content.common.buttons.confirm}
+            onRetry={reload}
+          />
+        ) : null}
       </View>
 
       <BottomNav role="TEACHER" currentScreen="TeacherDashboard" currentModule="home" />

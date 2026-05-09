@@ -74,26 +74,33 @@ async function ensureDatabaseExists() {
     if (result.rowCount === 0) {
       console.log(`[prepare-db] Creating database "${databaseName}"`);
       await client.query(`CREATE DATABASE ${quoteIdentifier(databaseName)}`);
+      return true;
     } else {
       console.log(`[prepare-db] Database "${databaseName}" already exists`);
+      return false;
     }
   } finally {
     await client.end();
   }
 }
 
-function prepareSchema() {
+function prepareSchema(databaseWasCreated) {
   if (hasMigrationFiles()) {
     runPrismaCommand(['migrate', 'deploy'], 'prisma migrate deploy');
     return;
   }
 
-  runPrismaCommand(['db', 'push'], 'prisma db push');
+  if (databaseWasCreated) {
+    runPrismaCommand(['db', 'push'], 'prisma db push');
+    return;
+  }
+
+  runPrismaCommand(['validate'], 'prisma validate');
 }
 
 async function main() {
-  await ensureDatabaseExists();
-  prepareSchema();
+  const databaseWasCreated = await ensureDatabaseExists();
+  prepareSchema(databaseWasCreated);
 }
 
 main().catch((error) => {

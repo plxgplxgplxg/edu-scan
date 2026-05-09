@@ -10,10 +10,7 @@ import {
 } from '../../../common/swagger/decorators/api-responses.decorator';
 import { SWAGGER_MODULES_METADATA } from '../../../common/swagger/swagger.metadata';
 import { CreateQuestionDto } from '../dtos/create-question.dto';
-import {
-  QuestionSortBy,
-  SortOrder,
-} from '../dtos/query-questions.dto';
+import { QuestionSortBy, SortOrder } from '../dtos/query-questions.dto';
 import {
   DeleteQuestionResponseDto,
   QuestionListResponseDto,
@@ -47,10 +44,30 @@ export const QuestionsSwagger = {
         notes:
           'Hỗ trợ phân trang, lọc theo môn học, độ khó, tag, từ khóa và sắp xếp kết quả.',
       }),
-      ApiQuery({ name: 'page', required: false, type: Number, description: 'Số trang hiện tại' }),
-      ApiQuery({ name: 'limit', required: false, type: Number, description: 'Số lượng phần tử trên mỗi trang' }),
-      ApiQuery({ name: 'subject', required: false, type: String, description: 'Lọc theo môn học' }),
-      ApiQuery({ name: 'difficulty', required: false, enum: Difficulty, description: 'Lọc theo độ khó câu hỏi' }),
+      ApiQuery({
+        name: 'page',
+        required: false,
+        type: Number,
+        description: 'Số trang hiện tại',
+      }),
+      ApiQuery({
+        name: 'limit',
+        required: false,
+        type: Number,
+        description: 'Số lượng phần tử trên mỗi trang',
+      }),
+      ApiQuery({
+        name: 'subject',
+        required: false,
+        type: String,
+        description: 'Lọc theo môn học',
+      }),
+      ApiQuery({
+        name: 'difficulty',
+        required: false,
+        enum: Difficulty,
+        description: 'Lọc theo độ khó câu hỏi',
+      }),
       ApiQuery({
         name: 'tags',
         required: false,
@@ -58,9 +75,24 @@ export const QuestionsSwagger = {
         description:
           'Danh sách tag, hỗ trợ dạng chuỗi phân tách bằng dấu phẩy hoặc lặp lại query parameter',
       }),
-      ApiQuery({ name: 'keyword', required: false, type: String, description: 'Từ khóa tìm kiếm' }),
-      ApiQuery({ name: 'sortBy', required: false, enum: QuestionSortBy, description: 'Trường dùng để sắp xếp' }),
-      ApiQuery({ name: 'sortOrder', required: false, enum: SortOrder, description: 'Thứ tự sắp xếp tăng hoặc giảm' }),
+      ApiQuery({
+        name: 'keyword',
+        required: false,
+        type: String,
+        description: 'Từ khóa tìm kiếm',
+      }),
+      ApiQuery({
+        name: 'sortBy',
+        required: false,
+        enum: QuestionSortBy,
+        description: 'Trường dùng để sắp xếp',
+      }),
+      ApiQuery({
+        name: 'sortOrder',
+        required: false,
+        enum: SortOrder,
+        description: 'Thứ tự sắp xếp tăng hoặc giảm',
+      }),
       ApiWrappedOkResponse({
         type: QuestionListResponseDto,
         description: 'Lấy danh sách câu hỏi thành công.',

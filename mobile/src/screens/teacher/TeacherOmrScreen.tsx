@@ -9,16 +9,20 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { omrBatches } from '../../api/mockData';
+import { listExams, listOmrBatches, mapOmrBatchSummary, uploadOmrBatch } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
 import { BottomNav } from '../../components/BottomNav';
 import { ModalSheet } from '../../components/ModalSheet';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ProgressBar } from '../../components/ProgressBar';
+import { ErrorState, LoadingState } from '../../components/RequestState';
 import { Screen } from '../../components/Screen';
 import { StatusBadge } from '../../components/StatusBadge';
 import { SurfaceCard } from '../../components/SurfaceCard';
+import { TextInputField } from '../../components/TextInputField';
+import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { useAppContent } from '../../hooks/useAppContent';
+import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
@@ -28,8 +32,35 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export function TeacherOmrScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
+  const { accessToken } = useAuth();
   const layout = useResponsiveLayout();
   const [showUpload, setShowUpload] = useState(false);
+  const [examCode, setExamCode] = useState('');
+  const [fileUris, setFileUris] = useState('');
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const { data, loading, error, reload } = useAsyncResource(
+    async () => {
+      if (!accessToken) {
+        return {
+          exams: [],
+          batches: [],
+        };
+      }
+
+      const [exams, batches] = await Promise.all([
+        listExams(accessToken),
+        listOmrBatches(accessToken),
+      ]);
+
+      return {
+        exams,
+        batches: batches.map(mapOmrBatchSummary),
+      };
+    },
+    [accessToken],
+  );
+  const omrBatches = data?.batches ?? [];
 
   return (
     <Screen>
@@ -69,6 +100,14 @@ export function TeacherOmrScreen() {
           },
         ]}
       >
+        {loading ? <LoadingState label={content.common.labels.loading} /> : null}
+        {error ? (
+          <ErrorState
+            message={error}
+            retryLabel={content.common.buttons.confirm}
+            onRetry={reload}
+          />
+        ) : null}
         <Pressable onPress={() => setShowUpload(true)}>
           <SurfaceCard style={styles.heroCard}>
             <View style={styles.uploadIcon}>
@@ -130,12 +169,73 @@ export function TeacherOmrScreen() {
             {content.common.messages.uploadHint}
           </AppText>
         </SurfaceCard>
+        <TextInputField
+          label="Mã hoặc tên đề thi"
+          value={examCode}
+          onChangeText={setExamCode}
+          placeholder="Nhập tên đề thi"
+        />
+        <TextInputField
+          label="File URI"
+          value={fileUris}
+          onChangeText={setFileUris}
+          placeholder="uri1, uri2"
+        />
         <PrimaryButton
           label={content.common.buttons.startScan}
           icon={<ScanLine size={18} color={palette.white} />}
-          onPress={() => setShowUpload(false)}
+          loading={submitting}
+          onPress={async () => {
+            if (!accessToken || !data) {
+              return;
+            }
+
+            const normalizedExam = examCode.trim().toLowerCase();
+            const exam = data.exams.find(
+              (item) =>
+                item.title.toLowerCase() === normalizedExam ||
+                item.id.toLowerCase() === normalizedExam,
+            );
+
+            const files = fileUris
+              .split(',')
+              .map((item, index) => item.trim())
+              .filter(Boolean)
+              .map((uri, index) => ({
+                uri,
+                name: `omr-${index + 1}.jpg`,
+              }));
+
+            if (!exam || files.length === 0) {
+              setSubmitError('Cần chọn đề thi hợp lệ và ít nhất một file URI');
+              return;
+            }
+
+            setSubmitting(true);
+            setSubmitError(null);
+
+            try {
+              await uploadOmrBatch(accessToken, {
+                examId: exam.id,
+                files,
+              });
+              setShowUpload(false);
+              setExamCode('');
+              setFileUris('');
+              await reload();
+            } catch (err) {
+              setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+            } finally {
+              setSubmitting(false);
+            }
+          }}
           style={styles.sheetButton}
         />
+        {submitError ? (
+          <AppText variant="caption" color={palette.destructive}>
+            {submitError}
+          </AppText>
+        ) : null}
       </ModalSheet>
 
       <BottomNav role="TEACHER" currentScreen="TeacherOMR" currentModule="omr" />

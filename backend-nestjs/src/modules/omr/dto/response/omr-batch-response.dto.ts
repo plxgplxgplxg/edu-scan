@@ -117,6 +117,9 @@ export class OmrBatchResponseDto {
   @ApiProperty({ format: 'uuid' })
   examId!: string;
 
+  @ApiProperty()
+  examTitle!: string;
+
   @ApiProperty({ format: 'uuid' })
   teacherId!: string;
 

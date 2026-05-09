@@ -10,17 +10,20 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { teacherAssignments } from '../../api/mockData';
+import { listAssignments, listClasses, mapTeacherAssignmentSummary } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
 import { BottomNav } from '../../components/BottomNav';
 import { EmptyState } from '../../components/EmptyState';
 import { PageHeader } from '../../components/PageHeader';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ProgressBar } from '../../components/ProgressBar';
+import { ErrorState, LoadingState } from '../../components/RequestState';
 import { Screen } from '../../components/Screen';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { TextInputField } from '../../components/TextInputField';
+import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { useAppContent } from '../../hooks/useAppContent';
+import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import { formatVietnameseDate, percentage } from '../../utils/format';
@@ -31,8 +34,26 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export function TeacherAssignmentsScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
+  const { accessToken } = useAuth();
   const layout = useResponsiveLayout();
   const [search, setSearch] = useState('');
+  const { data, loading, error, reload } = useAsyncResource(
+    async () => {
+      if (!accessToken) {
+        return [];
+      }
+
+      const [classes, assignments] = await Promise.all([
+        listClasses(accessToken),
+        listAssignments(accessToken),
+      ]);
+
+      const classMap = new Map(classes.map((item) => [item.id, item]));
+      return assignments.map((item) => mapTeacherAssignmentSummary(item, classMap));
+    },
+    [accessToken],
+  );
+  const teacherAssignments = data ?? [];
 
   const items = useMemo(
     () =>
@@ -65,6 +86,14 @@ export function TeacherAssignmentsScreen() {
           },
         ]}
       >
+        {loading ? <LoadingState label={content.common.labels.loading} /> : null}
+        {error ? (
+          <ErrorState
+            message={error}
+            retryLabel={content.common.buttons.confirm}
+            onRetry={reload}
+          />
+        ) : null}
         <TextInputField
           label={content.common.search.assignments}
           value={search}
@@ -124,7 +153,7 @@ export function TeacherAssignmentsScreen() {
           variant="outline"
           label={content.common.buttons.createAssignment}
           icon={<Plus size={18} color={palette.primary} />}
-          onPress={() => undefined}
+          onPress={() => navigation.navigate('TeacherClasses')}
         />
       </View>
 

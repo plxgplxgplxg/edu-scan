@@ -31,7 +31,13 @@ export class AuthService {
     if (!isPasswordValid) {
       throw new UnauthorizedException('Password is incorrect!');
     }
-    return this.generateTokens(user.id, user.email, user.role);
+    return this.generateTokens(
+      user.id,
+      user.email,
+      user.role,
+      user.name,
+      user.studentCode,
+    );
   }
 
   async refreshToken(userId: string, email: string, role: string) {
@@ -43,10 +49,22 @@ export class AuthService {
         'Can not find user or user is not active!',
       );
     }
-    return this.generateTokens(userId, email, role);
+    return this.generateTokens(
+      userId,
+      email,
+      role,
+      user.name,
+      user.studentCode,
+    );
   }
 
-  async generateTokens(userId: string, email: string, role: string) {
+  async generateTokens(
+    userId: string,
+    email: string,
+    role: string,
+    name: string,
+    studentCode: string | null,
+  ) {
     const payload = { sub: userId, email, role };
     const accessSecret = this.configService.getOrThrow<string>('jwt.secret');
     const accessExpiresIn =
@@ -76,6 +94,8 @@ export class AuthService {
         id: userId,
         email,
         role,
+        name,
+        studentCode,
       },
     };
   }

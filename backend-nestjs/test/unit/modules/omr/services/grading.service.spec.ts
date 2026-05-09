@@ -200,12 +200,12 @@ describe('GradingService', () => {
 
 function buildAnswerKeys(questionCount = 2) {
   return Array.from({ length: questionCount }, (_, index) => ({
-      questionNumber: index + 1,
-      correctAnswer: [
-        AnswerChoice.A,
-        AnswerChoice.B,
-        AnswerChoice.C,
-        AnswerChoice.D,
-      ][index % 4],
-    }));
+    questionNumber: index + 1,
+    correctAnswer: [
+      AnswerChoice.A,
+      AnswerChoice.B,
+      AnswerChoice.C,
+      AnswerChoice.D,
+    ][index % 4],
+  }));
 }

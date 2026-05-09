@@ -44,7 +44,7 @@ export function LoginScreen() {
     [content.roles],
   );
 
-  const onSubmit = () => {
+  const onSubmit = async () => {
     setError(undefined);
 
     if (!email.trim() || !password.trim()) {
@@ -58,10 +58,14 @@ export function LoginScreen() {
     }
 
     setLoading(true);
-    setTimeout(() => {
-      login(email.trim());
+
+    try {
+      await login(email.trim(), password.trim());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : content.common.messages.loginEmpty);
+    } finally {
       setLoading(false);
-    }, 900);
+    }
   };
 
   return (

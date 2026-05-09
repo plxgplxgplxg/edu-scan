@@ -9,17 +9,20 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { questionBank } from '../../api/mockData';
+import { createQuestion, listQuestions, mapQuestionSummary } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
 import { BottomNav } from '../../components/BottomNav';
 import { EmptyState } from '../../components/EmptyState';
 import { ModalSheet } from '../../components/ModalSheet';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { ErrorState, LoadingState } from '../../components/RequestState';
 import { Screen } from '../../components/Screen';
 import { StatusBadge } from '../../components/StatusBadge';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { TextInputField } from '../../components/TextInputField';
+import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { useAppContent } from '../../hooks/useAppContent';
+import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
@@ -29,17 +32,38 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export function TeacherQuestionsScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
+  const { accessToken } = useAuth();
   const layout = useResponsiveLayout();
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<'A' | 'B' | 'C' | 'D'>('A');
+  const [difficulty, setDifficulty] = useState<'EASY' | 'MEDIUM' | 'HARD'>('MEDIUM');
+  const [form, setForm] = useState({
+    content: '',
+    optionA: '',
+    optionB: '',
+    optionC: '',
+    optionD: '',
+    subject: '',
+    tags: '',
+  });
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const { data, loading, error, reload } = useAsyncResource(
+    async () => {
+      if (!accessToken) {
+        return [];
+      }
+
+      const response = await listQuestions(accessToken, search);
+      return response.items.map(mapQuestionSummary);
+    },
+    [accessToken, search],
+  );
 
   const items = useMemo(
-    () =>
-      questionBank.filter(item =>
-        item.content.toLowerCase().includes(search.toLowerCase()),
-      ),
-    [search],
+    () => data ?? [],
+    [data],
   );
 
   return (
@@ -92,6 +116,15 @@ export function TeacherQuestionsScreen() {
           },
         ]}
       >
+        {loading ? <LoadingState label={content.common.labels.loading} /> : null}
+        {error ? (
+          <ErrorState
+            message={error}
+            retryLabel={content.common.buttons.confirm}
+            onRetry={reload}
+          />
+        ) : null}
+
         {items.map(item => (
           <SurfaceCard key={item.id} style={styles.card}>
             <View style={styles.rowBetween}>
@@ -132,33 +165,45 @@ export function TeacherQuestionsScreen() {
         <View style={styles.sheetBody}>
           <TextInputField
             label={content.common.form.content}
-            value=""
-            onChangeText={() => undefined}
+            value={form.content}
+            onChangeText={value => setForm(current => ({ ...current, content: value }))}
             placeholder={content.common.placeholders.questionContent}
           />
           <TextInputField
+            label={content.common.form.subject}
+            value={form.subject}
+            onChangeText={value => setForm(current => ({ ...current, subject: value }))}
+            placeholder={content.common.placeholders.subject}
+          />
+          <TextInputField
             label={`${content.teacher.questions.optionLabel} A`}
-            value=""
-            onChangeText={() => undefined}
+            value={form.optionA}
+            onChangeText={value => setForm(current => ({ ...current, optionA: value }))}
             placeholder={content.common.placeholders.optionA}
           />
           <TextInputField
             label={`${content.teacher.questions.optionLabel} B`}
-            value=""
-            onChangeText={() => undefined}
+            value={form.optionB}
+            onChangeText={value => setForm(current => ({ ...current, optionB: value }))}
             placeholder={content.common.placeholders.optionB}
           />
           <TextInputField
             label={`${content.teacher.questions.optionLabel} C`}
-            value=""
-            onChangeText={() => undefined}
+            value={form.optionC}
+            onChangeText={value => setForm(current => ({ ...current, optionC: value }))}
             placeholder={content.common.placeholders.optionC}
           />
           <TextInputField
             label={`${content.teacher.questions.optionLabel} D`}
-            value=""
-            onChangeText={() => undefined}
+            value={form.optionD}
+            onChangeText={value => setForm(current => ({ ...current, optionD: value }))}
             placeholder={content.common.placeholders.optionD}
+          />
+          <TextInputField
+            label="Tags"
+            value={form.tags}
+            onChangeText={value => setForm(current => ({ ...current, tags: value }))}
+            placeholder="ví dụ: đại số, chương 1"
           />
           <AppText variant="label" weight="semibold">
             {content.common.form.correctAnswer}
@@ -183,10 +228,77 @@ export function TeacherQuestionsScreen() {
               </Pressable>
             ))}
           </View>
+          <View style={styles.answerRow}>
+            {(['EASY', 'MEDIUM', 'HARD'] as const).map(option => (
+              <Pressable
+                key={option}
+                onPress={() => setDifficulty(option)}
+                style={[
+                  styles.answerOption,
+                  difficulty === option ? styles.answerActive : null,
+                ]}
+              >
+                <AppText
+                  variant="body"
+                  weight="semibold"
+                  color={difficulty === option ? palette.white : palette.foreground}
+                >
+                  {content.common.statuses[option]}
+                </AppText>
+              </Pressable>
+            ))}
+          </View>
           <PrimaryButton
             label={content.common.buttons.createQuestion}
-            onPress={() => setShowCreate(false)}
+            loading={submitting}
+            onPress={async () => {
+              if (!accessToken) {
+                return;
+              }
+
+              setSubmitting(true);
+              setSubmitError(null);
+
+              try {
+                await createQuestion(accessToken, {
+                  content: form.content.trim(),
+                  optionA: form.optionA.trim(),
+                  optionB: form.optionB.trim(),
+                  optionC: form.optionC.trim(),
+                  optionD: form.optionD.trim(),
+                  correctAnswer: selectedAnswer,
+                  subject: form.subject.trim(),
+                  difficulty,
+                  tags: form.tags
+                    .split(',')
+                    .map((item) => item.trim())
+                    .filter(Boolean),
+                });
+                setShowCreate(false);
+                setForm({
+                  content: '',
+                  optionA: '',
+                  optionB: '',
+                  optionC: '',
+                  optionD: '',
+                  subject: '',
+                  tags: '',
+                });
+                setDifficulty('MEDIUM');
+                setSelectedAnswer('A');
+                await reload();
+              } catch (err) {
+                setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+              } finally {
+                setSubmitting(false);
+              }
+            }}
           />
+          {submitError ? (
+            <AppText variant="caption" color={palette.destructive}>
+              {submitError}
+            </AppText>
+          ) : null}
         </View>
       </ModalSheet>
 

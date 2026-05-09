@@ -4,7 +4,7 @@ import { Plus, Search, UserX } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { adminUsers } from '../../api/mockData';
+import { createUser, deactivateUser, listUsers, mapUserSummary } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
 import { BottomNav } from '../../components/BottomNav';
 import { EmptyState } from '../../components/EmptyState';
@@ -12,10 +12,13 @@ import { FilterChips } from '../../components/FilterChips';
 import { ModalSheet } from '../../components/ModalSheet';
 import { PageHeader } from '../../components/PageHeader';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { ErrorState, LoadingState } from '../../components/RequestState';
 import { Screen } from '../../components/Screen';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { TextInputField } from '../../components/TextInputField';
+import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { useAppContent } from '../../hooks/useAppContent';
+import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
@@ -27,11 +30,33 @@ type RoleFilter = 'ALL' | UserRole;
 export function AdminUsersScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
+  const { accessToken } = useAuth();
   const layout = useResponsiveLayout();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<RoleFilter>('ALL');
   const [showCreate, setShowCreate] = useState(false);
   const [selectedDeactivateId, setSelectedDeactivateId] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'STUDENT' as UserRole,
+    studentCode: '',
+  });
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const { data, loading, error, reload } = useAsyncResource(
+    async () => {
+      if (!accessToken) {
+        return [];
+      }
+
+      const users = await listUsers(accessToken);
+      return users.map(mapUserSummary);
+    },
+    [accessToken],
+  );
+  const adminUsers = data ?? [];
 
   const items = useMemo(
     () =>
@@ -75,6 +100,14 @@ export function AdminUsersScreen() {
           },
         ]}
       >
+        {loading ? <LoadingState label={content.common.labels.loading} /> : null}
+        {error ? (
+          <ErrorState
+            message={error}
+            retryLabel={content.common.buttons.confirm}
+            onRetry={reload}
+          />
+        ) : null}
         <TextInputField
           label={content.common.search.users}
           value={search}
@@ -139,35 +172,77 @@ export function AdminUsersScreen() {
         <View style={styles.sheetBody}>
           <TextInputField
             label={content.common.form.fullName}
-            value=""
-            onChangeText={() => undefined}
+            value={form.name}
+            onChangeText={value => setForm(current => ({ ...current, name: value }))}
             placeholder={content.common.placeholders.personName}
           />
           <TextInputField
             label={content.common.form.email}
-            value=""
-            onChangeText={() => undefined}
+            value={form.email}
+            onChangeText={value => setForm(current => ({ ...current, email: value }))}
             placeholder={content.common.placeholders.email}
           />
           <TextInputField
             label={content.common.form.password}
-            value=""
-            onChangeText={() => undefined}
+            value={form.password}
+            onChangeText={value => setForm(current => ({ ...current, password: value }))}
             placeholder={content.common.placeholders.password}
           />
           <TextInputField
             label={content.common.form.role}
-            value=""
-            onChangeText={() => undefined}
+            value={form.role}
+            onChangeText={value =>
+              setForm(current => ({ ...current, role: value.toUpperCase() as UserRole }))
+            }
             placeholder={content.common.placeholders.role}
           />
           <TextInputField
             label={content.common.form.studentCode}
-            value=""
-            onChangeText={() => undefined}
+            value={form.studentCode}
+            onChangeText={value => setForm(current => ({ ...current, studentCode: value }))}
             placeholder={content.common.placeholders.studentCode}
           />
-          <PrimaryButton label={content.common.buttons.create} onPress={() => setShowCreate(false)} />
+          <PrimaryButton
+            label={content.common.buttons.create}
+            loading={submitting}
+            onPress={async () => {
+              if (!accessToken) {
+                return;
+              }
+
+              setSubmitting(true);
+              setSubmitError(null);
+
+              try {
+                await createUser(accessToken, {
+                  email: form.email.trim(),
+                  name: form.name.trim(),
+                  password: form.password,
+                  role: form.role,
+                  studentCode:
+                    form.role === 'STUDENT' ? form.studentCode.trim().toUpperCase() : undefined,
+                });
+                setShowCreate(false);
+                setForm({
+                  name: '',
+                  email: '',
+                  password: '',
+                  role: 'STUDENT',
+                  studentCode: '',
+                });
+                await reload();
+              } catch (err) {
+                setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+              } finally {
+                setSubmitting(false);
+              }
+            }}
+          />
+          {submitError ? (
+            <AppText variant="caption" color={palette.destructive}>
+              {submitError}
+            </AppText>
+          ) : null}
         </View>
       </ModalSheet>
 
@@ -187,10 +262,33 @@ export function AdminUsersScreen() {
           />
           <PrimaryButton
             label={content.common.buttons.deactivate}
-            onPress={() => setSelectedDeactivateId(null)}
+            loading={submitting}
+            onPress={async () => {
+              if (!accessToken || !selectedDeactivateId) {
+                return;
+              }
+
+              setSubmitting(true);
+              setSubmitError(null);
+
+              try {
+                await deactivateUser(accessToken, selectedDeactivateId);
+                setSelectedDeactivateId(null);
+                await reload();
+              } catch (err) {
+                setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+              } finally {
+                setSubmitting(false);
+              }
+            }}
             style={styles.flex}
           />
         </View>
+        {submitError ? (
+          <AppText variant="caption" color={palette.destructive}>
+            {submitError}
+          </AppText>
+        ) : null}
       </ModalSheet>
 
       <BottomNav role="ADMIN" currentScreen="AdminUsers" currentModule="users" />

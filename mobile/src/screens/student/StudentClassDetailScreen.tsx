@@ -6,21 +6,30 @@ import {
   Link,
   Upload,
 } from 'lucide-react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { studentAssignments, studentClasses } from '../../api/mockData';
+import {
+  getClassDetail,
+  listAssignments,
+  mapClassDetail,
+  mapStudentAssignmentSummary,
+  submitAssignment,
+} from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
 import { BottomNav } from '../../components/BottomNav';
 import { FilterChips } from '../../components/FilterChips';
 import { ModalSheet } from '../../components/ModalSheet';
 import { PageHeader } from '../../components/PageHeader';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { ErrorState, LoadingState } from '../../components/RequestState';
 import { Screen } from '../../components/Screen';
 import { StatusBadge } from '../../components/StatusBadge';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { TextInputField } from '../../components/TextInputField';
+import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { useAppContent } from '../../hooks/useAppContent';
+import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import { formatVietnameseDate, isExpired } from '../../utils/format';
@@ -31,17 +40,76 @@ type TabKey = 'assignments' | 'info';
 
 export function StudentClassDetailScreen() {
   const navigation = useNavigation<Nav>();
+  const route = useRoute<RouteProp<RootStackParamList, 'StudentClassDetail'>>();
   const content = useAppContent();
+  const { accessToken, role } = useAuth();
   const layout = useResponsiveLayout();
-  const currentClass = studentClasses[0];
+  const classId = route.params?.classId;
   const [tab, setTab] = useState<TabKey>('assignments');
   const [showSubmit, setShowSubmit] = useState<string | null>(null);
   const [fileUrl, setFileUrl] = useState('');
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const { data, loading, error, reload } = useAsyncResource(
+    async () => {
+      if (!accessToken || !classId) {
+        return null;
+      }
+
+      const [classItem, assignments] = await Promise.all([
+        getClassDetail(accessToken, classId),
+        listAssignments(accessToken),
+      ]);
+
+      const classMap = new Map([[classItem.id, classItem]]);
+      return {
+        currentClass: mapClassDetail(classItem),
+        assignments: assignments
+          .filter((item) => item.classes.some((entry) => entry.classId === classItem.id))
+          .map((item) => mapStudentAssignmentSummary(item, classMap)),
+      };
+    },
+    [accessToken, classId],
+  );
 
   const classAssignments = useMemo(
-    () => studentAssignments.filter(item => item.classNames.includes(currentClass.name)),
-    [currentClass.name],
+    () => data?.assignments ?? [],
+    [data?.assignments],
   );
+
+  if (!data && loading) {
+    return (
+      <Screen>
+        <LoadingState label={content.common.labels.loading} />
+      </Screen>
+    );
+  }
+
+  if (!data && error) {
+    return (
+      <Screen>
+        <ErrorState
+          message={error}
+          retryLabel={content.common.buttons.confirm}
+          onRetry={reload}
+        />
+      </Screen>
+    );
+  }
+
+  if (!data) {
+    return (
+      <Screen>
+        <ErrorState
+          message="Không tìm thấy lớp học"
+          retryLabel={content.common.buttons.back}
+          onRetry={() => navigation.goBack()}
+        />
+      </Screen>
+    );
+  }
+
+  const { currentClass } = data;
 
   return (
     <Screen>
@@ -163,7 +231,7 @@ export function StudentClassDetailScreen() {
           {content.common.buttons.submitAssignment}
         </AppText>
         <AppText variant="body" color={palette.mutedForeground} style={styles.sheetSubtitle}>
-          {studentAssignments.find(item => item.id === showSubmit)?.title ?? ''}
+          {classAssignments.find(item => item.id === showSubmit)?.title ?? ''}
         </AppText>
         <TextInputField
           label={content.common.form.assignmentFileUrl}
@@ -175,10 +243,39 @@ export function StudentClassDetailScreen() {
         <AppText variant="caption" color={palette.mutedForeground} style={styles.sheetHint}>
           {content.common.messages.assignmentUploadHint}
         </AppText>
-        <PrimaryButton label={content.common.buttons.confirm} onPress={() => setShowSubmit(null)} />
+        <PrimaryButton
+          label={content.common.buttons.submitAssignment}
+          loading={submitting}
+          onPress={async () => {
+            if (!accessToken || !showSubmit) {
+              return;
+            }
+
+            setSubmitting(true);
+            setSubmitError(null);
+
+            try {
+              await submitAssignment(accessToken, showSubmit, fileUrl.trim());
+              setShowSubmit(null);
+              setFileUrl('');
+              await reload();
+            } catch (err) {
+              setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+            } finally {
+              setSubmitting(false);
+            }
+          }}
+        />
+        {submitError ? (
+          <AppText variant="caption" color={palette.destructive}>
+            {submitError}
+          </AppText>
+        ) : null}
       </ModalSheet>
 
-      <BottomNav role="STUDENT" currentScreen="StudentClassDetail" currentModule="classes" />
+      {role ? (
+        <BottomNav role={role} currentScreen="StudentClassDetail" currentModule="classes" />
+      ) : null}
     </Screen>
   );
 }

@@ -18,6 +18,20 @@ export const OmrSwagger = {
   Controller() {
     return ApiModuleTag(SWAGGER_MODULES_METADATA.omr);
   },
+  LayDanhSachBatchOmr() {
+    return applyDecorators(
+      ApiBearerOperation({
+        summary: 'Lấy danh sách batch OMR của giáo viên hiện tại',
+        roles: [Role.TEACHER],
+      }),
+      ApiWrappedOkResponse({
+        type: OmrBatchResponseDto,
+        isArray: true,
+        description: 'Lấy danh sách batch OMR thành công.',
+      }),
+      ApiStandardErrorResponses(401, 403, 500),
+    );
+  },
   TaiLenBatchOmr() {
     return applyDecorators(
       ApiBearerOperation({
@@ -32,7 +46,11 @@ export const OmrSwagger = {
           type: 'object',
           required: ['examId', 'files'],
           properties: {
-            examId: { type: 'string', format: 'uuid', description: 'ID đề thi' },
+            examId: {
+              type: 'string',
+              format: 'uuid',
+              description: 'ID đề thi',
+            },
             templateName: {
               type: 'string',
               nullable: true,
@@ -61,7 +79,11 @@ export const OmrSwagger = {
         notes:
           'Trả về trạng thái batch, số lượng tệp, thống kê xử lý và danh sách bài làm được sinh từ batch.',
       }),
-      ApiParam({ name: 'batchId', description: 'ID batch OMR', format: 'uuid' }),
+      ApiParam({
+        name: 'batchId',
+        description: 'ID batch OMR',
+        format: 'uuid',
+      }),
       ApiWrappedOkResponse({
         type: OmrBatchResponseDto,
         description: 'Lấy chi tiết batch OMR thành công.',

@@ -60,6 +60,10 @@ export class OmrService {
     return this.batchService.getTeacherBatchById(batch.id, teacherId);
   }
 
+  async listTeacherBatches(teacherId: string) {
+    return this.batchService.listTeacherBatches(teacherId);
+  }
+
   async getBatchById(batchId: string, teacherId: string) {
     return this.batchService.getTeacherBatchById(batchId, teacherId);
   }

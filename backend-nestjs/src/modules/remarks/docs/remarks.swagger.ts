@@ -55,6 +55,21 @@ export const RemarksSwagger = {
       ApiStandardErrorResponses(401, 403, 500),
     );
   },
+  LayDanhSachYeuCauPhucKhaoCuaToi() {
+    return applyDecorators(
+      ApiBearerOperation({
+        summary: 'Học sinh lấy danh sách yêu cầu phúc khảo của mình',
+        roles: [Role.STUDENT],
+      }),
+      ApiWrappedOkResponse({
+        type: RemarkResponseDto,
+        isArray: true,
+        description:
+          'Lấy danh sách yêu cầu phúc khảo của học sinh hiện tại thành công.',
+      }),
+      ApiStandardErrorResponses(401, 403, 500),
+    );
+  },
   DuyetYeuCauPhucKhao() {
     return applyDecorators(
       ApiBearerOperation({

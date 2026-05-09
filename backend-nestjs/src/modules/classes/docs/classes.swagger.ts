@@ -48,13 +48,29 @@ export const ClassesSwagger = {
       ApiStandardErrorResponses(401, 403, 500),
     );
   },
+  LayDanhSachLopHocTheoVaiTro() {
+    return applyDecorators(
+      ApiBearerOperation({
+        summary: 'Lấy danh sách lớp học theo vai trò hiện tại',
+        roles: [Role.TEACHER, Role.STUDENT, Role.ADMIN],
+        notes:
+          'TEACHER nhận danh sách lớp đang dạy, STUDENT nhận danh sách lớp đã tham gia, ADMIN nhận toàn bộ lớp học.',
+      }),
+      ApiWrappedOkResponse({
+        type: ClassResponseDto,
+        isArray: true,
+        description: 'Lấy danh sách lớp học thành công.',
+      }),
+      ApiStandardErrorResponses(401, 403, 500),
+    );
+  },
   LayChiTietLopHoc() {
     return applyDecorators(
       ApiBearerOperation({
         summary: 'Lấy chi tiết lớp học theo ID',
-        roles: [Role.TEACHER],
+        roles: [Role.TEACHER, Role.STUDENT, Role.ADMIN],
         notes:
-          'Trả về thông tin lớp, giáo viên phụ trách và danh sách học sinh đã ghi danh.',
+          'TEACHER xem lớp mình phụ trách, STUDENT xem lớp mình đã tham gia, ADMIN xem mọi lớp. Trả về thông tin lớp, giáo viên phụ trách và danh sách học sinh đã ghi danh.',
       }),
       ApiParam({ name: 'id', description: 'ID lớp học', format: 'uuid' }),
       ApiWrappedOkResponse({
@@ -103,7 +119,11 @@ export const ClassesSwagger = {
         roles: [Role.TEACHER],
       }),
       ApiParam({ name: 'id', description: 'ID lớp học', format: 'uuid' }),
-      ApiParam({ name: 'studentId', description: 'ID học sinh', format: 'uuid' }),
+      ApiParam({
+        name: 'studentId',
+        description: 'ID học sinh',
+        format: 'uuid',
+      }),
       ApiWrappedOkResponse({
         type: ClassResponseDto,
         description: 'Xóa học sinh khỏi lớp thành công.',

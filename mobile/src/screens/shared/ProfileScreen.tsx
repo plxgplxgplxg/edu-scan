@@ -12,6 +12,7 @@ import { BottomNav } from '../../components/BottomNav';
 import { PageHeader } from '../../components/PageHeader';
 import { ModalSheet } from '../../components/ModalSheet';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { ErrorState, LoadingState } from '../../components/RequestState';
 import { Screen } from '../../components/Screen';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { AppText } from '../../components/AppText';
@@ -19,12 +20,54 @@ import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import { getInitials } from '../../utils/string';
-import { omrBatches, studentResults, teacherClasses, teacherExams } from '../../api/mockData';
+import {
+  listClasses,
+  listExams,
+  listOmrBatches,
+  listStudentSubmissions,
+} from '../../api/edu-scan';
+import { useAsyncResource } from '../../hooks/useAsyncResource';
 
 export function ProfileScreen() {
-  const { content, email, language, logout, profileName, role, setLanguage } = useAuth();
+  const { accessToken, content, email, language, logout, profileName, role, setLanguage } = useAuth();
   const layout = useResponsiveLayout();
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
+  const { data, loading, error, reload } = useAsyncResource(
+    async () => {
+      if (!accessToken || !role) {
+        return null;
+      }
+
+      if (role === 'TEACHER') {
+        const [classes, exams, omrBatches] = await Promise.all([
+          listClasses(accessToken),
+          listExams(accessToken),
+          listOmrBatches(accessToken),
+        ]);
+
+        return {
+          classes: classes.length,
+          exams: exams.length,
+          omrBatches: omrBatches.length,
+        };
+      }
+
+      if (role === 'STUDENT') {
+        const submissions = await listStudentSubmissions(accessToken);
+        const graded = submissions.items.filter((item) => item.status === 'GRADED');
+
+        return {
+          average:
+            graded.reduce((sum, item) => sum + item.score, 0) /
+            Math.max(graded.length, 1),
+          exams: submissions.items.length,
+        };
+      }
+
+      return null;
+    },
+    [accessToken, role],
+  );
 
   const roleGradients = useMemo(
     () =>
@@ -95,26 +138,21 @@ export function ProfileScreen() {
               </AppText>
             </View>
             <View style={[styles.metricsCard, layout.isCompact ? styles.metricsCardStack : null]}>
-              {role === 'TEACHER' ? (
+                {role === 'TEACHER' ? (
                 <>
-                  <MetricBlock label={content.teacher.dashboard.metrics.classes} value={String(teacherClasses.length)} light />
-                  <MetricBlock label={content.teacher.dashboard.metrics.exams} value={String(teacherExams.length)} light />
-                  <MetricBlock label={content.shared.profile.teacherOmrCount} value={String(omrBatches.length)} light />
+                  <MetricBlock label={content.teacher.dashboard.metrics.classes} value={String((data as { classes?: number } | null)?.classes ?? 0)} light />
+                  <MetricBlock label={content.teacher.dashboard.metrics.exams} value={String((data as { exams?: number } | null)?.exams ?? 0)} light />
+                  <MetricBlock label={content.shared.profile.teacherOmrCount} value={String((data as { omrBatches?: number } | null)?.omrBatches ?? 0)} light />
                 </>
               ) : null}
               {role === 'STUDENT' ? (
                 <>
                   <MetricBlock
                     label={content.student.dashboard.metrics.average}
-                    value={(
-                      studentResults
-                        .filter(item => item.status === 'GRADED')
-                        .reduce((sum, item) => sum + item.score, 0) /
-                      Math.max(studentResults.filter(item => item.status === 'GRADED').length, 1)
-                    ).toFixed(1)}
+                    value={(((data as { average?: number } | null)?.average ?? 0)).toFixed(1)}
                     light
                   />
-                  <MetricBlock label={content.student.dashboard.metrics.exams} value={String(studentResults.length)} light />
+                  <MetricBlock label={content.student.dashboard.metrics.exams} value={String((data as { exams?: number } | null)?.exams ?? 0)} light />
                   <MetricBlock label={content.shared.profile.studentRank} value="Khá" light />
                 </>
               ) : null}
@@ -136,6 +174,14 @@ export function ProfileScreen() {
           },
         ]}
       >
+        {loading ? <LoadingState label={content.common.labels.loading} /> : null}
+        {error ? (
+          <ErrorState
+            message={error}
+            retryLabel={content.common.buttons.confirm}
+            onRetry={reload}
+          />
+        ) : null}
         {menuItems.map(item => (
           <Pressable key={item.key} onPress={item.onPress}>
             <SurfaceCard style={styles.menuCard}>

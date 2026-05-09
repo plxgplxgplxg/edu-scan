@@ -4,17 +4,20 @@ import { ArrowLeft, Check, MessageSquare, X } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { teacherRemarks } from '../../api/mockData';
+import { listTeacherRemarks, mapRemarkSummary, reviewRemark } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
 import { BottomNav } from '../../components/BottomNav';
 import { EmptyState } from '../../components/EmptyState';
 import { FilterChips } from '../../components/FilterChips';
 import { ModalSheet } from '../../components/ModalSheet';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { ErrorState, LoadingState } from '../../components/RequestState';
 import { Screen } from '../../components/Screen';
 import { StatusBadge } from '../../components/StatusBadge';
 import { SurfaceCard } from '../../components/SurfaceCard';
+import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { useAppContent } from '../../hooks/useAppContent';
+import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
@@ -26,24 +29,39 @@ type RemarkFilter = 'ALL' | Extract<StatusKey, 'PENDING' | 'APPROVED' | 'REJECTE
 export function TeacherRemarksScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
+  const { accessToken } = useAuth();
   const layout = useResponsiveLayout();
   const [filter, setFilter] = useState<RemarkFilter>('ALL');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [decisionAnswer, setDecisionAnswer] = useState<'A' | 'B' | 'C' | 'D'>('A');
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const { data, loading, error, reload } = useAsyncResource(
+    async () => {
+      if (!accessToken) {
+        return [];
+      }
+
+      const remarks = await listTeacherRemarks(accessToken);
+      return remarks.map(mapRemarkSummary);
+    },
+    [accessToken],
+  );
 
   const items = useMemo(
     () =>
-      teacherRemarks.filter(item => filter === 'ALL' || item.status === filter),
-    [filter],
+      (data ?? []).filter(item => filter === 'ALL' || item.status === filter),
+    [data, filter],
   );
 
   const selectedRemark =
-    teacherRemarks.find(item => item.id === selectedId) ?? teacherRemarks[0];
+    (data ?? []).find(item => item.id === selectedId) ?? items[0];
 
   const filterItems = [
     { id: 'ALL' as const, label: content.common.labels.all },
-    { id: 'PENDING' as const, label: content.common.tabs.pendingReview, count: teacherRemarks.filter(item => item.status === 'PENDING').length },
-    { id: 'APPROVED' as const, label: content.common.tabs.approved, count: teacherRemarks.filter(item => item.status === 'APPROVED').length },
-    { id: 'REJECTED' as const, label: content.common.tabs.rejected, count: teacherRemarks.filter(item => item.status === 'REJECTED').length },
+    { id: 'PENDING' as const, label: content.common.tabs.pendingReview, count: (data ?? []).filter(item => item.status === 'PENDING').length },
+    { id: 'APPROVED' as const, label: content.common.tabs.approved, count: (data ?? []).filter(item => item.status === 'APPROVED').length },
+    { id: 'REJECTED' as const, label: content.common.tabs.rejected, count: (data ?? []).filter(item => item.status === 'REJECTED').length },
   ];
 
   return (
@@ -85,6 +103,14 @@ export function TeacherRemarksScreen() {
           },
         ]}
       >
+        {loading ? <LoadingState label={content.common.labels.loading} /> : null}
+        {error ? (
+          <ErrorState
+            message={error}
+            retryLabel={content.common.buttons.confirm}
+            onRetry={reload}
+          />
+        ) : null}
         {items.map(item => (
           <Pressable key={item.id} onPress={() => setSelectedId(item.id)}>
             <SurfaceCard style={styles.card}>
@@ -143,21 +169,90 @@ export function TeacherRemarksScreen() {
             <AppText variant="body">{selectedRemark.reason}</AppText>
           </SurfaceCard>
           {selectedRemark.status === 'PENDING' ? (
-            <View style={styles.actionRow}>
-              <PrimaryButton
-                label={content.common.buttons.reject}
-                variant="danger"
-                icon={<X size={18} color={palette.destructive} />}
-                onPress={() => setSelectedId(null)}
-                style={styles.flex}
-              />
-              <PrimaryButton
-                label={content.common.buttons.approve}
-                icon={<Check size={18} color={palette.white} />}
-                onPress={() => setSelectedId(null)}
-                style={styles.flex}
-              />
-            </View>
+            <>
+              <View style={styles.actionRow}>
+                {(['A', 'B', 'C', 'D'] as const).map(option => (
+                  <Pressable
+                    key={option}
+                    onPress={() => setDecisionAnswer(option)}
+                    style={[
+                      styles.answerOption,
+                      decisionAnswer === option ? styles.answerActive : null,
+                    ]}
+                  >
+                    <AppText
+                      variant="body"
+                      weight="semibold"
+                      color={decisionAnswer === option ? palette.white : palette.foreground}
+                    >
+                      {option}
+                    </AppText>
+                  </Pressable>
+                ))}
+              </View>
+              <View style={styles.actionRow}>
+                <PrimaryButton
+                  label={content.common.buttons.reject}
+                  variant="danger"
+                  icon={<X size={18} color={palette.destructive} />}
+                  loading={submitting}
+                  onPress={async () => {
+                    if (!accessToken) {
+                      return;
+                    }
+
+                    setSubmitting(true);
+                    setSubmitError(null);
+
+                    try {
+                      await reviewRemark(accessToken, selectedRemark.id, {
+                        status: 'REJECTED',
+                        teacherComment: 'Yêu cầu chưa đủ cơ sở để điều chỉnh.',
+                      });
+                      setSelectedId(null);
+                      await reload();
+                    } catch (err) {
+                      setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+                    } finally {
+                      setSubmitting(false);
+                    }
+                  }}
+                  style={styles.flex}
+                />
+                <PrimaryButton
+                  label={content.common.buttons.approve}
+                  icon={<Check size={18} color={palette.white} />}
+                  loading={submitting}
+                  onPress={async () => {
+                    if (!accessToken) {
+                      return;
+                    }
+
+                    setSubmitting(true);
+                    setSubmitError(null);
+
+                    try {
+                      await reviewRemark(accessToken, selectedRemark.id, {
+                        status: 'APPROVED',
+                        finalAnswer: decisionAnswer,
+                      });
+                      setSelectedId(null);
+                      await reload();
+                    } catch (err) {
+                      setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+                    } finally {
+                      setSubmitting(false);
+                    }
+                  }}
+                  style={styles.flex}
+                />
+              </View>
+              {submitError ? (
+                <AppText variant="caption" color={palette.destructive}>
+                  {submitError}
+                </AppText>
+              ) : null}
+            </>
           ) : null}
         </View>
       </ModalSheet>
@@ -202,5 +297,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: appTheme.spacing.md,
     flexWrap: 'wrap',
+  },
+  answerOption: {
+    width: 44,
+    height: 44,
+    borderRadius: appTheme.radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.secondary,
+  },
+  answerActive: {
+    backgroundColor: palette.primary,
   },
 });

@@ -47,6 +47,10 @@ export class RemarksService {
     return this.remarksRepository.findAllRemarks(status);
   }
 
+  async getMyRemarks(studentId: string) {
+    return this.remarksRepository.findStudentRemarks(studentId);
+  }
+
   async reviewRemark(
     remarkId: string,
     teacherId: string,

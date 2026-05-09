@@ -10,24 +10,31 @@ import {
   UserPlus,
   Users,
 } from 'lucide-react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import {
-  classStudents,
-  teacherAssignments,
-  teacherClasses,
-} from '../../api/mockData';
+  addStudentToClass,
+  createAssignment,
+  getClassDetail,
+  listAssignments,
+  mapClassDetail,
+  mapTeacherAssignmentSummary,
+  removeStudentFromClass,
+} from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
 import { ModalSheet } from '../../components/ModalSheet';
 import { PageHeader } from '../../components/PageHeader';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ProgressBar } from '../../components/ProgressBar';
+import { ErrorState, LoadingState } from '../../components/RequestState';
 import { Screen } from '../../components/Screen';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { TextInputField } from '../../components/TextInputField';
 import { FilterChips } from '../../components/FilterChips';
+import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { useAppContent } from '../../hooks/useAppContent';
+import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import { formatVietnameseDate, percentage } from '../../utils/format';
@@ -38,13 +45,17 @@ type DetailTab = 'students' | 'assignments' | 'info';
 
 export function TeacherClassDetailScreen() {
   const navigation = useNavigation<Nav>();
+  const route = useRoute<RouteProp<RootStackParamList, 'TeacherClassDetail'>>();
   const content = useAppContent();
+  const { accessToken } = useAuth();
   const layout = useResponsiveLayout();
-  const currentClass = teacherClasses[0];
+  const classId = route.params?.classId;
   const [activeTab, setActiveTab] = useState<DetailTab>('students');
   const [showAddStudent, setShowAddStudent] = useState(false);
   const [studentLookup, setStudentLookup] = useState('');
   const [showCreateAssignment, setShowCreateAssignment] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [assignmentForm, setAssignmentForm] = useState({
     title: '',
     description: '',
@@ -52,6 +63,33 @@ export function TeacherClassDetailScreen() {
     maxScore: '10',
     latePenaltyPct: '10',
   });
+  const { data, loading, error, reload } = useAsyncResource(
+    async () => {
+      if (!accessToken || !classId) {
+        return null;
+      }
+
+      const [classItem, assignments] = await Promise.all([
+        getClassDetail(accessToken, classId),
+        listAssignments(accessToken),
+      ]);
+
+      const detail = mapClassDetail(classItem);
+      const classMap = new Map([[classItem.id, classItem]]);
+
+      return {
+        currentClass: detail,
+        assignments: assignments
+          .filter((item) => item.classes.some((entry) => entry.classId === classItem.id))
+          .map((item) => mapTeacherAssignmentSummary(item, classMap)),
+      };
+    },
+    [accessToken, classId],
+  );
+
+  const currentClass = data?.currentClass;
+  const classStudents = currentClass?.students ?? [];
+  const teacherAssignments = data?.assignments ?? [];
 
   const tabItems = useMemo(
     () => [
@@ -61,6 +99,38 @@ export function TeacherClassDetailScreen() {
     ],
     [content.common.sections.info, content.common.tabs.assignments, content.common.tabs.students],
   );
+
+  if (!currentClass && loading) {
+    return (
+      <Screen>
+        <LoadingState label={content.common.labels.loading} />
+      </Screen>
+    );
+  }
+
+  if (!currentClass && error) {
+    return (
+      <Screen>
+        <ErrorState
+          message={error}
+          retryLabel={content.common.buttons.confirm}
+          onRetry={reload}
+        />
+      </Screen>
+    );
+  }
+
+  if (!currentClass) {
+    return (
+      <Screen>
+        <ErrorState
+          message="Không tìm thấy lớp học"
+          retryLabel={content.common.buttons.back}
+          onRetry={() => navigation.goBack()}
+        />
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
@@ -127,7 +197,25 @@ export function TeacherClassDetailScreen() {
                     {`${student.studentCode} • ${student.joinedAt}`}
                   </AppText>
                 </View>
-                <Pressable>
+                <Pressable
+                  onPress={async () => {
+                    if (!accessToken) {
+                      return;
+                    }
+
+                    setSubmitting(true);
+                    setSubmitError(null);
+
+                    try {
+                      await removeStudentFromClass(accessToken, currentClass.id, student.id);
+                      await reload();
+                    } catch (err) {
+                      setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+                    } finally {
+                      setSubmitting(false);
+                    }
+                  }}
+                >
                   <Trash2 size={16} color={palette.mutedForeground} />
                 </Pressable>
               </SurfaceCard>
@@ -232,9 +320,37 @@ export function TeacherClassDetailScreen() {
         />
         <PrimaryButton
           label={content.teacher.classes.addStudent}
-          onPress={() => setShowAddStudent(false)}
+          loading={submitting}
+          onPress={async () => {
+            if (!accessToken) {
+              return;
+            }
+
+            setSubmitting(true);
+            setSubmitError(null);
+
+            try {
+              const value = studentLookup.trim();
+              await addStudentToClass(accessToken, currentClass.id, {
+                email: value.includes('@') ? value : undefined,
+                studentCode: value.includes('@') ? undefined : value,
+              });
+              setStudentLookup('');
+              setShowAddStudent(false);
+              await reload();
+            } catch (err) {
+              setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+            } finally {
+              setSubmitting(false);
+            }
+          }}
           style={styles.sheetButton}
         />
+        {submitError ? (
+          <AppText variant="caption" color={palette.destructive}>
+            {submitError}
+          </AppText>
+        ) : null}
       </ModalSheet>
 
       <ModalSheet
@@ -279,8 +395,46 @@ export function TeacherClassDetailScreen() {
           />
           <PrimaryButton
             label={content.common.buttons.createAssignment}
-            onPress={() => setShowCreateAssignment(false)}
+            loading={submitting}
+            onPress={async () => {
+              if (!accessToken) {
+                return;
+              }
+
+              setSubmitting(true);
+              setSubmitError(null);
+
+              try {
+                await createAssignment(accessToken, {
+                  title: assignmentForm.title.trim(),
+                  description: assignmentForm.description.trim() || undefined,
+                  deadline: new Date(assignmentForm.deadline).toISOString(),
+                  maxScore: Number(assignmentForm.maxScore),
+                  allowLate: Number(assignmentForm.latePenaltyPct) > 0,
+                  latePenaltyPct: Number(assignmentForm.latePenaltyPct),
+                  classIds: [currentClass.id],
+                });
+                setShowCreateAssignment(false);
+                setAssignmentForm({
+                  title: '',
+                  description: '',
+                  deadline: '',
+                  maxScore: '10',
+                  latePenaltyPct: '10',
+                });
+                await reload();
+              } catch (err) {
+                setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+              } finally {
+                setSubmitting(false);
+              }
+            }}
           />
+          {submitError ? (
+            <AppText variant="caption" color={palette.destructive}>
+              {submitError}
+            </AppText>
+          ) : null}
         </View>
       </ModalSheet>
     </Screen>

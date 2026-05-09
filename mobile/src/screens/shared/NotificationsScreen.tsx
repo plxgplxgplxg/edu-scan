@@ -10,14 +10,16 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { notifications } from '../../api/mockData';
+import { buildNotifications } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
 import { BottomNav } from '../../components/BottomNav';
 import { EmptyState } from '../../components/EmptyState';
 import { PageHeader } from '../../components/PageHeader';
+import { ErrorState, LoadingState } from '../../components/RequestState';
 import { Screen } from '../../components/Screen';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { useAuth } from '../../store/auth-store';
+import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
@@ -26,8 +28,19 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export function NotificationsScreen() {
   const navigation = useNavigation<Nav>();
-  const { content, role } = useAuth();
+  const { accessToken, content, role } = useAuth();
   const layout = useResponsiveLayout();
+  const { data, loading, error, reload } = useAsyncResource(
+    async () => {
+      if (!accessToken || !role) {
+        return [];
+      }
+
+      return buildNotifications(accessToken, role);
+    },
+    [accessToken, role],
+  );
+  const notifications = data ?? [];
   const unreadCount = notifications.filter(item => !item.read).length;
 
   return (
@@ -63,6 +76,14 @@ export function NotificationsScreen() {
           },
         ]}
       >
+        {loading ? <LoadingState label={content.common.labels.loading} /> : null}
+        {error ? (
+          <ErrorState
+            message={error}
+            retryLabel={content.common.buttons.confirm}
+            onRetry={reload}
+          />
+        ) : null}
         {notifications.map(item => (
           <SurfaceCard
             key={item.id}

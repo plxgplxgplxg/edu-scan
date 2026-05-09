@@ -3,15 +3,18 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { studentResults } from '../../api/mockData';
+import { listStudentSubmissions, mapResultSummary } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
 import { BottomNav } from '../../components/BottomNav';
 import { PageHeader } from '../../components/PageHeader';
+import { ErrorState, LoadingState } from '../../components/RequestState';
 import { ScoreRing } from '../../components/ScoreRing';
 import { Screen } from '../../components/Screen';
 import { StatusBadge } from '../../components/StatusBadge';
 import { SurfaceCard } from '../../components/SurfaceCard';
+import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { useAppContent } from '../../hooks/useAppContent';
+import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import { formatVietnameseDate } from '../../utils/format';
@@ -22,11 +25,24 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export function StudentResultsScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
+  const { accessToken, role } = useAuth();
   const layout = useResponsiveLayout();
+  const { data, loading, error, reload } = useAsyncResource(
+    async () => {
+      if (!accessToken) {
+        return [];
+      }
+
+      const submissions = await listStudentSubmissions(accessToken);
+      return submissions.items.map(mapResultSummary);
+    },
+    [accessToken],
+  );
+  const studentResults = data ?? [];
   const graded = studentResults.filter(item => item.status === 'GRADED');
   const avg =
     graded.reduce((sum, item) => sum + item.score, 0) / Math.max(graded.length, 1);
-  const maxScore = Math.max(...graded.map(item => item.score));
+  const maxScore = graded.length ? Math.max(...graded.map(item => item.score)) : 0;
 
   return (
     <Screen>
@@ -79,6 +95,14 @@ export function StudentResultsScreen() {
           },
         ]}
       >
+        {loading ? <LoadingState label={content.common.labels.loading} /> : null}
+        {error ? (
+          <ErrorState
+            message={error}
+            retryLabel={content.common.buttons.confirm}
+            onRetry={reload}
+          />
+        ) : null}
         {studentResults.map(item => (
           <Pressable
             key={item.id}
@@ -102,7 +126,9 @@ export function StudentResultsScreen() {
         ))}
       </View>
 
-      <BottomNav role="STUDENT" currentScreen="StudentResults" currentModule="results" />
+      {role ? (
+        <BottomNav role={role} currentScreen="StudentResults" currentModule="results" />
+      ) : null}
     </Screen>
   );
 }

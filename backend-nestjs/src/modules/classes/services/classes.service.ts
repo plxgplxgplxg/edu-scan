@@ -3,10 +3,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Role } from '@prisma/client';
 import { ClassesRepository } from '../repositories/classes.repository';
 import { CreateClassDto } from '../dto/request/create-class.dto';
 import { UpdateClassDto } from '../dto/request/update-class.dto';
 import { AddStudentDto } from '../dto/request/add-student.dto';
+import type { AuthenticatedUser } from '../../../common/auth/assert-user-role';
 
 @Injectable()
 export class ClassesService {
@@ -26,11 +28,50 @@ export class ClassesService {
     return this.classesRepository.listTeacherClasses(teacherId);
   }
 
+  async listClasses(currentUser: AuthenticatedUser) {
+    if (currentUser.role === Role.TEACHER) {
+      return this.classesRepository.listTeacherClasses(currentUser.id);
+    }
+
+    if (currentUser.role === Role.STUDENT) {
+      return this.classesRepository.listStudentClasses(currentUser.id);
+    }
+
+    return this.classesRepository.listAllClasses();
+  }
+
   async getTeacherClassById(classId: string, teacherId: string) {
     const classEntity = await this.classesRepository.findTeacherClassById(
       classId,
       teacherId,
     );
+
+    if (!classEntity) {
+      throw new NotFoundException('Class not found!');
+    }
+
+    return classEntity;
+  }
+
+  async getClassById(classId: string, currentUser: AuthenticatedUser) {
+    if (currentUser.role === Role.TEACHER) {
+      return this.getTeacherClassById(classId, currentUser.id);
+    }
+
+    if (currentUser.role === Role.STUDENT) {
+      const classEntity = await this.classesRepository.findStudentClassById(
+        classId,
+        currentUser.id,
+      );
+
+      if (!classEntity) {
+        throw new NotFoundException('Class not found!');
+      }
+
+      return classEntity;
+    }
+
+    const classEntity = await this.classesRepository.findClassById(classId);
 
     if (!classEntity) {
       throw new NotFoundException('Class not found!');
