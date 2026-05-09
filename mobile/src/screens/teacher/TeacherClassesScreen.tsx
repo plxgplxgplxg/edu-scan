@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import {
-  ArrowLeft,
   Copy,
   Plus,
   Search,
@@ -15,12 +14,14 @@ import { AppText } from '../../components/AppText';
 import { BottomNav } from '../../components/BottomNav';
 import { EmptyState } from '../../components/EmptyState';
 import { ModalSheet } from '../../components/ModalSheet';
+import { PageHeader } from '../../components/PageHeader';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { TextInputField } from '../../components/TextInputField';
 import { useAppContent } from '../../hooks/useAppContent';
 import { appTheme, palette } from '../../theme/tokens';
+import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -35,6 +36,7 @@ const subjectStyles: Record<string, { backgroundColor: string; color: string }> 
 export function TeacherClassesScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
+  const layout = useResponsiveLayout();
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [formState, setFormState] = useState({
@@ -57,21 +59,27 @@ export function TeacherClassesScreen() {
 
   return (
     <Screen>
-      <View style={styles.header}>
-        <Pressable style={styles.backRow} onPress={() => navigation.navigate('TeacherDashboard')}>
-          <ArrowLeft size={16} color={palette.mutedForeground} />
-          <AppText variant="label" color={palette.mutedForeground}>
-            {content.common.buttons.backToHome}
-          </AppText>
-        </Pressable>
-        <View style={styles.titleRow}>
-          <AppText variant="title" weight="bold">
-            {content.teacher.classes.title}
-          </AppText>
-          <Pressable style={styles.iconButton} onPress={() => setShowCreate(true)}>
-            <Plus size={20} color={palette.white} />
-          </Pressable>
-        </View>
+      <PageHeader
+        backLabel={content.common.buttons.backToHome}
+        title={content.teacher.classes.title}
+        subtitle={`${String(filteredItems.length)} ${content.teacher.classes.studentCountSuffix}`}
+        gradient={['#5B5BD6', '#7C5CFC']}
+        onBack={() => navigation.navigate('TeacherDashboard')}
+      />
+
+      <View
+        style={[
+          styles.list,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap,
+            maxWidth: layout.contentMaxWidth,
+            alignSelf: 'center',
+            width: '100%',
+            gap: layout.sectionGap,
+          },
+        ]}
+      >
         <TextInputField
           label={content.common.search.classes}
           value={search}
@@ -79,9 +87,7 @@ export function TeacherClassesScreen() {
           placeholder={content.common.search.classes}
           trailing={<Search size={18} color={palette.mutedForeground} />}
         />
-      </View>
 
-      <View style={styles.list}>
         {filteredItems.map(item => {
           const subjectStyle = subjectStyles[item.subject] ?? {
             backgroundColor: palette.secondary,
@@ -136,6 +142,13 @@ export function TeacherClassesScreen() {
             icon={<Users size={38} color={palette.mutedForeground} />}
           />
         ) : null}
+
+        <PrimaryButton
+          variant="outline"
+          label={content.teacher.classes.createTitle}
+          icon={<Plus size={18} color={palette.primary} />}
+          onPress={() => setShowCreate(true)}
+        />
       </View>
 
       <ModalSheet visible={showCreate} onClose={() => setShowCreate(false)}>
@@ -176,36 +189,11 @@ export function TeacherClassesScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: 56,
-    gap: appTheme.spacing.md,
-  },
-  backRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: appTheme.radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: palette.primary,
-  },
   list: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: appTheme.spacing.lg,
-    gap: appTheme.spacing.md,
+    gap: appTheme.spacing.lg,
   },
   classCard: {
-    padding: appTheme.spacing.lg,
+    padding: appTheme.spacing.xl,
   },
   classHeader: {
     flexDirection: 'row',

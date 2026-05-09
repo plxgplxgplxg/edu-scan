@@ -1,13 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import {
-  ArrowLeft,
   BookOpen,
   CheckCircle,
   Clock,
   Copy,
   ClipboardList,
-  Info,
   Trash2,
   UserPlus,
   Users,
@@ -31,6 +29,7 @@ import { TextInputField } from '../../components/TextInputField';
 import { FilterChips } from '../../components/FilterChips';
 import { useAppContent } from '../../hooks/useAppContent';
 import { appTheme, palette } from '../../theme/tokens';
+import { useResponsiveLayout } from '../../theme/responsive';
 import { formatVietnameseDate, percentage } from '../../utils/format';
 import type { RootStackParamList } from '../../navigation/types';
 
@@ -40,6 +39,7 @@ type DetailTab = 'students' | 'assignments' | 'info';
 export function TeacherClassDetailScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
+  const layout = useResponsiveLayout();
   const currentClass = teacherClasses[0];
   const [activeTab, setActiveTab] = useState<DetailTab>('students');
   const [showAddStudent, setShowAddStudent] = useState(false);
@@ -70,24 +70,38 @@ export function TeacherClassDetailScreen() {
         subtitle={`${currentClass.subject} • ${currentClass.schoolYear}`}
         gradient={['#5B5BD6', '#7C5CFC']}
         onBack={() => navigation.goBack()}
+        leadingVisual={<BookOpen size={30} color={palette.white} />}
+        footer={(
+          <View style={styles.codeRow}>
+            <Pressable style={styles.codePill}>
+              <Copy size={14} color={palette.white} />
+              <AppText variant="label" weight="semibold" color={palette.white}>
+                {currentClass.code}
+              </AppText>
+            </Pressable>
+            <View style={styles.studentPill}>
+              <Users size={14} color={palette.white} />
+              <AppText variant="label" weight="semibold" color={palette.white}>
+                {`${String(classStudents.length)} ${content.teacher.classes.studentCountSuffix}`}
+              </AppText>
+            </View>
+          </View>
+        )}
       />
 
-      <View style={styles.body}>
-        <View style={styles.codeRow}>
-          <Pressable style={styles.codePill}>
-            <Copy size={14} color={palette.white} />
-            <AppText variant="label" color={palette.white}>
-              {currentClass.code}
-            </AppText>
-          </Pressable>
-          <View style={styles.studentPill}>
-            <Users size={14} color={palette.white} />
-            <AppText variant="label" color={palette.white}>
-              {`${String(classStudents.length)} ${content.teacher.classes.studentCountSuffix}`}
-            </AppText>
-          </View>
-        </View>
-
+      <View
+        style={[
+          styles.body,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap,
+            maxWidth: layout.contentMaxWidth,
+            alignSelf: 'center',
+            width: '100%',
+            gap: layout.sectionGap,
+          },
+        ]}
+      >
         <FilterChips value={activeTab} items={tabItems} onChange={setActiveTab} />
 
         {activeTab === 'students' ? (
@@ -136,7 +150,7 @@ export function TeacherClassDetailScreen() {
 
               return (
                 <SurfaceCard key={item.id} style={styles.assignmentCard}>
-                  <View style={styles.assignmentHead}>
+                  <View style={[styles.assignmentHead, layout.isCompact ? styles.assignmentHeadStack : null]}>
                     <View style={styles.flex}>
                       <AppText variant="body" weight="medium">
                         {item.title}
@@ -189,7 +203,10 @@ export function TeacherClassDetailScreen() {
               { label: content.common.form.schoolYear, value: currentClass.schoolYear },
               { label: content.student.classes.classInfoTitle, value: currentClass.code },
             ].map(item => (
-              <SurfaceCard key={item.label} style={styles.infoCard}>
+              <SurfaceCard
+                key={item.label}
+                style={[styles.infoCard, layout.isCompact ? styles.infoCardStack : null]}
+              >
                 <AppText variant="caption" color={palette.mutedForeground}>
                   {item.label}
                 </AppText>
@@ -272,31 +289,30 @@ export function TeacherClassDetailScreen() {
 
 const styles = StyleSheet.create({
   body: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: appTheme.spacing.lg,
-    gap: appTheme.spacing.md,
+    gap: appTheme.spacing.lg,
   },
   codeRow: {
     flexDirection: 'row',
     gap: appTheme.spacing.sm,
+    flexWrap: 'wrap',
   },
   codePill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: appTheme.spacing.md,
-    paddingVertical: appTheme.spacing.sm,
-    borderRadius: appTheme.radius.md,
-    backgroundColor: palette.primary,
+    paddingHorizontal: appTheme.spacing.lg,
+    paddingVertical: 10,
+    borderRadius: appTheme.radius.lg,
+    backgroundColor: 'rgba(255,255,255,0.16)',
   },
   studentPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: appTheme.spacing.md,
-    paddingVertical: appTheme.spacing.sm,
-    borderRadius: appTheme.radius.md,
-    backgroundColor: palette.accent,
+    paddingHorizontal: appTheme.spacing.lg,
+    paddingVertical: 10,
+    borderRadius: appTheme.radius.lg,
+    backgroundColor: 'rgba(255,255,255,0.14)',
   },
   section: {
     gap: appTheme.spacing.md,
@@ -319,11 +335,16 @@ const styles = StyleSheet.create({
   },
   assignmentCard: {
     gap: appTheme.spacing.md,
+    borderLeftWidth: 5,
+    borderLeftColor: 'rgba(97,91,227,0.92)',
   },
   assignmentHead: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: appTheme.spacing.md,
+  },
+  assignmentHeadStack: {
+    flexWrap: 'wrap',
   },
   scoreBadge: {
     paddingHorizontal: 10,
@@ -347,7 +368,14 @@ const styles = StyleSheet.create({
     gap: appTheme.spacing.md,
   },
   infoCard: {
-    gap: 4,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: appTheme.spacing.md,
+  },
+  infoCardStack: {
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
   },
   sheetTitle: {
     marginBottom: appTheme.spacing.lg,

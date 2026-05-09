@@ -1,17 +1,19 @@
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
-import { ArrowLeft, Award, Target, TrendingUp } from 'lucide-react-native';
+import { StyleSheet, View } from 'react-native';
+import { Award, Target, TrendingUp } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { progressPoints } from '../../api/mockData';
 import { AppText } from '../../components/AppText';
 import { BottomNav } from '../../components/BottomNav';
+import { PageHeader } from '../../components/PageHeader';
 import { Screen } from '../../components/Screen';
 import { SimpleLineChart } from '../../components/SimpleLineChart';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { useAppContent } from '../../hooks/useAppContent';
 import { appTheme, palette } from '../../theme/tokens';
+import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -19,6 +21,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export function StudentProgressScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
+  const layout = useResponsiveLayout();
 
   const summaryCards = [
     {
@@ -46,22 +49,27 @@ export function StudentProgressScreen() {
 
   return (
     <Screen>
-      <View style={styles.header}>
-        <Pressable style={styles.backRow} onPress={() => navigation.navigate('StudentDashboard')}>
-          <ArrowLeft size={16} color={palette.mutedForeground} />
-          <AppText variant="label" color={palette.mutedForeground}>
-            {content.common.buttons.backToHome}
-          </AppText>
-        </Pressable>
-        <AppText variant="title" weight="bold">
-          {content.student.progress.title}
-        </AppText>
-        <AppText variant="body" color={palette.mutedForeground}>
-          {content.student.progress.subtitle}
-        </AppText>
-      </View>
+      <PageHeader
+        backLabel={content.common.buttons.backToHome}
+        title={content.student.progress.title}
+        subtitle={content.student.progress.subtitle}
+        gradient={['#4F46E5', '#7C5CFC']}
+        onBack={() => navigation.navigate('StudentDashboard')}
+      />
 
-      <View style={styles.summaryRow}>
+      <View
+        style={[
+          styles.summaryRow,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap,
+            maxWidth: layout.contentMaxWidth,
+            alignSelf: 'center',
+            width: '100%',
+            flexWrap: 'wrap',
+          },
+        ]}
+      >
         {summaryCards.map(card => (
           <SurfaceCard key={card.key} style={[styles.summaryCard, { backgroundColor: card.backgroundColor }]}>
             {card.icon}
@@ -75,7 +83,19 @@ export function StudentProgressScreen() {
         ))}
       </View>
 
-      <View style={styles.body}>
+      <View
+        style={[
+          styles.body,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap,
+            maxWidth: layout.contentMaxWidth,
+            alignSelf: 'center',
+            width: '100%',
+            gap: layout.sectionGap,
+          },
+        ]}
+      >
         <SurfaceCard style={styles.chartCard}>
           <AppText variant="body" weight="medium">
             {content.common.sections.trend}
@@ -111,33 +131,19 @@ export function StudentProgressScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: 56,
-    gap: appTheme.spacing.sm,
-  },
-  backRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: appTheme.spacing.sm,
-  },
   summaryRow: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: appTheme.spacing.lg,
     flexDirection: 'row',
     gap: appTheme.spacing.sm,
   },
   summaryCard: {
     flex: 1,
+    minWidth: 140,
     alignItems: 'center',
     gap: 4,
     borderWidth: 0,
   },
   body: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: appTheme.spacing.lg,
-    gap: appTheme.spacing.md,
+    gap: appTheme.spacing.lg,
   },
   chartCard: {
     gap: appTheme.spacing.md,

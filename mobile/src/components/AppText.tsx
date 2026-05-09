@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, type TextProps } from 'react-native';
+import { Text, type TextProps } from 'react-native';
 
 import { palette, typography } from '../theme/tokens';
+import { useResponsiveLayout } from '../theme/responsive';
 
 type Variant = 'body' | 'label' | 'title' | 'headline' | 'hero' | 'caption';
 type Weight = 'regular' | 'medium' | 'semibold' | 'bold' | 'heavy';
@@ -12,33 +13,6 @@ interface AppTextProps extends TextProps {
   color?: string;
 }
 
-const variantStyles = StyleSheet.create({
-  body: {
-    fontSize: typography.sizes.md,
-    lineHeight: 20,
-  },
-  label: {
-    fontSize: typography.sizes.sm,
-    lineHeight: 18,
-  },
-  title: {
-    fontSize: typography.sizes.xxl,
-    lineHeight: 30,
-  },
-  headline: {
-    fontSize: typography.sizes.xl,
-    lineHeight: 24,
-  },
-  hero: {
-    fontSize: typography.sizes.display,
-    lineHeight: 54,
-  },
-  caption: {
-    fontSize: typography.sizes.xs,
-    lineHeight: 16,
-  },
-});
-
 export function AppText({
   children,
   style,
@@ -47,6 +21,36 @@ export function AppText({
   color = palette.foreground,
   ...rest
 }: AppTextProps) {
+  const layout = useResponsiveLayout();
+  const titleScale = layout.titleScale;
+  const bodyScale = layout.isCompact ? 0.96 : layout.isTablet ? 1.04 : 1;
+  const variantStyle = {
+    body: {
+      fontSize: 16 * bodyScale,
+      lineHeight: 22 * bodyScale,
+    },
+    label: {
+      fontSize: 13 * bodyScale,
+      lineHeight: 18 * bodyScale,
+    },
+    title: {
+      fontSize: 34 * titleScale,
+      lineHeight: 40 * titleScale,
+    },
+    headline: {
+      fontSize: 22 * titleScale,
+      lineHeight: 28 * titleScale,
+    },
+    hero: {
+      fontSize: 44 * titleScale,
+      lineHeight: 48 * titleScale,
+    },
+    caption: {
+      fontSize: 13 * bodyScale,
+      lineHeight: 18 * bodyScale,
+    },
+  }[variant];
+
   return (
     <Text
       allowFontScaling={false}
@@ -57,7 +61,7 @@ export function AppText({
           fontFamily: typography.family,
           fontWeight: typography.weights[weight],
         },
-        variantStyles[variant],
+        variantStyle,
         style,
       ]}
     >

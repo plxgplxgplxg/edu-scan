@@ -6,4 +6,4 @@ export const contentByLanguage = {
   en,
 };
 
-export type AppContent = typeof vi;
+export type AppContent = typeof vi | typeof en;

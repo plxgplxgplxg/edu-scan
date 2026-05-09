@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { appTheme } from '../theme/tokens';
+import { useResponsiveLayout } from '../theme/responsive';
 import { AppText } from './AppText';
 
 interface FilterChipsProps<T extends string> {
@@ -15,11 +16,18 @@ export function FilterChips<T extends string>({
   items,
   onChange,
 }: FilterChipsProps<T>) {
+  const layout = useResponsiveLayout();
+
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[
+        styles.container,
+        {
+          paddingRight: layout.horizontalPadding * 0.25,
+        },
+      ]}
     >
       {items.map(item => {
         const active = item.id === value;
@@ -28,7 +36,15 @@ export function FilterChips<T extends string>({
           <Pressable
             key={item.id}
             onPress={() => onChange(item.id)}
-            style={[styles.chip, active ? styles.activeChip : null]}
+            style={[
+              styles.chip,
+              {
+                minHeight: layout.controlMinHeight - 10,
+                paddingHorizontal: layout.isCompact ? appTheme.spacing.md : appTheme.spacing.lg,
+                borderRadius: layout.heroRadius - 6,
+              },
+              active ? styles.activeChip : null,
+            ]}
           >
             <AppText
               variant="label"
@@ -58,20 +74,21 @@ const styles = StyleSheet.create({
     gap: appTheme.spacing.sm,
   },
   chip: {
-    minHeight: 40,
-    paddingHorizontal: appTheme.spacing.md,
-    borderRadius: appTheme.radius.md,
     backgroundColor: appTheme.palette.card,
+    borderWidth: 1,
+    borderColor: appTheme.palette.border,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    ...appTheme.shadows.card,
   },
   activeChip: {
     backgroundColor: appTheme.palette.primary,
+    borderColor: 'transparent',
   },
   badge: {
-    minWidth: 18,
-    height: 18,
+    minWidth: 22,
+    height: 22,
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',

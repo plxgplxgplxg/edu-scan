@@ -21,6 +21,7 @@ import { SurfaceCard } from '../../components/SurfaceCard';
 import { TextInputField } from '../../components/TextInputField';
 import { useAppContent } from '../../hooks/useAppContent';
 import { appTheme, palette } from '../../theme/tokens';
+import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -28,6 +29,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export function TeacherQuestionsScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
+  const layout = useResponsiveLayout();
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<'A' | 'B' | 'C' | 'D'>('A');
@@ -42,7 +44,18 @@ export function TeacherQuestionsScreen() {
 
   return (
     <Screen>
-      <View style={styles.header}>
+      <View
+        style={[
+          styles.header,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap,
+            maxWidth: layout.contentMaxWidth,
+            alignSelf: 'center',
+            width: '100%',
+          },
+        ]}
+      >
         <Pressable style={styles.backRow} onPress={() => navigation.navigate('TeacherDashboard')}>
           <ArrowLeft size={16} color={palette.mutedForeground} />
           <AppText variant="label" color={palette.mutedForeground}>
@@ -66,7 +79,19 @@ export function TeacherQuestionsScreen() {
         />
       </View>
 
-      <View style={styles.list}>
+      <View
+        style={[
+          styles.list,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap,
+            maxWidth: layout.contentMaxWidth,
+            alignSelf: 'center',
+            width: '100%',
+            gap: layout.sectionGap,
+          },
+        ]}
+      >
         {items.map(item => (
           <SurfaceCard key={item.id} style={styles.card}>
             <View style={styles.rowBetween}>
@@ -172,8 +197,6 @@ export function TeacherQuestionsScreen() {
 
 const styles = StyleSheet.create({
   header: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: 56,
     gap: appTheme.spacing.md,
   },
   backRow: {
@@ -183,8 +206,8 @@ const styles = StyleSheet.create({
   },
   titleRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: appTheme.spacing.md,
   },
   iconButton: {
     width: 40,
@@ -195,8 +218,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   list: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: appTheme.spacing.lg,
     gap: appTheme.spacing.md,
   },
   card: {
@@ -204,7 +225,6 @@ const styles = StyleSheet.create({
   },
   rowBetween: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     gap: appTheme.spacing.md,
   },
   flex: {
@@ -236,6 +256,7 @@ const styles = StyleSheet.create({
   answerRow: {
     flexDirection: 'row',
     gap: appTheme.spacing.sm,
+    flexWrap: 'wrap',
   },
   answerOption: {
     flex: 1,

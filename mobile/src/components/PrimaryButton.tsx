@@ -2,20 +2,23 @@ import React from 'react';
 import {
   ActivityIndicator,
   Pressable,
-  StyleSheet,
   View,
   type PressableProps,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 
 import { appTheme } from '../theme/tokens';
+import { useResponsiveLayout } from '../theme/responsive';
 import { GradientBackground } from './GradientBackground';
 import { AppText } from './AppText';
 
-interface PrimaryButtonProps extends PressableProps {
+interface PrimaryButtonProps extends Omit<PressableProps, 'style'> {
   label: string;
   icon?: React.ReactNode;
   loading?: boolean;
   variant?: 'solid' | 'soft' | 'danger' | 'outline';
+  style?: StyleProp<ViewStyle>;
 }
 
 export function PrimaryButton({
@@ -27,6 +30,7 @@ export function PrimaryButton({
   style,
   ...rest
 }: PrimaryButtonProps) {
+  const layout = useResponsiveLayout();
   const isDisabled = disabled || loading;
 
   const content = (
@@ -50,59 +54,55 @@ export function PrimaryButton({
       {...rest}
       disabled={isDisabled}
       style={({ pressed }) => [
-        styles.pressable,
-        pressed && !isDisabled ? styles.pressed : null,
-        isDisabled ? styles.disabled : null,
-        variant === 'outline' ? styles.outline : null,
-        variant === 'soft' ? styles.soft : null,
-        variant === 'danger' ? styles.danger : null,
+        {
+          overflow: 'hidden',
+          borderRadius: layout.heroRadius - 6,
+        },
+        pressed && !isDisabled ? { opacity: 0.92, transform: [{ scale: 0.99 }] } : null,
+        isDisabled ? { opacity: 0.7 } : null,
+        variant === 'outline'
+          ? {
+              backgroundColor: appTheme.palette.card,
+              borderWidth: 1,
+              borderColor: 'rgba(97,91,227,0.22)',
+            }
+          : null,
+        variant === 'soft' ? { backgroundColor: appTheme.palette.primaryMuted } : null,
+        variant === 'danger' ? { backgroundColor: appTheme.palette.destructiveSoft } : null,
         style,
       ]}
     >
       {variant === 'solid' ? (
-        <GradientBackground colors={[appTheme.palette.primary, appTheme.palette.accent]} style={styles.fill}>
+        <GradientBackground
+          colors={[appTheme.palette.primary, appTheme.palette.accent]}
+          style={{
+            minHeight: layout.controlMinHeight,
+            justifyContent: 'center',
+            borderRadius: layout.heroRadius - 6,
+          }}
+        >
           {content}
         </GradientBackground>
       ) : (
-        <View style={styles.fill}>{content}</View>
+        <View
+          style={{
+            minHeight: layout.controlMinHeight,
+            justifyContent: 'center',
+            borderRadius: layout.heroRadius - 6,
+          }}
+        >
+          {content}
+        </View>
       )}
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  pressable: {
-    overflow: 'hidden',
-    borderRadius: appTheme.radius.lg,
-  },
-  fill: {
-    minHeight: 54,
-    justifyContent: 'center',
-    borderRadius: appTheme.radius.lg,
-  },
+const styles = {
   inner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: appTheme.spacing.sm,
-    paddingHorizontal: appTheme.spacing.lg,
-  },
-  pressed: {
-    opacity: 0.92,
-    transform: [{ scale: 0.99 }],
-  },
-  disabled: {
-    opacity: 0.7,
-  },
-  outline: {
-    backgroundColor: appTheme.palette.card,
-    borderWidth: 1,
-    borderColor: appTheme.palette.primary,
-  },
-  soft: {
-    backgroundColor: appTheme.palette.secondary,
-  },
-  danger: {
-    backgroundColor: '#FEF2F2',
-  },
-});
+    paddingHorizontal: appTheme.spacing.xl,
+  } as const,
+};

@@ -4,7 +4,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from '../store/auth-store';
 import { AppNavigator } from '../navigation/AppNavigator';
-import { palette } from '../theme/tokens';
 
 function AppShell() {
   const { role } = useAuth();
@@ -13,7 +12,8 @@ function AppShell() {
     <>
       <StatusBar
         barStyle={role ? 'light-content' : 'light-content'}
-        backgroundColor={palette.primaryStrong}
+        backgroundColor="transparent"
+        translucent
       />
       <AppNavigator />
     </>

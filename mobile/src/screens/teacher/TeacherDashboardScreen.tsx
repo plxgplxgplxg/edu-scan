@@ -2,7 +2,6 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import {
   BarChart2,
-  Bell,
   BookOpen,
   FileText,
   HelpCircle,
@@ -21,6 +20,7 @@ import { Screen } from '../../components/Screen';
 import { useAppContent } from '../../hooks/useAppContent';
 import { useAuth } from '../../store/auth-store';
 import { appTheme } from '../../theme/tokens';
+import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
 import { teacherClasses, teacherExams, teacherRemarks } from '../../api/mockData';
 import { getInitials } from '../../utils/string';
@@ -40,6 +40,7 @@ export function TeacherDashboardScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
   const { profileName } = useAuth();
+  const layout = useResponsiveLayout();
 
   return (
     <Screen>
@@ -58,11 +59,23 @@ export function TeacherDashboardScreen() {
         ]}
       />
 
-      <View style={styles.section}>
+      <View
+        style={[
+          styles.section,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap + appTheme.spacing.sm,
+            maxWidth: layout.contentMaxWidth,
+            alignSelf: 'center',
+            width: '100%',
+            gap: layout.sectionGap,
+          },
+        ]}
+      >
         <AppText variant="caption" weight="semibold" color={appTheme.palette.mutedForeground}>
           {content.common.sections.functions.toUpperCase()}
         </AppText>
-        <View style={styles.grid}>
+        <View style={[styles.grid, { gap: layout.gridGap, rowGap: layout.gridGap }]}>
           {teacherDashboardModules.map(module => (
             <DashboardModuleCard
               key={module.id}
@@ -90,14 +103,11 @@ export function TeacherDashboardScreen() {
 
 const styles = StyleSheet.create({
   section: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: appTheme.spacing.xl,
-    gap: appTheme.spacing.md,
+    gap: appTheme.spacing.lg,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: appTheme.spacing.md,
+    justifyContent: 'flex-start',
   },
 });

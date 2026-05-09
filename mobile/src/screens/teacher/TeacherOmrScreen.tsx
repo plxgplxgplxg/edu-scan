@@ -13,7 +13,6 @@ import { omrBatches } from '../../api/mockData';
 import { AppText } from '../../components/AppText';
 import { BottomNav } from '../../components/BottomNav';
 import { ModalSheet } from '../../components/ModalSheet';
-import { PageHeader } from '../../components/PageHeader';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ProgressBar } from '../../components/ProgressBar';
 import { Screen } from '../../components/Screen';
@@ -21,6 +20,7 @@ import { StatusBadge } from '../../components/StatusBadge';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { useAppContent } from '../../hooks/useAppContent';
 import { appTheme, palette } from '../../theme/tokens';
+import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -28,11 +28,23 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export function TeacherOmrScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
+  const layout = useResponsiveLayout();
   const [showUpload, setShowUpload] = useState(false);
 
   return (
     <Screen>
-      <View style={styles.header}>
+      <View
+        style={[
+          styles.header,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap,
+            maxWidth: layout.contentMaxWidth,
+            alignSelf: 'center',
+            width: '100%',
+          },
+        ]}
+      >
         <Pressable style={styles.backRow} onPress={() => navigation.navigate('TeacherDashboard')}>
           <ArrowLeft size={16} color={palette.mutedForeground} />
           <AppText variant="label" color={palette.mutedForeground}>
@@ -44,7 +56,19 @@ export function TeacherOmrScreen() {
         </AppText>
       </View>
 
-      <View style={styles.body}>
+      <View
+        style={[
+          styles.body,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap,
+            maxWidth: layout.contentMaxWidth,
+            alignSelf: 'center',
+            width: '100%',
+            gap: layout.sectionGap,
+          },
+        ]}
+      >
         <Pressable onPress={() => setShowUpload(true)}>
           <SurfaceCard style={styles.heroCard}>
             <View style={styles.uploadIcon}>
@@ -121,8 +145,6 @@ export function TeacherOmrScreen() {
 
 const styles = StyleSheet.create({
   header: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: 56,
     gap: appTheme.spacing.md,
   },
   backRow: {
@@ -131,8 +153,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   body: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: appTheme.spacing.lg,
     gap: appTheme.spacing.md,
   },
   heroCard: {
@@ -165,6 +185,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: appTheme.spacing.md,
+    flexWrap: 'wrap',
   },
   sheetTitle: {
     marginBottom: appTheme.spacing.lg,

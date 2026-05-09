@@ -4,19 +4,23 @@ import {
   StyleSheet,
   View,
   type ScrollViewProps,
+  type StyleProp,
   type ViewStyle,
 } from 'react-native';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { appTheme } from '../theme/tokens';
+import { useResponsiveLayout } from '../theme/responsive';
 
 interface ScreenProps {
   children: React.ReactNode;
   scrollable?: boolean;
-  contentContainerStyle?: ViewStyle;
-  style?: ViewStyle;
+  contentContainerStyle?: StyleProp<ViewStyle>;
+  style?: StyleProp<ViewStyle>;
   scrollViewProps?: ScrollViewProps;
+  withoutBottomInset?: boolean;
+  bleedTop?: boolean;
 }
 
 export function Screen({
@@ -25,23 +29,69 @@ export function Screen({
   contentContainerStyle,
   style,
   scrollViewProps,
+  withoutBottomInset = false,
+  bleedTop = false,
 }: ScreenProps) {
+  const insets = useSafeAreaInsets();
+  const layout = useResponsiveLayout();
+  const childArray = React.Children.toArray(children);
+  const headerChild = childArray.find(
+    child =>
+      React.isValidElement(child) &&
+      typeof child.type !== 'string' &&
+      'name' in child.type &&
+      child.type.name === 'PageHeader',
+  );
+  const overlayChildren = childArray.filter(
+    child =>
+      React.isValidElement(child) &&
+      typeof child.type !== 'string' &&
+      'name' in child.type &&
+      child.type.name === 'BottomNav',
+  );
+  const contentChildren = childArray.filter(
+    child => !overlayChildren.includes(child) && child !== headerChild,
+  );
+  const omitTopInset = bleedTop || !!headerChild;
+  const bottomInset = !withoutBottomInset
+    ? layout.navHeight + Math.max(insets.bottom, layout.bottomOffset) + layout.sectionGap
+    : 0;
+
   const content = scrollable ? (
     <ScrollView
       bounces={false}
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={[styles.content, contentContainerStyle]}
+      contentInsetAdjustmentBehavior="never"
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={[
+        styles.content,
+        !withoutBottomInset ? { paddingBottom: bottomInset } : null,
+        contentContainerStyle,
+      ]}
       {...scrollViewProps}
     >
-      {children}
+      {contentChildren}
     </ScrollView>
   ) : (
-    <View style={[styles.content, contentContainerStyle]}>{children}</View>
+    <View
+      style={[
+        styles.content,
+        !withoutBottomInset ? { paddingBottom: bottomInset } : null,
+        contentContainerStyle,
+      ]}
+    >
+      {contentChildren}
+    </View>
   );
 
   return (
-    <SafeAreaView edges={['left', 'right']} style={[styles.safeArea, style]}>
+    <SafeAreaView
+      edges={omitTopInset ? ['left', 'right'] : ['top', 'left', 'right']}
+      style={[styles.safeArea, style]}
+    >
+      {headerChild}
       {content}
+      {overlayChildren}
     </SafeAreaView>
   );
 }
@@ -52,6 +102,6 @@ const styles = StyleSheet.create({
     backgroundColor: appTheme.palette.background,
   },
   content: {
-    paddingBottom: 120,
+    flexGrow: 1,
   },
 });

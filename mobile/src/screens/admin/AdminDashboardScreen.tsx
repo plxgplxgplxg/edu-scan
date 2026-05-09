@@ -4,7 +4,6 @@ import {
   BarChart2,
   BookOpen,
   Settings,
-  ShieldCheck,
   Users,
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -18,6 +17,7 @@ import { PageHeader } from '../../components/PageHeader';
 import { Screen } from '../../components/Screen';
 import { useAppContent } from '../../hooks/useAppContent';
 import { appTheme, palette } from '../../theme/tokens';
+import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
 import { adminUsers, teacherClasses } from '../../api/mockData';
 
@@ -33,6 +33,7 @@ const moduleIcons = {
 export function AdminDashboardScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
+  const layout = useResponsiveLayout();
 
   return (
     <Screen>
@@ -55,15 +56,23 @@ export function AdminDashboardScreen() {
           { label: content.admin.dashboard.metrics.classes, value: String(teacherClasses.length) },
         ]}
       />
-      <View style={styles.badgeIcon}>
-        <ShieldCheck size={20} color={palette.white} />
-      </View>
-
-      <View style={styles.section}>
+      <View
+        style={[
+          styles.section,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap + appTheme.spacing.sm,
+            maxWidth: layout.contentMaxWidth,
+            alignSelf: 'center',
+            width: '100%',
+            gap: layout.sectionGap,
+          },
+        ]}
+      >
         <AppText variant="caption" weight="semibold" color={palette.mutedForeground}>
           {content.common.sections.systemManagement.toUpperCase()}
         </AppText>
-        <View style={styles.grid}>
+        <View style={[styles.grid, { gap: layout.gridGap, rowGap: layout.gridGap }]}>
           {adminDashboardModules.map(module => (
             <DashboardModuleCard
               key={module.id}
@@ -88,20 +97,12 @@ export function AdminDashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  badgeIcon: {
-    position: 'absolute',
-    right: appTheme.spacing.xl + 12,
-    top: 96,
-  },
   section: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: appTheme.spacing.xl,
-    gap: appTheme.spacing.md,
+    gap: appTheme.spacing.lg,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: appTheme.spacing.md,
+    justifyContent: 'flex-start',
   },
 });

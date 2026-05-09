@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { ArrowLeft, Plus, Search, UserX } from 'lucide-react-native';
+import { Plus, Search, UserX } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -10,12 +10,14 @@ import { BottomNav } from '../../components/BottomNav';
 import { EmptyState } from '../../components/EmptyState';
 import { FilterChips } from '../../components/FilterChips';
 import { ModalSheet } from '../../components/ModalSheet';
+import { PageHeader } from '../../components/PageHeader';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { TextInputField } from '../../components/TextInputField';
 import { useAppContent } from '../../hooks/useAppContent';
 import { appTheme, palette } from '../../theme/tokens';
+import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
 import type { UserRole } from '../../types/app';
 
@@ -25,6 +27,7 @@ type RoleFilter = 'ALL' | UserRole;
 export function AdminUsersScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
+  const layout = useResponsiveLayout();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<RoleFilter>('ALL');
   const [showCreate, setShowCreate] = useState(false);
@@ -51,21 +54,27 @@ export function AdminUsersScreen() {
 
   return (
     <Screen>
-      <View style={styles.header}>
-        <Pressable style={styles.backRow} onPress={() => navigation.navigate('AdminDashboard')}>
-          <ArrowLeft size={16} color={palette.mutedForeground} />
-          <AppText variant="label" color={palette.mutedForeground}>
-            {content.common.buttons.backToHome}
-          </AppText>
-        </Pressable>
-        <View style={styles.titleRow}>
-          <AppText variant="title" weight="bold">
-            {content.admin.users.title}
-          </AppText>
-          <Pressable style={styles.iconButton} onPress={() => setShowCreate(true)}>
-            <Plus size={20} color={palette.white} />
-          </Pressable>
-        </View>
+      <PageHeader
+        backLabel={content.common.buttons.backToHome}
+        title={content.admin.users.title}
+        subtitle={content.common.search.users}
+        gradient={['#4F46E5', '#7C5CFC']}
+        onBack={() => navigation.navigate('AdminDashboard')}
+      />
+
+      <View
+        style={[
+          styles.list,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap,
+            maxWidth: layout.contentMaxWidth,
+            alignSelf: 'center',
+            width: '100%',
+            gap: layout.sectionGap,
+          },
+        ]}
+      >
         <TextInputField
           label={content.common.search.users}
           value={search}
@@ -74,11 +83,9 @@ export function AdminUsersScreen() {
           trailing={<Search size={18} color={palette.mutedForeground} />}
         />
         <FilterChips value={filter} items={filterItems} onChange={setFilter} />
-      </View>
 
-      <View style={styles.list}>
         {items.map(item => (
-          <SurfaceCard key={item.id} style={styles.card}>
+          <SurfaceCard key={item.id} style={[styles.card, layout.isCompact ? styles.cardStack : null]}>
             <View style={styles.avatar}>
               <AppText variant="label" weight="bold" color={item.isActive ? palette.secondaryForeground : palette.destructive}>
                 {item.name.charAt(0)}
@@ -116,6 +123,13 @@ export function AdminUsersScreen() {
         {!items.length ? (
           <EmptyState title={content.common.messages.emptyUsers} />
         ) : null}
+
+        <PrimaryButton
+          variant="outline"
+          label={content.admin.users.createTitle}
+          icon={<Plus size={18} color={palette.primary} />}
+          onPress={() => setShowCreate(true)}
+        />
       </View>
 
       <ModalSheet visible={showCreate} onClose={() => setShowCreate(false)}>
@@ -185,38 +199,17 @@ export function AdminUsersScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: 56,
-    gap: appTheme.spacing.md,
-  },
-  backRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: appTheme.radius.md,
-    backgroundColor: palette.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   list: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: appTheme.spacing.lg,
-    gap: appTheme.spacing.md,
+    gap: appTheme.spacing.lg,
   },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: appTheme.spacing.md,
+  },
+  cardStack: {
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
   },
   avatar: {
     width: 40,
@@ -255,5 +248,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: appTheme.spacing.md,
     marginTop: appTheme.spacing.xl,
+    flexWrap: 'wrap',
   },
 });

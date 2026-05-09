@@ -22,6 +22,7 @@ import { SurfaceCard } from '../../components/SurfaceCard';
 import { TextInputField } from '../../components/TextInputField';
 import { useAppContent } from '../../hooks/useAppContent';
 import { appTheme, palette } from '../../theme/tokens';
+import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -29,6 +30,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export function TeacherExamsScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
+  const layout = useResponsiveLayout();
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState('');
@@ -43,7 +45,18 @@ export function TeacherExamsScreen() {
 
   return (
     <Screen>
-      <View style={styles.header}>
+      <View
+        style={[
+          styles.header,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap,
+            maxWidth: layout.contentMaxWidth,
+            alignSelf: 'center',
+            width: '100%',
+          },
+        ]}
+      >
         <Pressable style={styles.backRow} onPress={() => navigation.navigate('TeacherDashboard')}>
           <ArrowLeft size={16} color={palette.mutedForeground} />
           <AppText variant="label" color={palette.mutedForeground}>
@@ -67,7 +80,19 @@ export function TeacherExamsScreen() {
         />
       </View>
 
-      <View style={styles.list}>
+      <View
+        style={[
+          styles.list,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap,
+            maxWidth: layout.contentMaxWidth,
+            alignSelf: 'center',
+            width: '100%',
+            gap: layout.sectionGap,
+          },
+        ]}
+      >
         {items.map(item => (
           <SurfaceCard key={item.id} style={styles.card}>
             <View style={styles.leading}>
@@ -137,8 +162,6 @@ export function TeacherExamsScreen() {
 
 const styles = StyleSheet.create({
   header: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: 56,
     gap: appTheme.spacing.md,
   },
   backRow: {
@@ -148,8 +171,8 @@ const styles = StyleSheet.create({
   },
   titleRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: appTheme.spacing.md,
   },
   iconButton: {
     width: 40,
@@ -160,8 +183,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   list: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: appTheme.spacing.lg,
     gap: appTheme.spacing.md,
   },
   card: {

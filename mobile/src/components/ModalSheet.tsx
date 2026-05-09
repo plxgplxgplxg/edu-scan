@@ -5,13 +5,13 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  StyleSheet,
   View,
 } from 'react-native';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { appTheme } from '../theme/tokens';
+import { useResponsiveLayout } from '../theme/responsive';
 
 interface ModalSheetProps {
   visible: boolean;
@@ -21,6 +21,7 @@ interface ModalSheetProps {
 
 export function ModalSheet({ visible, onClose, children }: ModalSheetProps) {
   const insets = useSafeAreaInsets();
+  const layout = useResponsiveLayout();
 
   return (
     <Modal
@@ -32,14 +33,40 @@ export function ModalSheet({ visible, onClose, children }: ModalSheetProps) {
       <Pressable style={styles.overlay} onPress={onClose}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.sheetWrap}
+          style={{ width: '100%' }}
         >
-          <Pressable onPress={event => event.stopPropagation()} style={styles.sheet}>
-            <View style={styles.handle} />
+          <Pressable
+            onPress={event => event.stopPropagation()}
+            style={{
+              alignSelf: 'center',
+              width: '100%',
+              maxWidth: layout.contentMaxWidth + layout.horizontalPadding * 2,
+              borderTopLeftRadius: layout.heroRadius,
+              borderTopRightRadius: layout.heroRadius,
+              backgroundColor: appTheme.palette.card,
+              paddingHorizontal: layout.isCompact ? appTheme.spacing.xl : appTheme.spacing.xxl,
+              paddingTop: layout.sectionGap,
+              maxHeight: layout.isCompact ? '92%' : '88%',
+              ...appTheme.shadows.floating,
+            }}
+          >
+            <View
+              style={{
+                alignSelf: 'center',
+                width: 42,
+                height: 4,
+                borderRadius: 999,
+                backgroundColor: '#D9DCF0',
+                marginBottom: appTheme.spacing.xl,
+              }}
+            />
             <ScrollView
               bounces={false}
               keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ paddingBottom: insets.bottom + appTheme.spacing.xxl }}
+              contentContainerStyle={{
+                paddingBottom: insets.bottom + appTheme.spacing.xxl,
+                gap: appTheme.spacing.md,
+              }}
             >
               {children}
             </ScrollView>
@@ -49,30 +76,10 @@ export function ModalSheet({ visible, onClose, children }: ModalSheetProps) {
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
+const styles = {
   overlay: {
     flex: 1,
     backgroundColor: appTheme.palette.overlay,
     justifyContent: 'flex-end',
-  },
-  sheetWrap: {
-    width: '100%',
-  },
-  sheet: {
-    borderTopLeftRadius: appTheme.radius.xxl,
-    borderTopRightRadius: appTheme.radius.xxl,
-    backgroundColor: appTheme.palette.card,
-    paddingHorizontal: appTheme.spacing.xxl,
-    paddingTop: appTheme.spacing.lg,
-    maxHeight: '88%',
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 42,
-    height: 4,
-    borderRadius: 999,
-    backgroundColor: appTheme.palette.muted,
-    marginBottom: appTheme.spacing.xl,
-  },
-});
+  } as const,
+};

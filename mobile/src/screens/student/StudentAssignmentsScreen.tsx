@@ -1,9 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import {
-  AlertCircle,
-  ArrowLeft,
-  ClipboardList,
   Clock,
   Link,
   Upload,
@@ -24,6 +21,7 @@ import { SurfaceCard } from '../../components/SurfaceCard';
 import { TextInputField } from '../../components/TextInputField';
 import { useAppContent } from '../../hooks/useAppContent';
 import { appTheme, palette } from '../../theme/tokens';
+import { useResponsiveLayout } from '../../theme/responsive';
 import { formatVietnameseDate, isExpired } from '../../utils/format';
 import type { RootStackParamList } from '../../navigation/types';
 
@@ -33,6 +31,7 @@ type FilterKey = 'all' | 'pending' | 'overdue' | 'submitted';
 export function StudentAssignmentsScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
+  const layout = useResponsiveLayout();
   const [filter, setFilter] = useState<FilterKey>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [fileUrl, setFileUrl] = useState('');
@@ -68,7 +67,19 @@ export function StudentAssignmentsScreen() {
         ]}
       />
 
-      <View style={styles.body}>
+      <View
+        style={[
+          styles.body,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap,
+            maxWidth: layout.contentMaxWidth,
+            alignSelf: 'center',
+            width: '100%',
+            gap: layout.sectionGap,
+          },
+        ]}
+      >
         <FilterChips
           value={filter}
           items={[
@@ -85,7 +96,7 @@ export function StudentAssignmentsScreen() {
             const expired = isExpired(item.deadline);
             return (
               <SurfaceCard key={item.id} style={[styles.card, expired && !item.submitted ? styles.overdueCard : null]}>
-                <View style={styles.rowBetween}>
+                <View style={[styles.rowBetween, layout.isCompact ? styles.rowWrap : null]}>
                   <View style={styles.flex}>
                     <AppText variant="caption" color={palette.mutedForeground}>
                       {item.classNames.join(', ')}
@@ -157,8 +168,6 @@ export function StudentAssignmentsScreen() {
 
 const styles = StyleSheet.create({
   body: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: appTheme.spacing.lg,
     gap: appTheme.spacing.md,
   },
   section: {
@@ -173,8 +182,10 @@ const styles = StyleSheet.create({
   },
   rowBetween: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     gap: appTheme.spacing.md,
+  },
+  rowWrap: {
+    flexWrap: 'wrap',
   },
   flex: {
     flex: 1,

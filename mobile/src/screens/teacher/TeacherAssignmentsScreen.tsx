@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import {
-  ArrowLeft,
   CheckCircle,
   ClipboardList,
   Clock,
@@ -15,12 +14,15 @@ import { teacherAssignments } from '../../api/mockData';
 import { AppText } from '../../components/AppText';
 import { BottomNav } from '../../components/BottomNav';
 import { EmptyState } from '../../components/EmptyState';
+import { PageHeader } from '../../components/PageHeader';
+import { PrimaryButton } from '../../components/PrimaryButton';
 import { ProgressBar } from '../../components/ProgressBar';
 import { Screen } from '../../components/Screen';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { TextInputField } from '../../components/TextInputField';
 import { useAppContent } from '../../hooks/useAppContent';
 import { appTheme, palette } from '../../theme/tokens';
+import { useResponsiveLayout } from '../../theme/responsive';
 import { formatVietnameseDate, percentage } from '../../utils/format';
 import type { RootStackParamList } from '../../navigation/types';
 
@@ -29,6 +31,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export function TeacherAssignmentsScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
+  const layout = useResponsiveLayout();
   const [search, setSearch] = useState('');
 
   const items = useMemo(
@@ -41,21 +44,27 @@ export function TeacherAssignmentsScreen() {
 
   return (
     <Screen>
-      <View style={styles.header}>
-        <Pressable style={styles.backRow} onPress={() => navigation.navigate('TeacherDashboard')}>
-          <ArrowLeft size={16} color={palette.mutedForeground} />
-          <AppText variant="label" color={palette.mutedForeground}>
-            {content.common.buttons.backToHome}
-          </AppText>
-        </Pressable>
-        <View style={styles.titleRow}>
-          <AppText variant="title" weight="bold">
-            {content.teacher.assignments.title}
-          </AppText>
-          <View style={styles.iconButton}>
-            <Plus size={20} color={palette.white} />
-          </View>
-        </View>
+      <PageHeader
+        backLabel={content.common.buttons.backToHome}
+        title={content.teacher.assignments.title}
+        subtitle={`${String(items.length)} ${content.common.tabs.assignments.toLowerCase()}`}
+        gradient={['#5B5BD6', '#7C5CFC']}
+        onBack={() => navigation.navigate('TeacherDashboard')}
+      />
+
+      <View
+        style={[
+          styles.list,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap,
+            maxWidth: layout.contentMaxWidth,
+            alignSelf: 'center',
+            width: '100%',
+            gap: layout.sectionGap,
+          },
+        ]}
+      >
         <TextInputField
           label={content.common.search.assignments}
           value={search}
@@ -63,9 +72,7 @@ export function TeacherAssignmentsScreen() {
           placeholder={content.common.search.assignments}
           trailing={<Search size={18} color={palette.mutedForeground} />}
         />
-      </View>
 
-      <View style={styles.list}>
         {items.map(item => {
           const progress = percentage(item.submitCount ?? 0, item.totalStudents ?? 0);
           const allSubmitted = progress === 100;
@@ -112,6 +119,13 @@ export function TeacherAssignmentsScreen() {
             icon={<ClipboardList size={38} color={palette.mutedForeground} />}
           />
         ) : null}
+
+        <PrimaryButton
+          variant="outline"
+          label={content.common.buttons.createAssignment}
+          icon={<Plus size={18} color={palette.primary} />}
+          onPress={() => undefined}
+        />
       </View>
 
       <BottomNav role="TEACHER" currentScreen="TeacherAssignments" currentModule="assignments" />
@@ -120,33 +134,8 @@ export function TeacherAssignmentsScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: 56,
-    gap: appTheme.spacing.md,
-  },
-  backRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: appTheme.radius.md,
-    backgroundColor: palette.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   list: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: appTheme.spacing.lg,
-    gap: appTheme.spacing.md,
+    gap: appTheme.spacing.lg,
   },
   card: {
     gap: appTheme.spacing.md,

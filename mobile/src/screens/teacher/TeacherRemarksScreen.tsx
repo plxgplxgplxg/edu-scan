@@ -16,6 +16,7 @@ import { StatusBadge } from '../../components/StatusBadge';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { useAppContent } from '../../hooks/useAppContent';
 import { appTheme, palette } from '../../theme/tokens';
+import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
 import type { StatusKey } from '../../types/app';
 
@@ -25,6 +26,7 @@ type RemarkFilter = 'ALL' | Extract<StatusKey, 'PENDING' | 'APPROVED' | 'REJECTE
 export function TeacherRemarksScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
+  const layout = useResponsiveLayout();
   const [filter, setFilter] = useState<RemarkFilter>('ALL');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -46,7 +48,18 @@ export function TeacherRemarksScreen() {
 
   return (
     <Screen>
-      <View style={styles.header}>
+      <View
+        style={[
+          styles.header,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap,
+            maxWidth: layout.contentMaxWidth,
+            alignSelf: 'center',
+            width: '100%',
+          },
+        ]}
+      >
         <Pressable style={styles.backRow} onPress={() => navigation.navigate('TeacherDashboard')}>
           <ArrowLeft size={16} color={palette.mutedForeground} />
           <AppText variant="label" color={palette.mutedForeground}>
@@ -59,7 +72,19 @@ export function TeacherRemarksScreen() {
         <FilterChips value={filter} items={filterItems} onChange={setFilter} />
       </View>
 
-      <View style={styles.list}>
+      <View
+        style={[
+          styles.list,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap,
+            maxWidth: layout.contentMaxWidth,
+            alignSelf: 'center',
+            width: '100%',
+            gap: layout.sectionGap,
+          },
+        ]}
+      >
         {items.map(item => (
           <Pressable key={item.id} onPress={() => setSelectedId(item.id)}>
             <SurfaceCard style={styles.card}>
@@ -144,8 +169,6 @@ export function TeacherRemarksScreen() {
 
 const styles = StyleSheet.create({
   header: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: 56,
     gap: appTheme.spacing.md,
   },
   backRow: {
@@ -154,8 +177,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   list: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: appTheme.spacing.lg,
     gap: appTheme.spacing.md,
   },
   card: {
@@ -163,7 +184,6 @@ const styles = StyleSheet.create({
   },
   rowBetween: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     gap: appTheme.spacing.md,
   },
   flex: {
@@ -181,5 +201,6 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     gap: appTheme.spacing.md,
+    flexWrap: 'wrap',
   },
 });

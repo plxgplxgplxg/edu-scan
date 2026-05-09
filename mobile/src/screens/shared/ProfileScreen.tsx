@@ -2,11 +2,9 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import {
   Bell,
-  Camera,
   Globe,
   LogOut,
   Shield,
-  Star,
   User,
 } from 'lucide-react-native';
 
@@ -19,11 +17,13 @@ import { SurfaceCard } from '../../components/SurfaceCard';
 import { AppText } from '../../components/AppText';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
+import { useResponsiveLayout } from '../../theme/responsive';
 import { getInitials } from '../../utils/string';
 import { omrBatches, studentResults, teacherClasses, teacherExams } from '../../api/mockData';
 
 export function ProfileScreen() {
   const { content, email, language, logout, profileName, role, setLanguage } = useAuth();
+  const layout = useResponsiveLayout();
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
 
   const roleGradients = useMemo(
@@ -67,48 +67,75 @@ export function ProfileScreen() {
   return (
     <Screen>
       <PageHeader
-        title={content.shared.profile.title}
+        title={profileName}
         subtitle={email}
-        overline={profileName}
+        overline={content.shared.profile.title}
         gradient={roleGradients}
-        avatarLabel={getInitials(profileName)}
-      />
-
-      <View style={styles.avatarButton}>
-        <Camera size={14} color={palette.primary} />
-      </View>
-
-      <View style={styles.metricsCard}>
-        {role === 'TEACHER' ? (
-          <>
-            <MetricBlock label={content.teacher.dashboard.metrics.classes} value={String(teacherClasses.length)} />
-            <MetricBlock label={content.teacher.dashboard.metrics.exams} value={String(teacherExams.length)} />
-            <MetricBlock label={content.shared.profile.teacherOmrCount} value={String(omrBatches.length)} />
-          </>
-        ) : null}
-        {role === 'STUDENT' ? (
-          <>
-            <MetricBlock
-              label={content.student.dashboard.metrics.average}
-              value={(
-                studentResults
-                  .filter(item => item.status === 'GRADED')
-                  .reduce((sum, item) => sum + item.score, 0) /
-                Math.max(studentResults.filter(item => item.status === 'GRADED').length, 1)
-              ).toFixed(1)}
-            />
-            <MetricBlock label={content.student.dashboard.metrics.exams} value={String(studentResults.length)} />
-            <View style={styles.metricBlock}>
-              <Star size={14} color={palette.warning} />
-              <AppText variant="caption" color={palette.mutedForeground}>
-                {content.shared.profile.studentRank}
+        leadingVisual={
+          <View
+            style={[
+              styles.initialsCard,
+              {
+                width: '100%',
+                height: '100%',
+                borderRadius: layout.heroRadius - 6,
+              },
+            ]}
+          >
+            <AppText variant="title" weight="bold" color={palette.white}>
+              {getInitials(profileName)}
+            </AppText>
+          </View>
+        }
+        footer={(
+          <View style={styles.headerFooter}>
+            <View style={styles.rolePill}>
+              <AppText variant="label" weight="semibold" color={palette.white}>
+                {role ? content.roles[role] : content.roles.TEACHER}
               </AppText>
             </View>
-          </>
-        ) : null}
-      </View>
+            <View style={[styles.metricsCard, layout.isCompact ? styles.metricsCardStack : null]}>
+              {role === 'TEACHER' ? (
+                <>
+                  <MetricBlock label={content.teacher.dashboard.metrics.classes} value={String(teacherClasses.length)} light />
+                  <MetricBlock label={content.teacher.dashboard.metrics.exams} value={String(teacherExams.length)} light />
+                  <MetricBlock label={content.shared.profile.teacherOmrCount} value={String(omrBatches.length)} light />
+                </>
+              ) : null}
+              {role === 'STUDENT' ? (
+                <>
+                  <MetricBlock
+                    label={content.student.dashboard.metrics.average}
+                    value={(
+                      studentResults
+                        .filter(item => item.status === 'GRADED')
+                        .reduce((sum, item) => sum + item.score, 0) /
+                      Math.max(studentResults.filter(item => item.status === 'GRADED').length, 1)
+                    ).toFixed(1)}
+                    light
+                  />
+                  <MetricBlock label={content.student.dashboard.metrics.exams} value={String(studentResults.length)} light />
+                  <MetricBlock label={content.shared.profile.studentRank} value="Khá" light />
+                </>
+              ) : null}
+            </View>
+          </View>
+        )}
+      />
 
-      <View style={styles.menu}>
+      <View
+        style={[
+          styles.menu,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap,
+            maxWidth: layout.contentMaxWidth,
+            alignSelf: 'center',
+            width: '100%',
+            gap: layout.sectionGap,
+          },
+        ]}
+      >
         {menuItems.map(item => (
           <Pressable key={item.key} onPress={item.onPress}>
             <SurfaceCard style={styles.menuCard}>
@@ -172,13 +199,21 @@ export function ProfileScreen() {
   );
 }
 
-function MetricBlock({ label, value }: { label: string; value: string }) {
+function MetricBlock({
+  label,
+  value,
+  light = false,
+}: {
+  label: string;
+  value: string;
+  light?: boolean;
+}) {
   return (
     <View style={styles.metricBlock}>
-      <AppText variant="body" weight="bold">
+      <AppText variant="headline" weight="bold" color={light ? palette.white : palette.foreground}>
         {value}
       </AppText>
-      <AppText variant="caption" color={palette.mutedForeground}>
+      <AppText variant="label" color={light ? 'rgba(255,255,255,0.7)' : palette.mutedForeground}>
         {label}
       </AppText>
     </View>
@@ -186,35 +221,42 @@ function MetricBlock({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  avatarButton: {
-    position: 'absolute',
-    top: 136,
-    right: appTheme.spacing.xl + 6,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: palette.white,
+  initialsCard: {
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+  },
+  headerFooter: {
+    gap: appTheme.spacing.lg,
+  },
+  rolePill: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: appTheme.spacing.lg,
+    paddingVertical: 8,
+    borderRadius: appTheme.radius.pill,
+    backgroundColor: 'rgba(255,255,255,0.16)',
   },
   metricsCard: {
-    marginHorizontal: appTheme.spacing.xl,
-    marginTop: appTheme.spacing.lg,
-    backgroundColor: palette.card,
+    backgroundColor: 'rgba(255,255,255,0.14)',
     borderRadius: appTheme.radius.lg,
     padding: appTheme.spacing.lg,
     flexDirection: 'row',
     justifyContent: 'space-around',
-    ...appTheme.shadows.card,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  metricsCardStack: {
+    flexWrap: 'wrap',
+    rowGap: appTheme.spacing.md,
   },
   metricBlock: {
     alignItems: 'center',
     gap: 4,
+    flex: 1,
+    minWidth: 90,
   },
   menu: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: appTheme.spacing.lg,
-    gap: appTheme.spacing.md,
+    gap: appTheme.spacing.lg,
   },
   menuCard: {
     flexDirection: 'row',
@@ -233,10 +275,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: appTheme.spacing.md,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#FFF1F2',
   },
   logoutIcon: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: '#FFE5E7',
   },
   flex: {
     flex: 1,

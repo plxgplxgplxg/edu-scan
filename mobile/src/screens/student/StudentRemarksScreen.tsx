@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { ArrowLeft, MessageSquare, Plus } from 'lucide-react-native';
+import { ArrowLeft, Plus } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -15,6 +15,7 @@ import { SurfaceCard } from '../../components/SurfaceCard';
 import { TextInputField } from '../../components/TextInputField';
 import { useAppContent } from '../../hooks/useAppContent';
 import { appTheme, palette } from '../../theme/tokens';
+import { useResponsiveLayout } from '../../theme/responsive';
 import { formatVietnameseDate } from '../../utils/format';
 import type { RootStackParamList } from '../../navigation/types';
 
@@ -23,11 +24,23 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export function StudentRemarksScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
+  const layout = useResponsiveLayout();
   const [showCreate, setShowCreate] = useState(false);
 
   return (
     <Screen>
-      <View style={styles.header}>
+      <View
+        style={[
+          styles.header,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap,
+            maxWidth: layout.contentMaxWidth,
+            alignSelf: 'center',
+            width: '100%',
+          },
+        ]}
+      >
         <Pressable style={styles.backRow} onPress={() => navigation.navigate('StudentDashboard')}>
           <ArrowLeft size={16} color={palette.mutedForeground} />
           <AppText variant="label" color={palette.mutedForeground}>
@@ -44,10 +57,22 @@ export function StudentRemarksScreen() {
         </View>
       </View>
 
-      <View style={styles.list}>
+      <View
+        style={[
+          styles.list,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap,
+            maxWidth: layout.contentMaxWidth,
+            alignSelf: 'center',
+            width: '100%',
+            gap: layout.sectionGap,
+          },
+        ]}
+      >
         {studentRemarks.map(item => (
           <SurfaceCard key={item.id} style={styles.card}>
-            <View style={styles.rowBetween}>
+            <View style={[styles.rowBetween, layout.isCompact ? styles.rowWrap : null]}>
               <View style={styles.flex}>
                 <AppText variant="body" weight="medium">
                   {item.examTitle}
@@ -118,8 +143,6 @@ export function StudentRemarksScreen() {
 
 const styles = StyleSheet.create({
   header: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: 56,
     gap: appTheme.spacing.md,
   },
   backRow: {
@@ -129,8 +152,8 @@ const styles = StyleSheet.create({
   },
   titleRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: appTheme.spacing.md,
   },
   iconButton: {
     width: 40,
@@ -141,8 +164,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   list: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: appTheme.spacing.lg,
     gap: appTheme.spacing.md,
   },
   card: {
@@ -150,8 +171,10 @@ const styles = StyleSheet.create({
   },
   rowBetween: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     gap: appTheme.spacing.md,
+  },
+  rowWrap: {
+    flexWrap: 'wrap',
   },
   flex: {
     flex: 1,

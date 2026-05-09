@@ -1,9 +1,8 @@
 export const gradients = {
-  indigo: ['#4f46e5', '#6d28d9'] as const,
-  primary: ['#5b5bd6', '#7c5cfc'] as const,
-  blue: ['#3b82f6', '#06b6d4'] as const,
-  green: ['#10b981', '#14b8a6'] as const,
-  amber: ['#f59e0b', '#f97316'] as const,
-  pink: ['#ec4899', '#f43f5e'] as const,
+  indigo: ['#5046de', '#7b3ff4'] as const,
+  primary: ['#4f46e5', '#7f38f5'] as const,
+  blue: ['#2e92ff', '#29c1ff'] as const,
+  green: ['#12be90', '#1ac6b5'] as const,
+  amber: ['#ff9800', '#ff6f3d'] as const,
+  pink: ['#ff4c8b', '#ff5f72'] as const,
 };
-

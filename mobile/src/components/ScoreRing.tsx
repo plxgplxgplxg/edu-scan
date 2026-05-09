@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
 import { appTheme } from '../theme/tokens';
+import { useResponsiveLayout } from '../theme/responsive';
 import { AppText } from './AppText';
 
 interface ScoreRingProps {
@@ -11,7 +12,9 @@ interface ScoreRingProps {
 }
 
 export function ScoreRing({ score, maxScore }: ScoreRingProps) {
-  const radius = 22;
+  const layout = useResponsiveLayout();
+  const size = layout.isCompact ? 52 : 56;
+  const radius = size / 2 - 6;
   const circumference = 2 * Math.PI * radius;
   const ratio = maxScore ? Math.min(score / maxScore, 1) : 0;
   const strokeDashoffset = circumference * (1 - ratio);
@@ -19,19 +22,19 @@ export function ScoreRing({ score, maxScore }: ScoreRingProps) {
     score >= 8 ? appTheme.palette.success : score >= 5 ? appTheme.palette.primary : appTheme.palette.destructive;
 
   return (
-    <View style={styles.wrap}>
-      <Svg width={56} height={56}>
+    <View style={[styles.wrap, { width: size, height: size }]}>
+      <Svg width={size} height={size}>
         <Circle
-          cx={28}
-          cy={28}
+          cx={size / 2}
+          cy={size / 2}
           r={radius}
           stroke="#F0F0F5"
           strokeWidth={4}
           fill="none"
         />
         <Circle
-          cx={28}
-          cy={28}
+          cx={size / 2}
+          cy={size / 2}
           r={radius}
           stroke={strokeColor}
           strokeWidth={4}
@@ -40,7 +43,7 @@ export function ScoreRing({ score, maxScore }: ScoreRingProps) {
           strokeDashoffset={strokeDashoffset}
           strokeLinecap="round"
           rotation="-90"
-          origin="28, 28"
+          origin={`${size / 2}, ${size / 2}`}
         />
       </Svg>
       <View style={styles.center}>

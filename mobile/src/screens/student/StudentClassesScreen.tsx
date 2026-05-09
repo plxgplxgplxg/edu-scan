@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import {
-  ArrowLeft,
   BookOpen,
   KeyRound,
-  Plus,
   Users,
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -21,6 +19,7 @@ import { SurfaceCard } from '../../components/SurfaceCard';
 import { TextInputField } from '../../components/TextInputField';
 import { useAppContent } from '../../hooks/useAppContent';
 import { appTheme, palette } from '../../theme/tokens';
+import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -28,6 +27,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export function StudentClassesScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
+  const layout = useResponsiveLayout();
   const [showJoin, setShowJoin] = useState(false);
   const [classCode, setClassCode] = useState('');
 
@@ -39,16 +39,38 @@ export function StudentClassesScreen() {
         subtitle={`${String(studentClasses.length)} ${content.student.classes.activeClasses}`}
         gradient={['#5B5BD6', '#7C5CFC']}
         onBack={() => navigation.navigate('StudentDashboard')}
+        leadingVisual={<BookOpen size={30} color={palette.white} />}
       />
 
-      <View style={styles.list}>
+      <View
+        style={[
+          styles.list,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap,
+            maxWidth: layout.contentMaxWidth,
+            alignSelf: 'center',
+            width: '100%',
+            gap: layout.sectionGap,
+          },
+        ]}
+      >
         {studentClasses.map(item => (
           <Pressable
             key={item.id}
             onPress={() => navigation.navigate('StudentClassDetail', { classId: item.id })}
           >
             <SurfaceCard style={styles.card}>
-              <View style={styles.iconWrap}>
+              <View
+                style={[
+                  styles.iconWrap,
+                  {
+                    width: layout.headerVisualSize + 10,
+                    height: layout.headerVisualSize + 10,
+                    borderRadius: layout.heroRadius,
+                  },
+                ]}
+              >
                 <BookOpen size={22} color={palette.white} />
               </View>
               <View style={styles.flex}>
@@ -120,18 +142,14 @@ export function StudentClassesScreen() {
 
 const styles = StyleSheet.create({
   list: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: appTheme.spacing.lg,
-    gap: appTheme.spacing.md,
+    gap: appTheme.spacing.lg,
   },
   card: {
     flexDirection: 'row',
     gap: appTheme.spacing.md,
+    alignItems: 'center',
   },
   iconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: appTheme.radius.md,
     backgroundColor: palette.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -148,19 +166,19 @@ const styles = StyleSheet.create({
   },
   subjectBadge: {
     backgroundColor: palette.secondary,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: appTheme.radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: appTheme.radius.pill,
   },
   pendingBadge: {
     backgroundColor: '#FEE2E2',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: appTheme.radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: appTheme.radius.pill,
   },
   metaRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: appTheme.spacing.md,
     flexWrap: 'wrap',
   },

@@ -1,11 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import {
-  ArrowLeft,
   BookOpen,
-  ClipboardList,
   Clock,
-  Info,
   Link,
   Upload,
 } from 'lucide-react-native';
@@ -17,6 +14,7 @@ import { AppText } from '../../components/AppText';
 import { BottomNav } from '../../components/BottomNav';
 import { FilterChips } from '../../components/FilterChips';
 import { ModalSheet } from '../../components/ModalSheet';
+import { PageHeader } from '../../components/PageHeader';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -24,6 +22,7 @@ import { SurfaceCard } from '../../components/SurfaceCard';
 import { TextInputField } from '../../components/TextInputField';
 import { useAppContent } from '../../hooks/useAppContent';
 import { appTheme, palette } from '../../theme/tokens';
+import { useResponsiveLayout } from '../../theme/responsive';
 import { formatVietnameseDate, isExpired } from '../../utils/format';
 import type { RootStackParamList } from '../../navigation/types';
 
@@ -33,6 +32,7 @@ type TabKey = 'assignments' | 'info';
 export function StudentClassDetailScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
+  const layout = useResponsiveLayout();
   const currentClass = studentClasses[0];
   const [tab, setTab] = useState<TabKey>('assignments');
   const [showSubmit, setShowSubmit] = useState<string | null>(null);
@@ -51,9 +51,22 @@ export function StudentClassDetailScreen() {
         subtitle={`${currentClass.subject} • ${content.common.labels.teacher}: ${currentClass.teacherName ?? ''}`}
         gradient={['#5B5BD6', '#7C5CFC']}
         onBack={() => navigation.navigate('StudentClasses')}
+        leadingVisual={<BookOpen size={32} color={palette.white} />}
       />
 
-      <View style={styles.body}>
+      <View
+        style={[
+          styles.body,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap,
+            maxWidth: layout.contentMaxWidth,
+            alignSelf: 'center',
+            width: '100%',
+            gap: layout.sectionGap,
+          },
+        ]}
+      >
         <FilterChips
           value={tab}
           items={[
@@ -70,7 +83,7 @@ export function StudentClassDetailScreen() {
 
               return (
                 <SurfaceCard key={item.id} style={styles.assignmentCard}>
-                  <View style={styles.assignmentHead}>
+                  <View style={[styles.assignmentHead, layout.isCompact ? styles.assignmentHeadStack : null]}>
                     <View style={styles.flex}>
                       <AppText variant="body" weight="medium">
                         {item.title}
@@ -129,7 +142,10 @@ export function StudentClassDetailScreen() {
               { label: content.common.form.schoolYear, value: currentClass.schoolYear },
               { label: content.student.classes.classInfoTitle, value: currentClass.code },
             ].map(item => (
-              <SurfaceCard key={item.label} style={styles.infoCard}>
+              <SurfaceCard
+                key={item.label}
+                style={[styles.infoCard, layout.isCompact ? styles.infoCardStack : null]}
+              >
                 <AppText variant="caption" color={palette.mutedForeground}>
                   {item.label}
                 </AppText>
@@ -169,20 +185,22 @@ export function StudentClassDetailScreen() {
 
 const styles = StyleSheet.create({
   body: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: appTheme.spacing.lg,
-    gap: appTheme.spacing.md,
+    gap: appTheme.spacing.lg,
   },
   section: {
     gap: appTheme.spacing.md,
   },
   assignmentCard: {
     gap: appTheme.spacing.md,
+    borderLeftWidth: 5,
+    borderLeftColor: 'rgba(97,91,227,0.92)',
   },
   assignmentHead: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     gap: appTheme.spacing.md,
+  },
+  assignmentHeadStack: {
+    flexWrap: 'wrap',
   },
   flex: {
     flex: 1,
@@ -204,7 +222,14 @@ const styles = StyleSheet.create({
     borderWidth: 0,
   },
   infoCard: {
-    gap: 4,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: appTheme.spacing.md,
+  },
+  infoCardStack: {
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
   },
   sheetTitle: {
     marginBottom: appTheme.spacing.sm,

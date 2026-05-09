@@ -1,7 +1,6 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import {
-  Bell,
   BookOpen,
   ClipboardList,
   GraduationCap,
@@ -20,6 +19,7 @@ import { Screen } from '../../components/Screen';
 import { useAppContent } from '../../hooks/useAppContent';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
+import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
 import { studentResults } from '../../api/mockData';
 import { getInitials } from '../../utils/string';
@@ -38,6 +38,7 @@ export function StudentDashboardScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
   const { profileName } = useAuth();
+  const layout = useResponsiveLayout();
   const gradedResults = studentResults.filter(item => item.status === 'GRADED');
   const averageScore =
     gradedResults.reduce((sum, item) => sum + item.score, 0) / Math.max(gradedResults.length, 1);
@@ -59,11 +60,23 @@ export function StudentDashboardScreen() {
         ]}
       />
 
-      <View style={styles.section}>
+      <View
+        style={[
+          styles.section,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap + appTheme.spacing.sm,
+            maxWidth: layout.contentMaxWidth,
+            alignSelf: 'center',
+            width: '100%',
+            gap: layout.sectionGap,
+          },
+        ]}
+      >
         <AppText variant="caption" weight="semibold" color={palette.mutedForeground}>
           {content.common.sections.functions.toUpperCase()}
         </AppText>
-        <View style={styles.grid}>
+        <View style={[styles.grid, { gap: layout.gridGap, rowGap: layout.gridGap }]}>
           {studentDashboardModules.map(module => (
             <DashboardModuleCard
               key={module.id}
@@ -90,14 +103,11 @@ export function StudentDashboardScreen() {
 
 const styles = StyleSheet.create({
   section: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: appTheme.spacing.xl,
-    gap: appTheme.spacing.md,
+    gap: appTheme.spacing.lg,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: appTheme.spacing.md,
+    justifyContent: 'flex-start',
   },
 });

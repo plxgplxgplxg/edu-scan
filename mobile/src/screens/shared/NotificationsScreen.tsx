@@ -1,7 +1,6 @@
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import {
-  ArrowLeft,
   Bell,
   BookOpen,
   CheckCircle,
@@ -20,6 +19,7 @@ import { Screen } from '../../components/Screen';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
+import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -27,6 +27,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export function NotificationsScreen() {
   const navigation = useNavigation<Nav>();
   const { content, role } = useAuth();
+  const layout = useResponsiveLayout();
   const unreadCount = notifications.filter(item => !item.read).length;
 
   return (
@@ -40,6 +41,8 @@ export function NotificationsScreen() {
             : undefined
         }
         gradient={['#4F46E5', '#6D28D9', '#7C5CFC']}
+        showNotificationButton
+        actionBadge={unreadCount}
         onBack={() => {
           if (role === 'TEACHER') navigation.navigate('TeacherDashboard');
           if (role === 'STUDENT') navigation.navigate('StudentDashboard');
@@ -47,13 +50,34 @@ export function NotificationsScreen() {
         }}
       />
 
-      <View style={styles.list}>
+      <View
+        style={[
+          styles.list,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap,
+            maxWidth: layout.contentMaxWidth,
+            alignSelf: 'center',
+            width: '100%',
+            gap: layout.sectionGap,
+          },
+        ]}
+      >
         {notifications.map(item => (
           <SurfaceCard
             key={item.id}
             style={[styles.card, !item.read ? styles.unreadCard : null]}
           >
-            <View style={styles.iconWrap}>
+            <View
+              style={[
+                styles.iconWrap,
+                {
+                  width: layout.headerVisualSize - 6,
+                  height: layout.headerVisualSize - 6,
+                  borderRadius: layout.heroRadius - 6,
+                },
+              ]}
+            >
               {item.type === 'assignment' ? (
                 <BookOpen size={18} color={palette.primary} />
               ) : null}
@@ -101,22 +125,18 @@ export function NotificationsScreen() {
 
 const styles = StyleSheet.create({
   list: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: appTheme.spacing.lg,
-    gap: appTheme.spacing.md,
+    gap: appTheme.spacing.lg,
   },
   card: {
     flexDirection: 'row',
     gap: appTheme.spacing.md,
+    alignItems: 'flex-start',
   },
   unreadCard: {
-    backgroundColor: '#F5F5FF',
-    borderColor: '#E8E8FF',
+    backgroundColor: '#F6F7FF',
+    borderColor: '#E8EAFF',
   },
   iconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: appTheme.radius.md,
     backgroundColor: palette.secondary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -127,7 +147,7 @@ const styles = StyleSheet.create({
   },
   rowBetween: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     gap: appTheme.spacing.sm,
   },
   unreadDot: {

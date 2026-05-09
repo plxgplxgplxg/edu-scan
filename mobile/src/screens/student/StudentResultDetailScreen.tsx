@@ -10,6 +10,7 @@ import { Screen } from '../../components/Screen';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { useAppContent } from '../../hooks/useAppContent';
 import { appTheme, palette } from '../../theme/tokens';
+import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
 import { formatVietnameseDate } from '../../utils/format';
 
@@ -19,6 +20,7 @@ export function StudentResultDetailScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<RouteProp<RootStackParamList, 'StudentResultDetail'>>();
   const content = useAppContent();
+  const layout = useResponsiveLayout();
   const correctCount = resultDetails.filter(item => item.isCorrect).length;
   const reviewCount = resultDetails.filter(item => item.needsReview).length;
   const resultId = route.params?.resultId;
@@ -27,7 +29,18 @@ export function StudentResultDetailScreen() {
 
   return (
     <Screen>
-      <View style={styles.hero}>
+      <View
+        style={[
+          styles.hero,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap,
+            paddingBottom: layout.sectionGap + appTheme.spacing.xl,
+            borderBottomLeftRadius: layout.heroRadius,
+            borderBottomRightRadius: layout.heroRadius,
+          },
+        ]}
+      >
         <Pressable style={styles.backRow} onPress={() => navigation.goBack()}>
           <ArrowLeft size={18} color={palette.white} />
           <AppText variant="label" color={palette.white}>
@@ -66,7 +79,19 @@ export function StudentResultDetailScreen() {
         </View>
       </View>
 
-      <View style={styles.list}>
+      <View
+        style={[
+          styles.list,
+          {
+            paddingHorizontal: layout.horizontalPadding,
+            paddingTop: layout.sectionGap,
+            maxWidth: layout.contentMaxWidth,
+            alignSelf: 'center',
+            width: '100%',
+            gap: layout.sectionGap,
+          },
+        ]}
+      >
         <AppText variant="headline" weight="semibold">
           {content.common.sections.resultDetails}
         </AppText>
@@ -125,12 +150,7 @@ export function StudentResultDetailScreen() {
 
 const styles = StyleSheet.create({
   hero: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: 56,
-    paddingBottom: appTheme.spacing.xxxl,
     backgroundColor: palette.primary,
-    borderBottomLeftRadius: appTheme.radius.xxl,
-    borderBottomRightRadius: appTheme.radius.xxl,
     gap: appTheme.spacing.sm,
   },
   backRow: {
@@ -164,8 +184,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(245, 158, 11, 0.2)',
   },
   list: {
-    paddingHorizontal: appTheme.spacing.xl,
-    paddingTop: appTheme.spacing.lg,
     gap: appTheme.spacing.md,
   },
   card: {
