@@ -93,8 +93,8 @@
     ],
     "rootDir": ".",
     "roots": [
-      "<rootDir>/src",
-      "<rootDir>/test/unit"
+      "<rootDir>/test/unit",
+      "<rootDir>/test/integration"
     ],
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {

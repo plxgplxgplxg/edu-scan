@@ -1,5 +1,9 @@
 import { UnprocessableEntityException } from '@nestjs/common';
-import { AnswerChoice, SubmissionStatus } from '@prisma/client';
+import {
+  AnswerChoice,
+  SubmissionStatus,
+  TestCodeResolutionStatus,
+} from '@prisma/client';
 import { GradingService } from '../../../../../src/modules/omr/services/grading.service';
 
 describe('GradingService', () => {
@@ -10,13 +14,18 @@ describe('GradingService', () => {
   });
 
   it('prepares a graded submission when payload is complete', () => {
-    const submission = service.prepareSubmission(buildExam(), {
-      studentCode: 'stu-001',
-      answers: [
-        { questionNumber: 1, detectedAnswer: AnswerChoice.A },
-        { questionNumber: 2, detectedAnswer: AnswerChoice.B },
-      ],
-    });
+    const answerKeys = buildAnswerKeys();
+    const submission = service.prepareSubmission(
+      answerKeys,
+      {
+        studentCode: 'stu-001',
+        answers: [
+          { questionNumber: 1, detectedAnswer: AnswerChoice.A },
+          { questionNumber: 2, detectedAnswer: AnswerChoice.B },
+        ],
+      },
+      TestCodeResolutionStatus.MATCHED,
+    );
 
     expect(submission.studentCode).toBe('STU-001');
     expect(submission.status).toBe(SubmissionStatus.GRADED);
@@ -40,13 +49,17 @@ describe('GradingService', () => {
   });
 
   it('marks submission as needs review when student code is missing', () => {
-    const submission = service.prepareSubmission(buildExam(), {
-      studentCode: null,
-      answers: [
-        { questionNumber: 1, detectedAnswer: AnswerChoice.A },
-        { questionNumber: 2, detectedAnswer: AnswerChoice.B },
-      ],
-    });
+    const submission = service.prepareSubmission(
+      buildAnswerKeys(),
+      {
+        studentCode: null,
+        answers: [
+          { questionNumber: 1, detectedAnswer: AnswerChoice.A },
+          { questionNumber: 2, detectedAnswer: AnswerChoice.B },
+        ],
+      },
+      TestCodeResolutionStatus.MATCHED,
+    );
 
     expect(submission.status).toBe(SubmissionStatus.NEEDS_REVIEW);
     expect(submission.needsReview).toBe(true);
@@ -54,28 +67,52 @@ describe('GradingService', () => {
 
   it('rejects duplicated question numbers from omr payload', () => {
     expect(() =>
-      service.prepareSubmission(buildExam(), {
-        studentCode: 'STU-001',
-        answers: [
-          { questionNumber: 1, detectedAnswer: AnswerChoice.A },
-          { questionNumber: 1, detectedAnswer: AnswerChoice.B },
-        ],
-      }),
+      service.prepareSubmission(
+        buildAnswerKeys(),
+        {
+          studentCode: 'STU-001',
+          answers: [
+            { questionNumber: 1, detectedAnswer: AnswerChoice.A },
+            { questionNumber: 1, detectedAnswer: AnswerChoice.B },
+          ],
+        },
+        TestCodeResolutionStatus.MATCHED,
+      ),
     ).toThrow(UnprocessableEntityException);
   });
 
-  it('rejects question numbers outside the answer key', () => {
-    expect(() =>
-      service.prepareSubmission(buildExam(), {
+  it('ignores question numbers outside the answer key and keeps authoritative questions', () => {
+    const submission = service.prepareSubmission(
+      buildAnswerKeys(),
+      {
         studentCode: 'STU-001',
         answers: [{ questionNumber: 3, detectedAnswer: AnswerChoice.A }],
-      }),
-    ).toThrow(UnprocessableEntityException);
+      },
+      TestCodeResolutionStatus.MATCHED,
+    );
+
+    expect(submission.status).toBe(SubmissionStatus.NEEDS_REVIEW);
+    expect(submission.details).toEqual([
+      {
+        questionNumber: 1,
+        detectedAnswer: null,
+        finalAnswer: null,
+        needsReview: true,
+        reviewReason: 'LOW_CONFIDENCE',
+      },
+      {
+        questionNumber: 2,
+        detectedAnswer: null,
+        finalAnswer: null,
+        needsReview: true,
+        reviewReason: 'LOW_CONFIDENCE',
+      },
+    ]);
   });
 
   it('calculates score from answer keys and final answers', () => {
     const score = service.calculateScore(
-      buildExam().answerKeys,
+      buildAnswerKeys(),
       [
         {
           questionNumber: 1,
@@ -99,22 +136,26 @@ describe('GradingService', () => {
   });
 
   it('preserves per-question review reason from omr payload', () => {
-    const submission = service.prepareSubmission(buildExam(), {
-      studentCode: 'STU-001',
-      answers: [
-        {
-          questionNumber: 1,
-          detectedAnswer: 'AB',
-          needsReview: true,
-          reviewReason: 'MULTI_MARK',
-        },
-        {
-          questionNumber: 2,
-          detectedAnswer: AnswerChoice.B,
-          needsReview: false,
-        },
-      ],
-    });
+    const submission = service.prepareSubmission(
+      buildAnswerKeys(),
+      {
+        studentCode: 'STU-001',
+        answers: [
+          {
+            questionNumber: 1,
+            detectedAnswer: 'AB',
+            needsReview: true,
+            reviewReason: 'MULTI_MARK',
+          },
+          {
+            questionNumber: 2,
+            detectedAnswer: AnswerChoice.B,
+            needsReview: false,
+          },
+        ],
+      },
+      TestCodeResolutionStatus.MATCHED,
+    );
 
     expect(submission.details[0]).toMatchObject({
       questionNumber: 1,
@@ -128,18 +169,23 @@ describe('GradingService', () => {
   it.each([15, 30, 60])(
     'scores only the first %i exam questions for a larger template response',
     (questionCount) => {
-      const exam = buildExam(questionCount);
-      const submission = service.prepareSubmission(exam, {
-        studentCode: 'STU-001',
-        answers: exam.answerKeys.map((item, index) => ({
-          questionNumber: item.questionNumber,
-          detectedAnswer: index % 2 === 0 ? item.correctAnswer : AnswerChoice.D,
-          needsReview: false,
-        })),
-      });
+      const answerKeys = buildAnswerKeys(questionCount);
+      const submission = service.prepareSubmission(
+        answerKeys,
+        {
+          studentCode: 'STU-001',
+          answers: answerKeys.map((item, index) => ({
+            questionNumber: item.questionNumber,
+            detectedAnswer:
+              index % 2 === 0 ? item.correctAnswer : AnswerChoice.D,
+            needsReview: false,
+          })),
+        },
+        TestCodeResolutionStatus.MATCHED,
+      );
 
       const summary = service.summarizeSubmission(
-        exam.answerKeys,
+        answerKeys,
         submission.details,
         questionCount,
       );
@@ -152,10 +198,8 @@ describe('GradingService', () => {
   );
 });
 
-function buildExam(questionCount = 2) {
-  return {
-    id: 'exam-1',
-    answerKeys: Array.from({ length: questionCount }, (_, index) => ({
+function buildAnswerKeys(questionCount = 2) {
+  return Array.from({ length: questionCount }, (_, index) => ({
       questionNumber: index + 1,
       correctAnswer: [
         AnswerChoice.A,
@@ -163,7 +207,5 @@ function buildExam(questionCount = 2) {
         AnswerChoice.C,
         AnswerChoice.D,
       ][index % 4],
-    })),
-    classes: [],
-  } as never;
+    }));
 }

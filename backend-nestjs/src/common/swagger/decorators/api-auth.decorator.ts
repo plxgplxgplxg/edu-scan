@@ -2,8 +2,15 @@ import { applyDecorators } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 
+const ROLE_LABELS: Record<Role, string> = {
+  ADMIN: 'Quản trị viên',
+  TEACHER: 'Giáo viên',
+  STUDENT: 'Học sinh',
+};
+
 export function buildAccessDescription(roles: Role[], notes?: string): string {
-  const lines = [`Vai trò được phép truy cập: ${roles.join(', ')}.`];
+  const roleLabels = roles.map((role) => ROLE_LABELS[role]).join(', ');
+  const lines = [`Vai trò được phép truy cập: ${roleLabels}.`];
 
   if (notes) {
     lines.push(notes);
@@ -33,6 +40,7 @@ export function ApiPublicOperation(options: {
   return ApiOperation({
     summary: options.summary,
     description:
-      options.notes ?? 'Endpoint công khai, không yêu cầu Bearer access token.',
+      options.notes ??
+      'Endpoint công khai, không yêu cầu Bearer access token ở header Authorization.',
   });
 }

@@ -88,3 +88,5 @@ Thumbs.db
 
 # Thư mục tài liệu nội bộ
 docs/
+!backend-nestjs/src/modules/**/docs/
+!backend-nestjs/src/modules/**/docs/*.swagger.ts

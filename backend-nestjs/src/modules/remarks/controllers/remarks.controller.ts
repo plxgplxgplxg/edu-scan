@@ -9,19 +9,12 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBody, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { RemarkStatus, Role } from '@prisma/client';
 import { Roles } from '../../../common/decorators/auth/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/auth/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/auth/roles.guard';
-import { ApiBearerOperation } from '../../../common/swagger/decorators/api-auth.decorator';
-import {
-  ApiStandardErrorResponses,
-  ApiWrappedCreatedResponse,
-  ApiWrappedOkResponse,
-} from '../../../common/swagger/decorators/api-responses.decorator';
+import { RemarksSwagger } from '../docs/remarks.swagger';
 import { CreateRemarkRequestDto } from '../dtos/create-remark.dto';
-import { RemarkResponseDto } from '../dtos/response/remark-response.dto';
 import { ReviewRemarkRequestDto } from '../dtos/review-remark.dto';
 import { RemarksService } from '../services/remarks.service';
 
@@ -34,7 +27,7 @@ type RemarkRequest = {
   user: RemarkRequestUser;
 };
 
-@ApiTags('remarks')
+@RemarksSwagger.Controller()
 @Controller('remarks')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class RemarksController {
@@ -42,18 +35,7 @@ export class RemarksController {
 
   @Post()
   @Roles(Role.STUDENT)
-  @ApiBearerOperation({
-    summary: 'Học sinh tạo yêu cầu phúc khảo',
-    roles: [Role.STUDENT],
-    notes:
-      'Học sinh gửi yêu cầu phúc khảo cho một bài làm hoặc một câu hỏi cụ thể theo dữ liệu trong request body.',
-  })
-  @ApiBody({ type: CreateRemarkRequestDto })
-  @ApiWrappedCreatedResponse({
-    type: RemarkResponseDto,
-    description: 'Tạo yêu cầu phúc khảo thành công.',
-  })
-  @ApiStandardErrorResponses(400, 401, 403, 404, 409, 500)
+  @RemarksSwagger.TaoYeuCauPhucKhao()
   async createRemark(
     @Req() req: RemarkRequest,
     @Body() dto: CreateRemarkRequestDto,
@@ -67,24 +49,7 @@ export class RemarksController {
 
   @Get()
   @Roles(Role.TEACHER, Role.ADMIN)
-  @ApiBearerOperation({
-    summary: 'Lấy danh sách yêu cầu phúc khảo',
-    roles: [Role.TEACHER, Role.ADMIN],
-    notes:
-      'TEACHER và ADMIN có thể lọc theo trạng thái để theo dõi luồng xử lý phúc khảo.',
-  })
-  @ApiQuery({
-    name: 'status',
-    required: false,
-    enum: RemarkStatus,
-    description: 'Lọc yêu cầu phúc khảo theo trạng thái xử lý',
-  })
-  @ApiWrappedOkResponse({
-    type: RemarkResponseDto,
-    isArray: true,
-    description: 'Lấy danh sách yêu cầu phúc khảo thành công.',
-  })
-  @ApiStandardErrorResponses(401, 403, 500)
+  @RemarksSwagger.LayDanhSachYeuCauPhucKhao()
   async getRemarks(@Query('status') status?: RemarkStatus) {
     const data = await this.remarksService.getRemarks(status);
     return {
@@ -95,23 +60,7 @@ export class RemarksController {
 
   @Patch(':id/review')
   @Roles(Role.TEACHER, Role.ADMIN)
-  @ApiBearerOperation({
-    summary: 'Duyệt yêu cầu phúc khảo',
-    roles: [Role.TEACHER, Role.ADMIN],
-    notes:
-      'Khi `APPROVED` cần cung cấp `finalAnswer`. Khi `REJECTED` cần cung cấp `teacherComment` theo business rule hiện tại.',
-  })
-  @ApiParam({
-    name: 'id',
-    description: 'ID yêu cầu phúc khảo',
-    format: 'uuid',
-  })
-  @ApiBody({ type: ReviewRemarkRequestDto })
-  @ApiWrappedOkResponse({
-    type: RemarkResponseDto,
-    description: 'Duyệt yêu cầu phúc khảo thành công.',
-  })
-  @ApiStandardErrorResponses(400, 401, 403, 404, 409, 500)
+  @RemarksSwagger.DuyetYeuCauPhucKhao()
   async reviewRemark(
     @Param('id') id: string,
     @Req() req: RemarkRequest,

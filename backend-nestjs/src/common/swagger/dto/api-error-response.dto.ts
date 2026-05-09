@@ -12,16 +12,16 @@ export class ApiErrorResponseDto {
 
   @ApiProperty({
     oneOf: [
-      { type: 'string', example: 'Validation failed' },
+      { type: 'string', example: 'Dữ liệu gửi lên không hợp lệ' },
       {
         type: 'array',
         items: { type: 'string' },
-        example: ['email must be an email'],
+        example: ['email phải đúng định dạng địa chỉ thư điện tử'],
       },
     ],
   })
   message!: string | string[];
 
-  @ApiProperty({ example: 'Bad Request' })
+  @ApiProperty({ example: 'Yêu cầu không hợp lệ' })
   error!: string;
 }

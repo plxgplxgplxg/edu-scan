@@ -51,10 +51,9 @@ describe('OmrClientService', () => {
     });
 
     await expect(
-      service.processImage({
+      service.detectImage({
         imageUrl: 'https://example.com/sheet.png',
         templateName: 'tnteam_60q_4col_ad',
-        answerKey: [{ questionNumber: 1, correctAnswer: 'A' }],
       }),
     ).resolves.toEqual({
       studentCode: '20224871',
@@ -83,9 +82,8 @@ describe('OmrClientService', () => {
     });
 
     await expect(
-      service.processImage({
+      service.detectImage({
         imageUrl: 'https://example.com/sheet.png',
-        answerKey: [{ questionNumber: 1, correctAnswer: 'A' }],
       }),
     ).rejects.toBeInstanceOf(UnprocessableEntityException);
   });
@@ -101,9 +99,8 @@ describe('OmrClientService', () => {
     });
 
     await expect(
-      service.processImage({
+      service.detectImage({
         imageUrl: 'https://example.com/sheet.png',
-        answerKey: [{ questionNumber: 1, correctAnswer: 'A' }],
       }),
     ).rejects.toEqual(new BadGatewayException('OMR upstream failed'));
   });

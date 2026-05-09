@@ -1,21 +1,21 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2, EventEmitterModule } from '@nestjs/event-emitter';
 import { AnswerChoice, RemarkStatus } from '@prisma/client';
-import { RemarksService } from '../../../src/modules/remarks/services/remarks.service';
-import { RemarksRepository } from '../../../src/modules/remarks/repositories/remarks.repository';
-import { SubmissionsService } from '../../../src/modules/submissions/services/submissions.service';
-import { SubmissionsRepository } from '../../../src/modules/submissions/repositories/submissions.repository';
-import { PrismaService } from '../../../src/database/prisma.service';
-import { OmrQueueProcessor } from '../../../src/modules/omr/processors/omr-queue.processor';
-import { OmrProcessor } from '../../../src/modules/omr/processors/omr.processor';
-import { OmrBatchStateUpdaterService } from '../../../src/modules/omr/services/omr-batch-state-updater.service';
-import { BatchService } from '../../../src/modules/omr/services/batch.service';
-import { OmrRepository } from '../../../src/modules/omr/repositories/omr.repository';
-import { GradingService } from '../../../src/modules/omr/services/grading.service';
-import { QuestionsService } from '../../../src/modules/questions/services/questions.service';
-import { QuestionsRepository } from '../../../src/modules/questions/repositories/questions.repository';
-import { ExamsService } from '../../../src/modules/exams/services/exams.service';
-import { ExamsRepository } from '../../../src/modules/exams/repositories/exams.repository';
+import { RemarksService } from '../../src/modules/remarks/services/remarks.service';
+import { RemarksRepository } from '../../src/modules/remarks/repositories/remarks.repository';
+import { SubmissionsService } from '../../src/modules/submissions/services/submissions.service';
+import { SubmissionsRepository } from '../../src/modules/submissions/repositories/submissions.repository';
+import { PrismaService } from '../../src/database/prisma.service';
+import { OmrQueueProcessor } from '../../src/modules/omr/processors/omr-queue.processor';
+import { OmrProcessor } from '../../src/modules/omr/processors/omr.processor';
+import { OmrBatchStateUpdaterService } from '../../src/modules/omr/services/omr-batch-state-updater.service';
+import { BatchService } from '../../src/modules/omr/services/batch.service';
+import { OmrRepository } from '../../src/modules/omr/repositories/omr.repository';
+import { GradingService } from '../../src/modules/omr/services/grading.service';
+import { QuestionsService } from '../../src/modules/questions/services/questions.service';
+import { QuestionsRepository } from '../../src/modules/questions/repositories/questions.repository';
+import { ExamsService } from '../../src/modules/exams/services/exams.service';
+import { ExamsRepository } from '../../src/modules/exams/repositories/exams.repository';
 
 describe('Cross-module hardening flows', () => {
   describe('remark approved -> submission detail update -> notification event', () => {

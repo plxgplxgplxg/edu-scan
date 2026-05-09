@@ -38,7 +38,7 @@ describe('RemarksController', () => {
       const result = await controller.createRemark(mockReq, dto);
 
       expect(result).toEqual({
-        message: 'Remark request created successfully',
+        message: 'Tạo yêu cầu phúc khảo thành công',
         data: { id: 'remark-id' },
       });
       expect(service.createRemark).toHaveBeenCalledWith('student-id', dto);
@@ -52,7 +52,7 @@ describe('RemarksController', () => {
       const result = await controller.getRemarks(RemarkStatus.PENDING);
 
       expect(result).toEqual({
-        message: 'Remarks retrieved successfully',
+        message: 'Lấy danh sách yêu cầu phúc khảo thành công',
         data: [{ id: 'remark-id' }],
       });
       expect(service.getRemarks).toHaveBeenCalledWith(RemarkStatus.PENDING);
@@ -74,7 +74,7 @@ describe('RemarksController', () => {
       const result = await controller.reviewRemark('remark-id', mockReq, dto);
 
       expect(result).toEqual({
-        message: 'Remark reviewed successfully',
+        message: 'Duyệt yêu cầu phúc khảo thành công',
         data: { id: 'remark-id', status: RemarkStatus.APPROVED },
       });
       expect(service.reviewRemark).toHaveBeenCalledWith(
