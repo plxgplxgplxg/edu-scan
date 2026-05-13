@@ -7,8 +7,9 @@ import {
   Shield,
   User,
 } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { BottomNav } from '../../components/BottomNav';
 import { PageHeader } from '../../components/PageHeader';
 import { ModalSheet } from '../../components/ModalSheet';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -27,8 +28,20 @@ import {
   listStudentSubmissions,
 } from '../../api/edu-scan';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
+import type { RootStackParamList } from '../../navigation/types';
+
+type Nav = NativeStackNavigationProp<RootStackParamList>;
+
+interface ProfileMenuItem {
+  key: string;
+  title: string;
+  subtitle: string;
+  icon: React.ReactNode;
+  onPress?: () => void;
+}
 
 export function ProfileScreen() {
+  const navigation = useNavigation<Nav>();
   const { accessToken, content, email, language, logout, profileName, role, setLanguage } = useAuth();
   const layout = useResponsiveLayout();
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
@@ -79,7 +92,7 @@ export function ProfileScreen() {
     [role],
   );
 
-  const menuItems = [
+  const menuItems: ProfileMenuItem[] = [
     {
       key: 'personal',
       title: content.shared.profile.personalInfo,
@@ -91,6 +104,7 @@ export function ProfileScreen() {
       title: content.shared.profile.notifications,
       subtitle: content.shared.profile.notificationSubtitle,
       icon: <Bell size={18} color={palette.warning} />,
+      onPress: () => navigation.navigate('SharedNotifications'),
     },
     {
       key: 'language',
@@ -106,6 +120,16 @@ export function ProfileScreen() {
       icon: <Shield size={18} color={palette.success} />,
     },
   ];
+
+  if (role === 'STUDENT') {
+    menuItems.splice(2, 0, {
+      key: 'progress',
+      title: content.student.progress.title,
+      subtitle: content.student.progress.subtitle,
+      icon: <Shield size={18} color={palette.success} />,
+      onPress: () => navigation.navigate('StudentProgress'),
+    });
+  }
 
   return (
     <Screen>
@@ -213,11 +237,6 @@ export function ProfileScreen() {
           </SurfaceCard>
         </Pressable>
       </View>
-
-      {role ? (
-        <BottomNav role={role} currentScreen="SharedProfile" currentModule="home" />
-      ) : null}
-
       <ModalSheet visible={showLanguagePicker} onClose={() => setShowLanguagePicker(false)}>
         <AppText variant="headline" weight="bold" style={styles.sheetTitle}>
           {content.common.buttons.switchLanguage}

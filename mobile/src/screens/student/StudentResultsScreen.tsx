@@ -5,7 +5,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { listStudentSubmissions, mapResultSummary } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
-import { BottomNav } from '../../components/BottomNav';
 import { PageHeader } from '../../components/PageHeader';
 import { ErrorState, LoadingState } from '../../components/RequestState';
 import { ScoreRing } from '../../components/ScoreRing';
@@ -25,7 +24,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export function StudentResultsScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
-  const { accessToken, role } = useAuth();
+  const { accessToken } = useAuth();
   const layout = useResponsiveLayout();
   const { data, loading, error, reload } = useAsyncResource(
     async () => {
@@ -51,7 +50,9 @@ export function StudentResultsScreen() {
         title={content.student.results.title}
         subtitle={content.student.results.totalExams}
         gradient={['#4F46E5', '#7C5CFC']}
-        onBack={() => navigation.navigate('StudentDashboard')}
+        onBack={() =>
+          navigation.navigate('StudentTabs', { screen: 'StudentDashboard' })
+        }
         footer={(
           <View style={[styles.summaryMetrics, layout.isCompact ? styles.summaryMetricsStack : null]}>
             <View style={styles.metricItem}>
@@ -126,9 +127,6 @@ export function StudentResultsScreen() {
         ))}
       </View>
 
-      {role ? (
-        <BottomNav role={role} currentScreen="StudentResults" currentModule="results" />
-      ) : null}
     </Screen>
   );
 }

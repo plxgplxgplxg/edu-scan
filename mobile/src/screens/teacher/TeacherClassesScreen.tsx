@@ -11,7 +11,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { createClass, listClasses, mapClassSummary } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
-import { BottomNav } from '../../components/BottomNav';
 import { EmptyState } from '../../components/EmptyState';
 import { ModalSheet } from '../../components/ModalSheet';
 import { PageHeader } from '../../components/PageHeader';
@@ -242,9 +241,6 @@ export function TeacherClassesScreen() {
         </View>
       </ModalSheet>
 
-      {role ? (
-        <BottomNav role={role} currentScreen="TeacherClasses" currentModule="classes" />
-      ) : null}
     </Screen>
   );
 }

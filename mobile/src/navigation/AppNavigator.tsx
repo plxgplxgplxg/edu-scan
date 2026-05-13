@@ -1,9 +1,23 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import {
+  BookOpen,
+  ClipboardList,
+  GraduationCap,
+  Home,
+  ScanLine,
+  User,
+} from 'lucide-react-native';
 
 import { useAuth } from '../store/auth-store';
-import type { RootStackParamList } from './types';
+import type {
+  AdminTabParamList,
+  RootStackParamList,
+  StudentTabParamList,
+  TeacherTabParamList,
+} from './types';
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { TeacherDashboardScreen } from '../screens/teacher/TeacherDashboardScreen';
 import { TeacherClassesScreen } from '../screens/teacher/TeacherClassesScreen';
@@ -25,8 +39,184 @@ import { AdminDashboardScreen } from '../screens/admin/AdminDashboardScreen';
 import { AdminUsersScreen } from '../screens/admin/AdminUsersScreen';
 import { ProfileScreen } from '../screens/shared/ProfileScreen';
 import { NotificationsScreen } from '../screens/shared/NotificationsScreen';
+import { palette } from '../theme/tokens';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+const TeacherTab = createBottomTabNavigator<TeacherTabParamList>();
+const StudentTab = createBottomTabNavigator<StudentTabParamList>();
+const AdminTab = createBottomTabNavigator<AdminTabParamList>();
+
+function TeacherTabsNavigator() {
+  return (
+    <TeacherTab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: palette.primary,
+        tabBarInactiveTintColor: palette.mutedForeground,
+        tabBarStyle: {
+          height: 72,
+          paddingTop: 8,
+          paddingBottom: 8,
+        },
+      }}
+    >
+      <TeacherTab.Screen
+        name="TeacherDashboard"
+        component={TeacherDashboardScreen}
+        options={{
+          title: 'Home',
+          tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
+        }}
+      />
+      <TeacherTab.Screen
+        name="TeacherClasses"
+        component={TeacherClassesScreen}
+        options={{
+          title: 'Lớp học',
+          tabBarIcon: ({ color, size }) => <BookOpen color={color} size={size} />,
+        }}
+      />
+      <TeacherTab.Screen
+        name="TeacherOMR"
+        component={TeacherOmrScreen}
+        options={{
+          title: 'OMR',
+          tabBarIcon: ({ color, size }) => <ScanLine color={color} size={size + 2} />,
+        }}
+      />
+      <TeacherTab.Screen
+        name="TeacherAssignments"
+        component={TeacherAssignmentsScreen}
+        options={{
+          title: 'Bài tập',
+          tabBarIcon: ({ color, size }) => (
+            <ClipboardList color={color} size={size} />
+          ),
+        }}
+      />
+      <TeacherTab.Screen
+        name="SharedProfile"
+        component={ProfileScreen}
+        options={{
+          title: 'Hồ sơ',
+          tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
+        }}
+      />
+    </TeacherTab.Navigator>
+  );
+}
+
+function StudentTabsNavigator() {
+  return (
+    <StudentTab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: palette.primary,
+        tabBarInactiveTintColor: palette.mutedForeground,
+        tabBarStyle: {
+          height: 72,
+          paddingTop: 8,
+          paddingBottom: 8,
+        },
+      }}
+    >
+      <StudentTab.Screen
+        name="StudentDashboard"
+        component={StudentDashboardScreen}
+        options={{
+          title: 'Home',
+          tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
+        }}
+      />
+      <StudentTab.Screen
+        name="StudentClasses"
+        component={StudentClassesScreen}
+        options={{
+          title: 'Lớp học',
+          tabBarIcon: ({ color, size }) => <BookOpen color={color} size={size} />,
+        }}
+      />
+      <StudentTab.Screen
+        name="StudentAssignments"
+        component={StudentAssignmentsScreen}
+        options={{
+          title: 'Bài tập',
+          tabBarIcon: ({ color, size }) => (
+            <ClipboardList color={color} size={size} />
+          ),
+        }}
+      />
+      <StudentTab.Screen
+        name="StudentResults"
+        component={StudentResultsScreen}
+        options={{
+          title: 'Kết quả',
+          tabBarIcon: ({ color, size }) => (
+            <GraduationCap color={color} size={size} />
+          ),
+        }}
+      />
+      <StudentTab.Screen
+        name="SharedProfile"
+        component={ProfileScreen}
+        options={{
+          title: 'Hồ sơ',
+          tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
+        }}
+      />
+    </StudentTab.Navigator>
+  );
+}
+
+function AdminTabsNavigator() {
+  return (
+    <AdminTab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: palette.primary,
+        tabBarInactiveTintColor: palette.mutedForeground,
+        tabBarStyle: {
+          height: 72,
+          paddingTop: 8,
+          paddingBottom: 8,
+        },
+      }}
+    >
+      <AdminTab.Screen
+        name="AdminDashboard"
+        component={AdminDashboardScreen}
+        options={{
+          title: 'Home',
+          tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
+        }}
+      />
+      <AdminTab.Screen
+        name="AdminUsers"
+        component={AdminUsersScreen}
+        options={{
+          title: 'Tài khoản',
+          tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
+        }}
+      />
+      <AdminTab.Screen
+        name="TeacherClasses"
+        component={TeacherClassesScreen}
+        options={{
+          title: 'Lớp học',
+          tabBarIcon: ({ color, size }) => <BookOpen color={color} size={size} />,
+        }}
+      />
+      <AdminTab.Screen
+        name="SharedProfile"
+        component={ProfileScreen}
+        options={{
+          title: 'Hồ sơ',
+          tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
+        }}
+      />
+    </AdminTab.Navigator>
+  );
+}
 
 export function AppNavigator() {
   const { role } = useAuth();
@@ -40,42 +230,30 @@ export function AppNavigator() {
 
         {role === 'TEACHER' ? (
           <>
-            <Stack.Screen name="TeacherDashboard" component={TeacherDashboardScreen} />
-            <Stack.Screen name="TeacherClasses" component={TeacherClassesScreen} />
+            <Stack.Screen name="TeacherTabs" component={TeacherTabsNavigator} />
             <Stack.Screen name="TeacherClassDetail" component={TeacherClassDetailScreen} />
             <Stack.Screen name="TeacherExams" component={TeacherExamsScreen} />
-            <Stack.Screen name="TeacherOMR" component={TeacherOmrScreen} />
-            <Stack.Screen name="TeacherAssignments" component={TeacherAssignmentsScreen} />
             <Stack.Screen name="TeacherRemarks" component={TeacherRemarksScreen} />
             <Stack.Screen name="TeacherQuestions" component={TeacherQuestionsScreen} />
+            <Stack.Screen name="SharedNotifications" component={NotificationsScreen} />
           </>
         ) : null}
 
         {role === 'STUDENT' ? (
           <>
-            <Stack.Screen name="StudentDashboard" component={StudentDashboardScreen} />
-            <Stack.Screen name="StudentClasses" component={StudentClassesScreen} />
+            <Stack.Screen name="StudentTabs" component={StudentTabsNavigator} />
             <Stack.Screen name="StudentClassDetail" component={StudentClassDetailScreen} />
-            <Stack.Screen name="StudentResults" component={StudentResultsScreen} />
             <Stack.Screen name="StudentResultDetail" component={StudentResultDetailScreen} />
-            <Stack.Screen name="StudentAssignments" component={StudentAssignmentsScreen} />
             <Stack.Screen name="StudentRemarks" component={StudentRemarksScreen} />
             <Stack.Screen name="StudentProgress" component={StudentProgressScreen} />
+            <Stack.Screen name="SharedNotifications" component={NotificationsScreen} />
           </>
         ) : null}
 
         {role === 'ADMIN' ? (
           <>
-            <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
-            <Stack.Screen name="AdminUsers" component={AdminUsersScreen} />
-            <Stack.Screen name="TeacherClasses" component={TeacherClassesScreen} />
+            <Stack.Screen name="AdminTabs" component={AdminTabsNavigator} />
             <Stack.Screen name="TeacherClassDetail" component={TeacherClassDetailScreen} />
-          </>
-        ) : null}
-
-        {role ? (
-          <>
-            <Stack.Screen name="SharedProfile" component={ProfileScreen} />
             <Stack.Screen name="SharedNotifications" component={NotificationsScreen} />
           </>
         ) : null}

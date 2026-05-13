@@ -6,8 +6,11 @@ import {
   Patch,
   Post,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { Role } from '@prisma/client';
 import { Roles } from '../../../common/decorators/auth/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/auth/jwt-auth.guard';
@@ -60,13 +63,15 @@ export class AssignmentsController {
 
   @Post(':id/submits')
   @Roles(Role.STUDENT)
+  @UseInterceptors(FileInterceptor('file'))
   @AssignmentsSwagger.NopBaiTap()
   submit(
     @Param('id') id: string,
     @Body() dto: SubmitAssignmentDto,
     @Req() req: AssignmentRequest,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.assignmentsService.submitAssignment(id, req.user.id, dto);
+    return this.assignmentsService.submitAssignment(id, req.user.id, dto, file);
   }
 
   @Get(':id/submits/me')

@@ -11,7 +11,6 @@ import {
   mapRemarkSummary,
 } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
-import { BottomNav } from '../../components/BottomNav';
 import { ModalSheet } from '../../components/ModalSheet';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ErrorState, LoadingState } from '../../components/RequestState';
@@ -32,7 +31,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export function StudentRemarksScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
-  const { accessToken, role } = useAuth();
+  const { accessToken } = useAuth();
   const layout = useResponsiveLayout();
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({
@@ -69,7 +68,12 @@ export function StudentRemarksScreen() {
           },
         ]}
       >
-        <Pressable style={styles.backRow} onPress={() => navigation.navigate('StudentDashboard')}>
+        <Pressable
+          style={styles.backRow}
+          onPress={() =>
+            navigation.navigate('StudentTabs', { screen: 'StudentDashboard' })
+          }
+        >
           <ArrowLeft size={16} color={palette.mutedForeground} />
           <AppText variant="label" color={palette.mutedForeground}>
             {content.common.buttons.backToHome}
@@ -214,9 +218,6 @@ export function StudentRemarksScreen() {
         </View>
       </ModalSheet>
 
-      {role ? (
-        <BottomNav role={role} currentScreen="StudentRemarks" currentModule="remarks" />
-      ) : null}
     </Screen>
   );
 }

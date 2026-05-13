@@ -13,9 +13,10 @@ export function SimpleLineChart({ values }: SimpleLineChartProps) {
   const height = 180;
   const max = 10;
   const min = 0;
+  const safeValues = values.filter((value) => Number.isFinite(value));
 
-  const points = values.map((value, index) => {
-    const x = (index / Math.max(values.length - 1, 1)) * width;
+  const points = safeValues.map((value, index) => {
+    const x = (index / Math.max(safeValues.length - 1, 1)) * width;
     const y = height - ((value - min) / (max - min)) * (height - 24) - 12;
     return `${x},${y}`;
   });
@@ -29,6 +30,7 @@ export function SimpleLineChart({ values }: SimpleLineChartProps) {
   }, '');
 
   const areaPath = `${linePath} L${width},${height} L0,${height} Z`;
+  const hasPath = points.length > 0;
 
   return (
     <View style={styles.wrap}>
@@ -40,8 +42,15 @@ export function SimpleLineChart({ values }: SimpleLineChartProps) {
           </LinearGradient>
         </Defs>
         <Rect x={0} y={0} width={width} height={height} fill="transparent" />
-        <Path d={areaPath} fill="url(#areaFill)" />
-        <Path d={linePath} stroke={appTheme.palette.primary} strokeWidth={3} fill="none" />
+        {hasPath ? <Path d={areaPath} fill="url(#areaFill)" /> : null}
+        {hasPath ? (
+          <Path
+            d={linePath}
+            stroke={appTheme.palette.primary}
+            strokeWidth={3}
+            fill="none"
+          />
+        ) : null}
       </Svg>
     </View>
   );

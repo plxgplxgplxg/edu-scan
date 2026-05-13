@@ -12,10 +12,8 @@ import {
   listAssignments,
   listClasses,
   mapStudentAssignmentSummary,
-  submitAssignment,
 } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
-import { BottomNav } from '../../components/BottomNav';
 import { FilterChips } from '../../components/FilterChips';
 import { ModalSheet } from '../../components/ModalSheet';
 import { PageHeader } from '../../components/PageHeader';
@@ -32,6 +30,7 @@ import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import { formatVietnameseDate, isExpired } from '../../utils/format';
 import type { RootStackParamList } from '../../navigation/types';
+import { useAssignmentSubmission } from '../../features/assignments/application/useAssignmentSubmission';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type FilterKey = 'all' | 'pending' | 'overdue' | 'submitted';
@@ -39,13 +38,10 @@ type FilterKey = 'all' | 'pending' | 'overdue' | 'submitted';
 export function StudentAssignmentsScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
-  const { accessToken, role } = useAuth();
+  const { accessToken } = useAuth();
   const layout = useResponsiveLayout();
   const [filter, setFilter] = useState<FilterKey>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [fileUrl, setFileUrl] = useState('');
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
   const { data, loading, error, reload } = useAsyncResource(
     async () => {
       if (!accessToken) {
@@ -62,7 +58,7 @@ export function StudentAssignmentsScreen() {
     },
     [accessToken],
   );
-  const studentAssignments = data ?? [];
+  const studentAssignments = useMemo(() => data ?? [], [data]);
 
   const pendingCount = studentAssignments.filter(item => !item.submitted).length;
   const overdueCount = studentAssignments.filter(
@@ -77,8 +73,19 @@ export function StudentAssignmentsScreen() {
         if (filter === 'overdue') return !item.submitted && isExpired(item.deadline);
         return item.submitted;
       }),
-    [filter],
+    [filter, studentAssignments],
   );
+  const {
+    selectedFile,
+    submitting,
+    submitError,
+    pickFile,
+    clearSelectedFile,
+    submitSelectedFile,
+  } = useAssignmentSubmission({
+    accessToken,
+    onSubmitted: reload,
+  });
 
   return (
     <Screen>
@@ -87,7 +94,9 @@ export function StudentAssignmentsScreen() {
         title={content.student.assignments.title}
         subtitle={content.student.assignments.subtitle}
         gradient={['#5B5BD6', '#7C5CFC']}
-        onBack={() => navigation.navigate('StudentDashboard')}
+        onBack={() =>
+          navigation.navigate('StudentTabs', { screen: 'StudentDashboard' })
+        }
         metrics={[
           { label: content.common.tabs.pending, value: String(pendingCount) },
           { label: content.common.tabs.overdue, value: String(overdueCount) },
@@ -186,36 +195,41 @@ export function StudentAssignmentsScreen() {
           {content.common.buttons.submitAssignment}
         </AppText>
         <TextInputField
-          label={content.common.form.assignmentFileUrl}
-          value={fileUrl}
-          onChangeText={setFileUrl}
-          placeholder={content.common.placeholders.fileUrl}
+          label="Tệp đã chọn"
+          value={selectedFile?.name ?? ''}
+          editable={false}
+          placeholder="Chưa có tệp nào được chọn"
           trailing={<Link size={16} color={palette.mutedForeground} />}
         />
         <AppText variant="caption" color={palette.mutedForeground} style={styles.sheetHint}>
           {content.common.messages.assignmentUploadHintAlt}
         </AppText>
-        <PrimaryButton label={content.common.buttons.confirm} onPress={() => setSelectedId(null)} />
+        <PrimaryButton
+          label="Chọn tệp"
+          variant="outline"
+          onPress={() => {
+            void pickFile();
+          }}
+        />
+        <PrimaryButton
+          label={content.common.buttons.confirm}
+          variant="soft"
+          onPress={() => {
+            clearSelectedFile();
+            setSelectedId(null);
+          }}
+        />
         <PrimaryButton
           label={content.common.buttons.submitAssignment}
           loading={submitting}
           onPress={async () => {
-            if (!accessToken || !selectedId) {
+            if (!selectedId) {
               return;
             }
 
-            setSubmitting(true);
-            setSubmitError(null);
-
-            try {
-              await submitAssignment(accessToken, selectedId, fileUrl.trim());
+            const submitted = await submitSelectedFile(selectedId);
+            if (submitted) {
               setSelectedId(null);
-              setFileUrl('');
-              await reload();
-            } catch (err) {
-              setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
-            } finally {
-              setSubmitting(false);
             }
           }}
         />
@@ -225,10 +239,6 @@ export function StudentAssignmentsScreen() {
           </AppText>
         ) : null}
       </ModalSheet>
-
-      {role ? (
-        <BottomNav role={role} currentScreen="StudentAssignments" currentModule="assignments" />
-      ) : null}
     </Screen>
   );
 }

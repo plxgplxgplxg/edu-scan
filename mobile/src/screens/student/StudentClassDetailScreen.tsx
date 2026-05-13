@@ -14,10 +14,8 @@ import {
   listAssignments,
   mapClassDetail,
   mapStudentAssignmentSummary,
-  submitAssignment,
 } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
-import { BottomNav } from '../../components/BottomNav';
 import { FilterChips } from '../../components/FilterChips';
 import { ModalSheet } from '../../components/ModalSheet';
 import { PageHeader } from '../../components/PageHeader';
@@ -34,6 +32,7 @@ import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import { formatVietnameseDate, isExpired } from '../../utils/format';
 import type { RootStackParamList } from '../../navigation/types';
+import { useAssignmentSubmission } from '../../features/assignments/application/useAssignmentSubmission';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type TabKey = 'assignments' | 'info';
@@ -42,14 +41,11 @@ export function StudentClassDetailScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<RouteProp<RootStackParamList, 'StudentClassDetail'>>();
   const content = useAppContent();
-  const { accessToken, role } = useAuth();
+  const { accessToken } = useAuth();
   const layout = useResponsiveLayout();
   const classId = route.params?.classId;
   const [tab, setTab] = useState<TabKey>('assignments');
   const [showSubmit, setShowSubmit] = useState<string | null>(null);
-  const [fileUrl, setFileUrl] = useState('');
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
   const { data, loading, error, reload } = useAsyncResource(
     async () => {
       if (!accessToken || !classId) {
@@ -76,6 +72,17 @@ export function StudentClassDetailScreen() {
     () => data?.assignments ?? [],
     [data?.assignments],
   );
+  const {
+    selectedFile,
+    submitting,
+    submitError,
+    pickFile,
+    clearSelectedFile,
+    submitSelectedFile,
+  } = useAssignmentSubmission({
+    accessToken,
+    onSubmitted: reload,
+  });
 
   if (!data && loading) {
     return (
@@ -118,7 +125,7 @@ export function StudentClassDetailScreen() {
         title={currentClass.name}
         subtitle={`${currentClass.subject} • ${content.common.labels.teacher}: ${currentClass.teacherName ?? ''}`}
         gradient={['#5B5BD6', '#7C5CFC']}
-        onBack={() => navigation.navigate('StudentClasses')}
+        onBack={() => navigation.navigate('StudentTabs', { screen: 'StudentClasses' })}
         leadingVisual={<BookOpen size={32} color={palette.white} />}
       />
 
@@ -234,36 +241,42 @@ export function StudentClassDetailScreen() {
           {classAssignments.find(item => item.id === showSubmit)?.title ?? ''}
         </AppText>
         <TextInputField
-          label={content.common.form.assignmentFileUrl}
-          value={fileUrl}
-          onChangeText={setFileUrl}
-          placeholder={content.common.placeholders.fileUrl}
+          label="Tệp đã chọn"
+          value={selectedFile?.name ?? ''}
+          editable={false}
+          placeholder="Chưa có tệp nào được chọn"
           trailing={<Link size={16} color={palette.mutedForeground} />}
         />
         <AppText variant="caption" color={palette.mutedForeground} style={styles.sheetHint}>
           {content.common.messages.assignmentUploadHint}
         </AppText>
         <PrimaryButton
+          label="Chọn tệp"
+          variant="outline"
+          onPress={() => {
+            void pickFile();
+          }}
+        />
+        <PrimaryButton
           label={content.common.buttons.submitAssignment}
           loading={submitting}
           onPress={async () => {
-            if (!accessToken || !showSubmit) {
+            if (!showSubmit) {
               return;
             }
 
-            setSubmitting(true);
-            setSubmitError(null);
-
-            try {
-              await submitAssignment(accessToken, showSubmit, fileUrl.trim());
+            const submitted = await submitSelectedFile(showSubmit);
+            if (submitted) {
               setShowSubmit(null);
-              setFileUrl('');
-              await reload();
-            } catch (err) {
-              setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
-            } finally {
-              setSubmitting(false);
             }
+          }}
+        />
+        <PrimaryButton
+          label={content.common.buttons.cancel}
+          variant="soft"
+          onPress={() => {
+            clearSelectedFile();
+            setShowSubmit(null);
           }}
         />
         {submitError ? (
@@ -272,10 +285,6 @@ export function StudentClassDetailScreen() {
           </AppText>
         ) : null}
       </ModalSheet>
-
-      {role ? (
-        <BottomNav role={role} currentScreen="StudentClassDetail" currentModule="classes" />
-      ) : null}
     </Screen>
   );
 }

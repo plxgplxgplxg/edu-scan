@@ -10,7 +10,6 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { AppText } from '../../components/AppText';
-import { BottomNav } from '../../components/BottomNav';
 import { DashboardModuleCard } from '../../components/DashboardModuleCard';
 import { PageHeader } from '../../components/PageHeader';
 import { Screen } from '../../components/Screen';
@@ -126,10 +125,16 @@ export function AdminDashboardScreen() {
               }
               colors={module.gradient}
               onPress={() => {
-                if (module.id === 'users') navigation.navigate('AdminUsers');
-                if (module.id === 'classes') navigation.navigate('TeacherClasses');
+                if (module.id === 'users') {
+                  navigation.navigate('AdminTabs', { screen: 'AdminUsers' });
+                }
+                if (module.id === 'classes') {
+                  navigation.navigate('AdminTabs', { screen: 'TeacherClasses' });
+                }
                 if (module.id === 'settings') navigation.navigate('SharedProfile');
-                if (module.id === 'stats') navigation.navigate('AdminDashboard');
+                if (module.id === 'stats') {
+                  navigation.navigate('AdminTabs', { screen: 'AdminDashboard' });
+                }
               }}
             />
           ))}
@@ -144,7 +149,6 @@ export function AdminDashboardScreen() {
         ) : null}
       </View>
 
-      <BottomNav role="ADMIN" currentScreen="AdminDashboard" currentModule="home" />
     </Screen>
   );
 }

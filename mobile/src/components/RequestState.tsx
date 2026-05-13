@@ -4,20 +4,25 @@ import { ActivityIndicator, View } from 'react-native';
 import { appTheme, palette } from '../theme/tokens';
 import { AppText } from './AppText';
 import { PrimaryButton } from './PrimaryButton';
+import { SkeletonCard } from './SkeletonCard';
 
 export function LoadingState({ label }: { label: string }) {
   return (
     <View
       style={{
         paddingVertical: appTheme.spacing.huge,
-        alignItems: 'center',
         gap: appTheme.spacing.md,
       }}
     >
-      <ActivityIndicator color={palette.primary} />
-      <AppText variant="body" color={palette.mutedForeground}>
-        {label}
-      </AppText>
+      <View style={{ alignItems: 'center', gap: appTheme.spacing.md }}>
+        <ActivityIndicator color={palette.primary} />
+        <AppText variant="body" color={palette.mutedForeground}>
+          {label}
+        </AppText>
+      </View>
+      <SkeletonCard />
+      <SkeletonCard />
+      <SkeletonCard lines={2} />
     </View>
   );
 }

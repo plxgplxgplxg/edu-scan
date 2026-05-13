@@ -11,7 +11,6 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { BottomNav } from '../../components/BottomNav';
 import { DashboardModuleCard } from '../../components/DashboardModuleCard';
 import { AppText } from '../../components/AppText';
 import { PageHeader } from '../../components/PageHeader';
@@ -25,6 +24,7 @@ import type { RootStackParamList } from '../../navigation/types';
 import { getInitials } from '../../utils/string';
 import { listClasses, listExams, listTeacherRemarks } from '../../api/edu-scan';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
+import { useNotifications } from '../../features/notifications/application/notifications-provider';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -51,6 +51,7 @@ export function TeacherDashboardScreen() {
   const content = useAppContent();
   const { accessToken, profileName } = useAuth();
   const layout = useResponsiveLayout();
+  const { unreadCount } = useNotifications();
   const { data, loading, error, reload } = useAsyncResource(
     async () => {
       if (!accessToken) {
@@ -90,6 +91,7 @@ export function TeacherDashboardScreen() {
         subtitle={`${content.roles.TEACHER} • ${content.teacher.dashboard.subtitle}`}
         gradient={['#4F46E5', '#6D28D9', '#7C5CFC']}
         showNotificationButton
+        actionBadge={unreadCount || undefined}
         onNotificationPress={() => navigation.navigate('SharedNotifications')}
         avatarLabel={getInitials(profileName)}
         metrics={[
@@ -132,12 +134,18 @@ export function TeacherDashboardScreen() {
               }
               colors={module.gradient}
               onPress={() => {
-                if (module.id === 'classes') navigation.navigate('TeacherClasses');
+                if (module.id === 'classes') {
+                  navigation.navigate('TeacherTabs', { screen: 'TeacherClasses' });
+                }
                 if (module.id === 'exams') navigation.navigate('TeacherExams');
-                if (module.id === 'omr') navigation.navigate('TeacherOMR');
+                if (module.id === 'omr') {
+                  navigation.navigate('TeacherTabs', { screen: 'TeacherOMR' });
+                }
                 if (module.id === 'remarks') navigation.navigate('TeacherRemarks');
                 if (module.id === 'questions') navigation.navigate('TeacherQuestions');
-                if (module.id === 'stats') navigation.navigate('TeacherOMR');
+                if (module.id === 'stats') {
+                  navigation.navigate('TeacherTabs', { screen: 'TeacherOMR' });
+                }
               }}
             />
           ))}
@@ -152,7 +160,6 @@ export function TeacherDashboardScreen() {
         ) : null}
       </View>
 
-      <BottomNav role="TEACHER" currentScreen="TeacherDashboard" currentModule="home" />
     </Screen>
   );
 }

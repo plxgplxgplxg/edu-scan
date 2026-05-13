@@ -10,7 +10,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { joinClassByCode, listAssignments, listClasses, mapClassSummary } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
-import { BottomNav } from '../../components/BottomNav';
 import { ModalSheet } from '../../components/ModalSheet';
 import { PageHeader } from '../../components/PageHeader';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -30,7 +29,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export function StudentClassesScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
-  const { accessToken, role } = useAuth();
+  const { accessToken } = useAuth();
   const layout = useResponsiveLayout();
   const [showJoin, setShowJoin] = useState(false);
   const [classCode, setClassCode] = useState('');
@@ -60,7 +59,9 @@ export function StudentClassesScreen() {
         title={content.student.classes.title}
         subtitle={`${String(studentClasses.length)} ${content.student.classes.activeClasses}`}
         gradient={['#5B5BD6', '#7C5CFC']}
-        onBack={() => navigation.navigate('StudentDashboard')}
+        onBack={() =>
+          navigation.navigate('StudentTabs', { screen: 'StudentDashboard' })
+        }
         leadingVisual={<BookOpen size={30} color={palette.white} />}
       />
 
@@ -190,9 +191,6 @@ export function StudentClassesScreen() {
         ) : null}
       </ModalSheet>
 
-      {role ? (
-        <BottomNav role={role} currentScreen="StudentClasses" currentModule="classes" />
-      ) : null}
     </Screen>
   );
 }

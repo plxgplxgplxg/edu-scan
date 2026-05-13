@@ -11,7 +11,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { createQuestion, listQuestions, mapQuestionSummary } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
-import { BottomNav } from '../../components/BottomNav';
 import { EmptyState } from '../../components/EmptyState';
 import { ModalSheet } from '../../components/ModalSheet';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -80,7 +79,12 @@ export function TeacherQuestionsScreen() {
           },
         ]}
       >
-        <Pressable style={styles.backRow} onPress={() => navigation.navigate('TeacherDashboard')}>
+        <Pressable
+          style={styles.backRow}
+          onPress={() =>
+            navigation.navigate('TeacherTabs', { screen: 'TeacherDashboard' })
+          }
+        >
           <ArrowLeft size={16} color={palette.mutedForeground} />
           <AppText variant="label" color={palette.mutedForeground}>
             {content.common.buttons.backToHome}
@@ -302,7 +306,6 @@ export function TeacherQuestionsScreen() {
         </View>
       </ModalSheet>
 
-      <BottomNav role="TEACHER" currentScreen="TeacherQuestions" currentModule="questions" />
     </Screen>
   );
 }

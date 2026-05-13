@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import {
   Bell,
   BookOpen,
@@ -10,38 +10,26 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { buildNotifications } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
-import { BottomNav } from '../../components/BottomNav';
 import { EmptyState } from '../../components/EmptyState';
 import { PageHeader } from '../../components/PageHeader';
 import { ErrorState, LoadingState } from '../../components/RequestState';
 import { Screen } from '../../components/Screen';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { useAuth } from '../../store/auth-store';
-import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
+import { useNotifications } from '../../features/notifications/application/notifications-provider';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export function NotificationsScreen() {
   const navigation = useNavigation<Nav>();
-  const { accessToken, content, role } = useAuth();
+  const { content, role } = useAuth();
   const layout = useResponsiveLayout();
-  const { data, loading, error, reload } = useAsyncResource(
-    async () => {
-      if (!accessToken || !role) {
-        return [];
-      }
-
-      return buildNotifications(accessToken, role);
-    },
-    [accessToken, role],
-  );
-  const notifications = data ?? [];
-  const unreadCount = notifications.filter(item => !item.read).length;
+  const { notifications, unreadCount, loading, error, reload, markAsRead } =
+    useNotifications();
 
   return (
     <Screen>
@@ -57,9 +45,15 @@ export function NotificationsScreen() {
         showNotificationButton
         actionBadge={unreadCount}
         onBack={() => {
-          if (role === 'TEACHER') navigation.navigate('TeacherDashboard');
-          if (role === 'STUDENT') navigation.navigate('StudentDashboard');
-          if (role === 'ADMIN') navigation.navigate('AdminDashboard');
+          if (role === 'TEACHER') {
+            navigation.navigate('TeacherTabs', { screen: 'TeacherDashboard' });
+          }
+          if (role === 'STUDENT') {
+            navigation.navigate('StudentTabs', { screen: 'StudentDashboard' });
+          }
+          if (role === 'ADMIN') {
+            navigation.navigate('AdminTabs', { screen: 'AdminDashboard' });
+          }
         }}
       />
 
@@ -85,48 +79,52 @@ export function NotificationsScreen() {
           />
         ) : null}
         {notifications.map(item => (
-          <SurfaceCard
+          <Pressable
             key={item.id}
-            style={[styles.card, !item.read ? styles.unreadCard : null]}
+            onPress={() => {
+              void markAsRead(item.id);
+            }}
           >
-            <View
-              style={[
-                styles.iconWrap,
-                {
-                  width: layout.headerVisualSize - 6,
-                  height: layout.headerVisualSize - 6,
-                  borderRadius: layout.heroRadius - 6,
-                },
-              ]}
-            >
-              {item.type === 'assignment' ? (
-                <BookOpen size={18} color={palette.primary} />
-              ) : null}
-              {item.type === 'result' ? (
-                <FileText size={18} color={palette.info} />
-              ) : null}
-              {item.type === 'remark' ? (
-                <MessageSquare size={18} color={palette.warning} />
-              ) : null}
-              {item.type === 'system' ? (
-                <CheckCircle size={18} color={palette.success} />
-              ) : null}
-            </View>
-            <View style={styles.flex}>
-              <View style={styles.rowBetween}>
-                <AppText variant="body" weight={item.read ? 'regular' : 'semibold'}>
-                  {item.title}
-                </AppText>
-                {!item.read ? <View style={styles.unreadDot} /> : null}
+            <SurfaceCard style={[styles.card, !item.read ? styles.unreadCard : null]}>
+              <View
+                style={[
+                  styles.iconWrap,
+                  {
+                    width: layout.headerVisualSize - 6,
+                    height: layout.headerVisualSize - 6,
+                    borderRadius: layout.heroRadius - 6,
+                  },
+                ]}
+              >
+                {item.type === 'assignment' ? (
+                  <BookOpen size={18} color={palette.primary} />
+                ) : null}
+                {item.type === 'result' ? (
+                  <FileText size={18} color={palette.info} />
+                ) : null}
+                {item.type === 'remark' ? (
+                  <MessageSquare size={18} color={palette.warning} />
+                ) : null}
+                {item.type === 'system' ? (
+                  <CheckCircle size={18} color={palette.success} />
+                ) : null}
               </View>
-              <AppText variant="caption" color={palette.mutedForeground}>
-                {item.body}
-              </AppText>
-              <AppText variant="caption" color={palette.mutedForeground}>
-                {item.time}
-              </AppText>
-            </View>
-          </SurfaceCard>
+              <View style={styles.flex}>
+                <View style={styles.rowBetween}>
+                  <AppText variant="body" weight={item.read ? 'regular' : 'semibold'}>
+                    {item.title}
+                  </AppText>
+                  {!item.read ? <View style={styles.unreadDot} /> : null}
+                </View>
+                <AppText variant="caption" color={palette.mutedForeground}>
+                  {item.body}
+                </AppText>
+                <AppText variant="caption" color={palette.mutedForeground}>
+                  {item.time}
+                </AppText>
+              </View>
+            </SurfaceCard>
+          </Pressable>
         ))}
 
         {!notifications.length ? (
@@ -136,10 +134,6 @@ export function NotificationsScreen() {
           />
         ) : null}
       </View>
-
-      {role ? (
-        <BottomNav role={role} currentScreen="SharedNotifications" currentModule="home" />
-      ) : null}
     </Screen>
   );
 }

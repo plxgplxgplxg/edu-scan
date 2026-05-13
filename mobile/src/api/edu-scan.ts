@@ -376,12 +376,31 @@ export async function createAssignment(
 export async function submitAssignment(
   token: string,
   assignmentId: string,
-  fileUrl: string,
+  payload: {
+    uri: string;
+    name: string;
+    type?: string;
+  } | string,
 ) {
+  if (typeof payload === 'string') {
+    return requestJson<AssignmentSubmitApi>(`/assignments/${assignmentId}/submits`, {
+      method: 'POST',
+      token,
+      body: { fileUrl: payload },
+    });
+  }
+
+  const formData = new FormData();
+  formData.append('file', {
+    uri: payload.uri,
+    name: payload.name,
+    type: payload.type || 'application/octet-stream',
+  } as unknown as Blob);
+
   return requestJson<AssignmentSubmitApi>(`/assignments/${assignmentId}/submits`, {
     method: 'POST',
     token,
-    body: { fileUrl },
+    body: formData,
   });
 }
 

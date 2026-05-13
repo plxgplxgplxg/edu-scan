@@ -7,14 +7,14 @@ function resolveHost() {
     try {
       const url = new URL(scriptUrl);
       if (Platform.OS === 'android' && url.hostname === 'localhost') {
-        return '10.0.2.2';
+        return 'localhost';
       }
       return url.hostname;
     } catch {}
   }
 
   if (Platform.OS === 'android') {
-    return '10.0.2.2';
+    return 'localhost';
   }
 
   return 'localhost';

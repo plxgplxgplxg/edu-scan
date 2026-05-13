@@ -27,6 +27,7 @@ export function DashboardModuleCard({
     layout.dashboardColumns === 1
       ? '100%'
       : (layout.contentWidth - layout.gridGap * (layout.dashboardColumns - 1)) / layout.dashboardColumns;
+  const compactCard = layout.isCompact || layout.dashboardColumns > 1;
 
   return (
     <Pressable style={[styles.container, { width: cardWidth }]} onPress={onPress}>
@@ -34,9 +35,11 @@ export function DashboardModuleCard({
         style={[
           styles.card,
           {
-            minHeight: layout.dashboardColumns === 1 ? 152 : layout.isCompact ? 160 : 172,
-            gap: layout.sectionGap,
+            minHeight: layout.dashboardColumns === 1 ? 138 : layout.isCompact ? 126 : 132,
+            gap: compactCard ? 10 : layout.sectionGap,
             borderRadius: layout.heroRadius - 6,
+            paddingVertical: compactCard ? 14 : 18,
+            paddingHorizontal: compactCard ? 12 : 18,
           },
         ]}
       >
@@ -45,8 +48,8 @@ export function DashboardModuleCard({
           style={[
             styles.iconWrap,
             {
-              width: layout.moduleIconSize,
-              height: layout.moduleIconSize,
+              width: compactCard ? Math.max(40, layout.moduleIconSize - 8) : layout.moduleIconSize,
+              height: compactCard ? Math.max(40, layout.moduleIconSize - 8) : layout.moduleIconSize,
               borderRadius: layout.heroRadius - 6,
             },
           ]}
@@ -54,14 +57,19 @@ export function DashboardModuleCard({
           {icon}
         </GradientBackground>
         <View style={styles.body}>
-          <AppText variant="body" weight="medium" style={styles.center} numberOfLines={2}>
+          <AppText
+            variant="body"
+            weight="medium"
+            style={[styles.center, styles.title]}
+            numberOfLines={2}
+          >
             {title}
           </AppText>
           <AppText
             variant="caption"
             color={appTheme.palette.mutedForeground}
-            style={styles.center}
-            numberOfLines={2}
+            style={[styles.center, styles.subtitle]}
+            numberOfLines={1}
           >
             {subtitle}
           </AppText>
@@ -83,9 +91,16 @@ const styles = StyleSheet.create({
     ...appTheme.shadows.card,
   },
   body: {
-    gap: 4,
+    gap: 2,
+    alignItems: 'center',
   },
   center: {
     textAlign: 'center',
+  },
+  title: {
+    minHeight: 48,
+  },
+  subtitle: {
+    minHeight: 18,
   },
 });

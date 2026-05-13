@@ -2,6 +2,7 @@ import {
   Injectable,
   BadRequestException,
   ForbiddenException,
+  Inject,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
@@ -10,12 +11,25 @@ import { CreateAssignmentDto } from '../dtos/create-assignment.dto';
 import { SubmitAssignmentDto } from '../dtos/submit-assignment.dto';
 import { GradeSubmitDto } from '../dtos/grade-submit.dto';
 import { GradeStatus, SubmitStatus } from '@prisma/client';
+import { IStorageService } from '../../../storage/storage.interface';
+
+const SUPPORTED_SUBMISSION_MIME_TYPES = new Set([
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'text/plain',
+]);
 
 @Injectable()
 export class AssignmentsService {
   constructor(
     private readonly assignmentsRepository: AssignmentsRepository,
     private readonly prisma: PrismaService,
+    @Inject(IStorageService)
+    private readonly storageService: IStorageService,
   ) {}
 
   async createAssignment(teacherId: string, dto: CreateAssignmentDto) {
@@ -69,6 +83,7 @@ export class AssignmentsService {
     assignmentId: string,
     studentId: string,
     dto: SubmitAssignmentDto,
+    file?: Express.Multer.File,
   ) {
     const assignment = await this.assignmentsRepository.findById(assignmentId);
     if (!assignment) {
@@ -106,11 +121,17 @@ export class AssignmentsService {
     }
 
     const submitStatus = isLate ? SubmitStatus.LATE : SubmitStatus.ON_TIME;
+    const fileUrl = await this.resolveSubmissionFileUrl(
+      assignmentId,
+      studentId,
+      dto,
+      file,
+    );
 
     return this.assignmentsRepository.createSubmit({
       assignmentId,
       studentId,
-      fileUrl: dto.fileUrl,
+      fileUrl,
       submitStatus,
       gradeStatus: GradeStatus.PENDING,
     });
@@ -181,5 +202,31 @@ export class AssignmentsService {
       feedback: dto.feedback,
       gradeStatus: GradeStatus.GRADED,
     });
+  }
+
+  private async resolveSubmissionFileUrl(
+    assignmentId: string,
+    studentId: string,
+    dto: SubmitAssignmentDto,
+    file?: Express.Multer.File,
+  ) {
+    if (file) {
+      if (!SUPPORTED_SUBMISSION_MIME_TYPES.has(file.mimetype)) {
+        throw new BadRequestException('Unsupported submission file type.');
+      }
+
+      return this.storageService.uploadFile(
+        file,
+        `eduscan/assignments/${assignmentId}/${studentId}`,
+      );
+    }
+
+    if (!dto.fileUrl?.trim()) {
+      throw new BadRequestException(
+        'Submission requires either an uploaded file or fileUrl.',
+      );
+    }
+
+    return dto.fileUrl.trim();
   }
 }

@@ -6,7 +6,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { listStudentProgress, mapProgressPoint } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
-import { BottomNav } from '../../components/BottomNav';
 import { PageHeader } from '../../components/PageHeader';
 import { ErrorState, LoadingState } from '../../components/RequestState';
 import { Screen } from '../../components/Screen';
@@ -24,7 +23,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export function StudentProgressScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
-  const { accessToken, role } = useAuth();
+  const { accessToken } = useAuth();
   const layout = useResponsiveLayout();
   const { data, loading, error, reload } = useAsyncResource(
     async () => {
@@ -73,7 +72,9 @@ export function StudentProgressScreen() {
         title={content.student.progress.title}
         subtitle={content.student.progress.subtitle}
         gradient={['#4F46E5', '#7C5CFC']}
-        onBack={() => navigation.navigate('StudentDashboard')}
+        onBack={() =>
+          navigation.navigate('StudentTabs', { screen: 'StudentDashboard' })
+        }
       />
 
       <View
@@ -152,9 +153,6 @@ export function StudentProgressScreen() {
         ))}
       </View>
 
-      {role ? (
-        <BottomNav role={role} currentScreen="StudentProgress" currentModule="progress" />
-      ) : null}
     </Screen>
   );
 }

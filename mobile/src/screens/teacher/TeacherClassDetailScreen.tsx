@@ -34,6 +34,7 @@ import { TextInputField } from '../../components/TextInputField';
 import { FilterChips } from '../../components/FilterChips';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { useAppContent } from '../../hooks/useAppContent';
+import { useCopyClassCode } from '../../features/classes/application/useCopyClassCode';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
@@ -49,6 +50,7 @@ export function TeacherClassDetailScreen() {
   const content = useAppContent();
   const { accessToken } = useAuth();
   const layout = useResponsiveLayout();
+  const { copyClassCode } = useCopyClassCode();
   const classId = route.params?.classId;
   const [activeTab, setActiveTab] = useState<DetailTab>('students');
   const [showAddStudent, setShowAddStudent] = useState(false);
@@ -97,7 +99,13 @@ export function TeacherClassDetailScreen() {
       { id: 'assignments' as const, label: `${content.common.tabs.assignments} (${String(teacherAssignments.length)})` },
       { id: 'info' as const, label: content.common.sections.info },
     ],
-    [content.common.sections.info, content.common.tabs.assignments, content.common.tabs.students],
+    [
+      classStudents.length,
+      content.common.sections.info,
+      content.common.tabs.assignments,
+      content.common.tabs.students,
+      teacherAssignments.length,
+    ],
   );
 
   if (!currentClass && loading) {
@@ -143,7 +151,12 @@ export function TeacherClassDetailScreen() {
         leadingVisual={<BookOpen size={30} color={palette.white} />}
         footer={(
           <View style={styles.codeRow}>
-            <Pressable style={styles.codePill}>
+            <Pressable
+              style={styles.codePill}
+              onPress={() => {
+                void copyClassCode(currentClass.code);
+              }}
+            >
               <Copy size={14} color={palette.white} />
               <AppText variant="label" weight="semibold" color={palette.white}>
                 {currentClass.code}

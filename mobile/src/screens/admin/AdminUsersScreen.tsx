@@ -6,7 +6,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { createUser, deactivateUser, listUsers, mapUserSummary } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
-import { BottomNav } from '../../components/BottomNav';
 import { EmptyState } from '../../components/EmptyState';
 import { FilterChips } from '../../components/FilterChips';
 import { ModalSheet } from '../../components/ModalSheet';
@@ -56,7 +55,7 @@ export function AdminUsersScreen() {
     },
     [accessToken],
   );
-  const adminUsers = data ?? [];
+  const adminUsers = useMemo(() => data ?? [], [data]);
 
   const items = useMemo(
     () =>
@@ -67,7 +66,7 @@ export function AdminUsersScreen() {
         const matchesFilter = filter === 'ALL' || item.role === filter;
         return matchesSearch && matchesFilter;
       }),
-    [filter, search],
+    [adminUsers, filter, search],
   );
 
   const filterItems = [
@@ -84,7 +83,7 @@ export function AdminUsersScreen() {
         title={content.admin.users.title}
         subtitle={content.common.search.users}
         gradient={['#4F46E5', '#7C5CFC']}
-        onBack={() => navigation.navigate('AdminDashboard')}
+        onBack={() => navigation.navigate('AdminTabs', { screen: 'AdminDashboard' })}
       />
 
       <View
@@ -291,7 +290,6 @@ export function AdminUsersScreen() {
         ) : null}
       </ModalSheet>
 
-      <BottomNav role="ADMIN" currentScreen="AdminUsers" currentModule="users" />
     </Screen>
   );
 }

@@ -12,7 +12,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { listAssignments, listClasses, mapTeacherAssignmentSummary } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
-import { BottomNav } from '../../components/BottomNav';
 import { EmptyState } from '../../components/EmptyState';
 import { PageHeader } from '../../components/PageHeader';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -53,14 +52,14 @@ export function TeacherAssignmentsScreen() {
     },
     [accessToken],
   );
-  const teacherAssignments = data ?? [];
+  const teacherAssignments = useMemo(() => data ?? [], [data]);
 
   const items = useMemo(
     () =>
       teacherAssignments.filter(item =>
         item.title.toLowerCase().includes(search.toLowerCase()),
       ),
-    [search],
+    [search, teacherAssignments],
   );
 
   return (
@@ -70,7 +69,9 @@ export function TeacherAssignmentsScreen() {
         title={content.teacher.assignments.title}
         subtitle={`${String(items.length)} ${content.common.tabs.assignments.toLowerCase()}`}
         gradient={['#5B5BD6', '#7C5CFC']}
-        onBack={() => navigation.navigate('TeacherDashboard')}
+        onBack={() =>
+          navigation.navigate('TeacherTabs', { screen: 'TeacherDashboard' })
+        }
       />
 
       <View
@@ -157,7 +158,6 @@ export function TeacherAssignmentsScreen() {
         />
       </View>
 
-      <BottomNav role="TEACHER" currentScreen="TeacherAssignments" currentModule="assignments" />
     </Screen>
   );
 }

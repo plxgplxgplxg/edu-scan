@@ -11,7 +11,6 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { AppText } from '../../components/AppText';
-import { BottomNav } from '../../components/BottomNav';
 import { DashboardModuleCard } from '../../components/DashboardModuleCard';
 import { PageHeader } from '../../components/PageHeader';
 import { Screen } from '../../components/Screen';
@@ -29,6 +28,7 @@ import {
   listStudentSubmissions,
 } from '../../api/edu-scan';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
+import { useNotifications } from '../../features/notifications/application/notifications-provider';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -53,6 +53,7 @@ export function StudentDashboardScreen() {
   const content = useAppContent();
   const { accessToken, profileName } = useAuth();
   const layout = useResponsiveLayout();
+  const { unreadCount } = useNotifications();
   const { data, loading, error, reload } = useAsyncResource(
     async () => {
       if (!accessToken) {
@@ -99,6 +100,7 @@ export function StudentDashboardScreen() {
         subtitle={`${content.roles.STUDENT} • ${content.student.dashboard.subtitle}`}
         gradient={['#4F46E5', '#6D28D9', '#7C5CFC']}
         showNotificationButton
+        actionBadge={unreadCount || undefined}
         onNotificationPress={() => navigation.navigate('SharedNotifications')}
         avatarLabel={getInitials(profileName)}
         metrics={[
@@ -143,9 +145,15 @@ export function StudentDashboardScreen() {
               }
               colors={module.gradient}
               onPress={() => {
-                if (module.id === 'classes') navigation.navigate('StudentClasses');
-                if (module.id === 'results') navigation.navigate('StudentResults');
-                if (module.id === 'assignments') navigation.navigate('StudentAssignments');
+                if (module.id === 'classes') {
+                  navigation.navigate('StudentTabs', { screen: 'StudentClasses' });
+                }
+                if (module.id === 'results') {
+                  navigation.navigate('StudentTabs', { screen: 'StudentResults' });
+                }
+                if (module.id === 'assignments') {
+                  navigation.navigate('StudentTabs', { screen: 'StudentAssignments' });
+                }
                 if (module.id === 'remarks') navigation.navigate('StudentRemarks');
                 if (module.id === 'progress') navigation.navigate('StudentProgress');
               }}
@@ -162,7 +170,6 @@ export function StudentDashboardScreen() {
         ) : null}
       </View>
 
-      <BottomNav role="STUDENT" currentScreen="StudentDashboard" currentModule="home" />
     </Screen>
   );
 }

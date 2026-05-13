@@ -26,7 +26,7 @@ interface PageHeaderProps {
   showNotificationButton?: boolean;
   onNotificationPress?: () => void;
   avatarLabel?: string;
-  gradient: readonly string[];
+  gradient?: readonly string[];
   metrics?: MetricItem[];
   overline?: string;
   actionIcon?: React.ReactNode;
@@ -43,7 +43,6 @@ export function PageHeader({
   showNotificationButton,
   onNotificationPress,
   avatarLabel,
-  gradient,
   metrics,
   overline,
   actionIcon,
@@ -57,9 +56,11 @@ export function PageHeader({
   const useCompactMetrics = layout.isCompact && (metrics?.length ?? 0) > 2;
   const extraTopInset = layout.isCompact ? appTheme.spacing.xxxl : appTheme.spacing.huge - appTheme.spacing.sm;
 
+  const headerGradient = ['#5B5BD6', '#7C5CFC'] as const;
+
   return (
     <GradientBackground
-      colors={gradient}
+      colors={headerGradient}
       style={[
         styles.gradient,
         {
@@ -135,11 +136,24 @@ export function PageHeader({
               {overline}
             </AppText>
           ) : null}
-          <AppText variant="title" weight="bold" color={appTheme.palette.white} numberOfLines={2}>
+          <AppText
+            variant="title"
+            weight="bold"
+            color={appTheme.palette.white}
+            numberOfLines={2}
+            adjustsFontSizeToFit
+            minimumFontScale={0.72}
+          >
             {title}
           </AppText>
           {subtitle ? (
-            <AppText variant="body" color="rgba(255,255,255,0.68)" numberOfLines={3}>
+            <AppText
+              variant="body"
+              color="rgba(255,255,255,0.68)"
+              numberOfLines={3}
+              adjustsFontSizeToFit
+              minimumFontScale={0.82}
+            >
               {subtitle}
             </AppText>
           ) : null}

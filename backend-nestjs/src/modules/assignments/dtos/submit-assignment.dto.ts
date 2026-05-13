@@ -1,7 +1,7 @@
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class SubmitAssignmentDto {
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  fileUrl: string;
+  fileUrl?: string;
 }

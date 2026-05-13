@@ -2,8 +2,10 @@ import React from 'react';
 import { StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { NotificationsProvider } from '../features/notifications/application/notifications-provider';
 import { AuthProvider, useAuth } from '../store/auth-store';
 import { AppNavigator } from '../navigation/AppNavigator';
+import { ToastProvider } from './ToastProvider';
 
 function AppShell() {
   const { role } = useAuth();
@@ -24,7 +26,11 @@ export default function AppRoot() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <AppShell />
+        <NotificationsProvider>
+          <ToastProvider>
+            <AppShell />
+          </ToastProvider>
+        </NotificationsProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

@@ -6,7 +6,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { listTeacherRemarks, mapRemarkSummary, reviewRemark } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
-import { BottomNav } from '../../components/BottomNav';
 import { EmptyState } from '../../components/EmptyState';
 import { FilterChips } from '../../components/FilterChips';
 import { ModalSheet } from '../../components/ModalSheet';
@@ -78,7 +77,12 @@ export function TeacherRemarksScreen() {
           },
         ]}
       >
-        <Pressable style={styles.backRow} onPress={() => navigation.navigate('TeacherDashboard')}>
+        <Pressable
+          style={styles.backRow}
+          onPress={() =>
+            navigation.navigate('TeacherTabs', { screen: 'TeacherDashboard' })
+          }
+        >
           <ArrowLeft size={16} color={palette.mutedForeground} />
           <AppText variant="label" color={palette.mutedForeground}>
             {content.common.buttons.backToHome}
@@ -257,7 +261,6 @@ export function TeacherRemarksScreen() {
         </View>
       </ModalSheet>
 
-      <BottomNav role="TEACHER" currentScreen="TeacherRemarks" currentModule="remarks" />
     </Screen>
   );
 }

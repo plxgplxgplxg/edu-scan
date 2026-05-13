@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useWindowDimensions } from 'react-native';
 
 const COMPACT_WIDTH = 360;
+const EXTRA_COMPACT_WIDTH = 330;
 const SMALL_WIDTH = 390;
 const LARGE_PHONE_WIDTH = 430;
 const TABLET_WIDTH = 768;
@@ -12,6 +13,7 @@ export function clamp(value: number, min: number, max: number) {
 
 export function getResponsiveLayout(width: number) {
   const isCompact = width < COMPACT_WIDTH;
+  const isExtraCompact = width < EXTRA_COMPACT_WIDTH;
   const isSmall = width < SMALL_WIDTH;
   const isLargePhone = width >= LARGE_PHONE_WIDTH;
   const isTablet = width >= TABLET_WIDTH;
@@ -24,18 +26,19 @@ export function getResponsiveLayout(width: number) {
   const heroRadius = clamp(Math.round(width * 0.068), 20, 32);
   const controlMinHeight = clamp(Math.round(width * 0.136), 52, 60);
   const headerVisualSize = clamp(Math.round(width * 0.17), 52, 84);
-  const moduleIconSize = clamp(Math.round(width * 0.165), 52, 68);
+  const moduleIconSize = clamp(Math.round(width * 0.145), 46, 60);
   const avatarSize = clamp(Math.round(width * 0.102), 34, 48);
   const navIconSize = isCompact ? 20 : 22;
   const navHeight = clamp(Math.round(width * 0.17), 72, 82);
   const titleScale = isCompact ? 0.84 : isTablet ? 0.98 : 0.9;
   const metricScale = isCompact ? 0.8 : isTablet ? 0.95 : 0.88;
-  const dashboardColumns = isTablet ? 3 : isSmall ? 1 : 2;
+  const dashboardColumns = isTablet ? 3 : isExtraCompact ? 1 : 2;
   const bottomOffset = isCompact ? 8 : 10;
 
   return {
     width,
     isCompact,
+    isExtraCompact,
     isSmall,
     isLargePhone,
     isTablet,

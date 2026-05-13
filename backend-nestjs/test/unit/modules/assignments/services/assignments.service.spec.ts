@@ -8,6 +8,7 @@ import { AssignmentsService } from '../../../../../src/modules/assignments/servi
 import { AssignmentsRepository } from '../../../../../src/modules/assignments/repositories/assignments.repository';
 import { PrismaService } from '../../../../../src/database/prisma.service';
 import { GradeStatus, SubmitStatus } from '@prisma/client';
+import { IStorageService } from '../../../../../src/storage/storage.interface';
 
 const mockAssignmentsRepository = () => ({
   create: jest.fn(),
@@ -29,10 +30,16 @@ const mockPrismaService = () => ({
   },
 });
 
+const mockStorageService = () => ({
+  uploadFile: jest.fn(),
+  deleteFile: jest.fn(),
+});
+
 describe('AssignmentsService', () => {
   let service: AssignmentsService;
   let repository: ReturnType<typeof mockAssignmentsRepository>;
   let prisma: ReturnType<typeof mockPrismaService>;
+  let storageService: ReturnType<typeof mockStorageService>;
 
   const TEACHER_ID = 'teacher-uuid-1';
   const STUDENT_ID = 'student-uuid-1';
@@ -80,12 +87,14 @@ describe('AssignmentsService', () => {
           useFactory: mockAssignmentsRepository,
         },
         { provide: PrismaService, useFactory: mockPrismaService },
+        { provide: IStorageService, useFactory: mockStorageService },
       ],
     }).compile();
 
     service = module.get<AssignmentsService>(AssignmentsService);
     repository = module.get(AssignmentsRepository);
     prisma = module.get(PrismaService);
+    storageService = module.get(IStorageService);
   });
 
   it('should be defined', () => {
@@ -196,6 +205,11 @@ describe('AssignmentsService', () => {
 
   describe('submitAssignment', () => {
     const submitDto = { fileUrl: 'https://cloudinary.com/file.pdf' };
+    const multipartFile = {
+      originalname: 'essay.pdf',
+      mimetype: 'application/pdf',
+      buffer: Buffer.from('file'),
+    } as Express.Multer.File;
 
     it('should throw NotFoundException when assignment does not exist', async () => {
       repository.findById.mockResolvedValue(null);
@@ -315,6 +329,55 @@ describe('AssignmentsService', () => {
         expect.objectContaining({ submitStatus: SubmitStatus.LATE }),
       );
       expect(result.submitStatus).toBe(SubmitStatus.LATE);
+    });
+
+    it('should upload multipart file before creating submit', async () => {
+      repository.findById.mockResolvedValue(mockAssignment);
+      prisma.classEnrollment.findFirst.mockResolvedValue({
+        id: 'enrollment-1',
+      });
+      repository.findSubmitByStudentAndAssignment.mockResolvedValue(null);
+      storageService.uploadFile.mockResolvedValue(
+        'https://cloudinary.com/uploaded.pdf',
+      );
+      repository.createSubmit.mockResolvedValue(mockSubmit);
+
+      await service.submitAssignment(
+        ASSIGNMENT_ID,
+        STUDENT_ID,
+        {},
+        multipartFile,
+      );
+
+      expect(storageService.uploadFile).toHaveBeenCalledWith(
+        multipartFile,
+        `eduscan/assignments/${ASSIGNMENT_ID}/${STUDENT_ID}`,
+      );
+      expect(repository.createSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fileUrl: 'https://cloudinary.com/uploaded.pdf',
+        }),
+      );
+    });
+
+    it('should reject unsupported multipart file type', async () => {
+      repository.findById.mockResolvedValue(mockAssignment);
+      prisma.classEnrollment.findFirst.mockResolvedValue({
+        id: 'enrollment-1',
+      });
+      repository.findSubmitByStudentAndAssignment.mockResolvedValue(null);
+
+      await expect(
+        service.submitAssignment(
+          ASSIGNMENT_ID,
+          STUDENT_ID,
+          {},
+          {
+            ...multipartFile,
+            mimetype: 'application/zip',
+          } as Express.Multer.File,
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
