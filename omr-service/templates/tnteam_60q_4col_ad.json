@@ -1,0 +1,120 @@
+{
+  "name": "tnteam_60q_4col_ad",
+  "aliases": ["tnteam_60", "tnteam_ad_60", "phieu_trac_nghiem_60_ad"],
+  "question_count": 60,
+  "answer_options": ["A", "B", "C", "D"],
+  "use_anchor_locator": false,
+  "id_fields": [
+    {
+      "name": "roll_no",
+      "code_length": 6,
+      "region": {
+        "x": 0.1511,
+        "y": 0.3335,
+        "width": 0.1995,
+        "height": 0.3330
+      },
+      "grid": {
+        "rows": 10,
+        "columns": 6
+      },
+      "primary": true
+    },
+    {
+      "name": "test_id",
+      "code_length": 3,
+      "region": {
+        "x": 0.3658,
+        "y": 0.3942,
+        "width": 0.0792,
+        "height": 0.2578
+      },
+      "grid": {
+        "rows": 10,
+        "columns": 3
+      },
+      "primary": false
+    }
+  ],
+  "student_id_length": 6,
+  "student_id_region": {
+    "x": 0.1511,
+    "y": 0.3335,
+    "width": 0.1995,
+    "height": 0.3330
+  },
+  "student_id_grid": {
+    "rows": 10,
+    "columns": 6
+  },
+  "answer_groups": [
+    {
+      "region": {
+        "x": 0.5254,
+        "y": 0.3997,
+        "width": 0.1028,
+        "height": 0.1560
+      },
+      "question_start": 1,
+      "question_end": 10
+    },
+    {
+      "region": {
+        "x": 0.6862,
+        "y": 0.3997,
+        "width": 0.1028,
+        "height": 0.1560
+      },
+      "question_start": 11,
+      "question_end": 20
+    },
+    {
+      "region": {
+        "x": 0.2025,
+        "y": 0.5750,
+        "width": 0.1028,
+        "height": 0.2309
+      },
+      "question_start": 21,
+      "question_end": 30
+    },
+    {
+      "region": {
+        "x": 0.3658,
+        "y": 0.5750,
+        "width": 0.1028,
+        "height": 0.2309
+      },
+      "question_start": 31,
+      "question_end": 40
+    },
+    {
+      "region": {
+        "x": 0.5254,
+        "y": 0.5750,
+        "width": 0.1028,
+        "height": 0.2309
+      },
+      "question_start": 41,
+      "question_end": 50
+    },
+    {
+      "region": {
+        "x": 0.6862,
+        "y": 0.5750,
+        "width": 0.1028,
+        "height": 0.2309
+      },
+      "question_start": 51,
+      "question_end": 60
+    }
+  ],
+  "answer_region": {
+    "x": 0.2025,
+    "y": 0.3997,
+    "width": 0.5865,
+    "height": 0.4062
+  },
+  "answer_columns": 4,
+  "notes": "TN Team 60-question answer sheet with 4 choices, 6-digit student id, and 3-digit test code."
+}

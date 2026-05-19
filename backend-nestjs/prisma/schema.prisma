@@ -25,6 +25,13 @@ enum SubmissionStatus {
   FAILED
 }
 
+enum TestCodeResolutionStatus {
+  MATCHED
+  UNKNOWN_TEST_CODE
+  MISSING_TEST_CODE
+  AMBIGUOUS_TEST_CODE
+}
+
 enum OmrBatchStatus {
   PENDING
   PROCESSING
@@ -55,6 +62,26 @@ enum Difficulty {
   HARD
 }
 
+enum ExamStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum ExamType {
+  OMR
+  CLASS_EXAM
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  ESSAY
+}
+
+enum ClassExamSubmissionStatus {
+  PENDING_MANUAL_GRADE
+  GRADED
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -76,6 +103,7 @@ model User {
   exams             Exam[]             @relation("TeacherExams")
   assignments       Assignment[]       @relation("TeacherAssignments")
   omrBatches        OmrBatch[]         @relation("TeacherOmrBatches")
+  classExamSubmissions ClassExamSubmission[]
 }
 
 model Class {
@@ -110,16 +138,35 @@ model Exam {
   id        String   @id @default(uuid())
   title     String
   maxScore  Float
+  status    ExamStatus @default(DRAFT)
+  type      ExamType @default(OMR)
   teacherId String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   teacher     User           @relation("TeacherExams", fields: [teacherId], references: [id])
-  answerKeys  AnswerKey[]
+  variants    ExamVariant[]
   questionMap ExamQuestion[]
   classes     ExamClass[]
   submissions Submission[]
   omrBatches  OmrBatch[]
+  classQuestions ClassExamQuestion[]
+  classSubmissions ClassExamSubmission[]
+}
+
+model ExamVariant {
+  id        String   @id @default(uuid())
+  examId     String
+  testCode   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  exam         Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+  answerKeys   AnswerKey[]
+  submissions  Submission[]
+
+  @@unique([examId, testCode])
+  @@index([examId])
 }
 
 model ExamClass {
@@ -135,13 +182,13 @@ model ExamClass {
 
 model AnswerKey {
   id             String       @id @default(uuid())
-  examId         String
+  variantId      String
   questionNumber Int
   correctAnswer  AnswerChoice
 
-  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  variant ExamVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
 
-  @@unique([examId, questionNumber])
+  @@unique([variantId, questionNumber])
 }
 
 model ExamQuestion {
@@ -178,16 +225,28 @@ model OmrBatch {
 model Submission {
   id          String           @id @default(uuid())
   examId      String
+  resolvedVariantId String?
   studentId   String?
   batchId     String?
   studentCode String?
+  studentCodeRaw String?
+  matchedStudentId String?
+  isExternal Boolean @default(false)
+  detectedTestId String?
+  resolvedTestCode String?
+  testCodeResolutionStatus TestCodeResolutionStatus
   imageUrl    String?
+  processedImageUrl String?
+  annotatedImageUrl String?
+  warpOverlayUrl    String?
+  answerScoresUrl   String?
   status      SubmissionStatus @default(NEEDS_REVIEW)
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   reviewedAt  DateTime?
 
   exam    Exam               @relation(fields: [examId], references: [id], onDelete: Cascade)
+  resolvedVariant ExamVariant? @relation(fields: [resolvedVariantId], references: [id], onDelete: SetNull)
   student User?              @relation("StudentSubmissions", fields: [studentId], references: [id], onDelete: SetNull)
   batch   OmrBatch?          @relation(fields: [batchId], references: [id], onDelete: SetNull)
   details SubmissionDetail[]
@@ -195,20 +254,85 @@ model Submission {
   @@index([examId, studentId])
   @@index([batchId])
   @@index([studentCode])
+  @@index([resolvedVariantId])
+  @@index([testCodeResolutionStatus])
 }
 
 model SubmissionDetail {
   id             String        @id @default(uuid())
   submissionId   String
   questionNumber Int
-  detectedAnswer AnswerChoice?
+  detectedAnswer String?
   finalAnswer    AnswerChoice?
   needsReview    Boolean       @default(false)
+  reviewReason   String?
 
   submission Submission      @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   remarks    RemarkRequest[]
 
   @@unique([submissionId, questionNumber])
+}
+
+model ClassExamQuestion {
+  id          String       @id @default(uuid())
+  examId       String
+  orderIndex   Int
+  type         QuestionType
+  content      String
+  optionA      String?
+  optionB      String?
+  optionC      String?
+  optionD      String?
+  answerChoice AnswerChoice?
+  answerText   String?
+  maxScore     Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  answers ClassExamSubmissionAnswer[]
+
+  @@unique([examId, orderIndex])
+  @@index([examId])
+}
+
+model ClassExamSubmission {
+  id          String @id @default(uuid())
+  examId       String
+  studentId    String
+  status       ClassExamSubmissionStatus @default(PENDING_MANUAL_GRADE)
+  autoScore    Float @default(0)
+  manualScore  Float @default(0)
+  totalScore   Float?
+  submittedAt  DateTime @default(now())
+  gradedAt     DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  answers ClassExamSubmissionAnswer[]
+
+  @@unique([examId, studentId])
+  @@index([examId, studentId])
+}
+
+model ClassExamSubmissionAnswer {
+  id            String @id @default(uuid())
+  submissionId   String
+  questionId     String
+  selectedChoice AnswerChoice?
+  essayAnswer    String?
+  autoScore      Float?
+  manualScore    Float?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  submission ClassExamSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  question ClassExamQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, questionId])
+  @@index([questionId])
 }
 
 model Assignment {

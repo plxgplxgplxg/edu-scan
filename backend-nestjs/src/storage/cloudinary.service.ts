@@ -16,7 +16,10 @@ export class CloudinaryService implements IStorageService {
     });
   }
 
-  async uploadFile(file: Express.Multer.File, folder = 'eduscan'): Promise<string> {
+  async uploadFile(
+    file: Express.Multer.File,
+    folder = 'eduscan',
+  ): Promise<string> {
     return new Promise((resolve, reject) => {
       const upload = cloudinary.uploader.upload_stream(
         { folder },
@@ -25,11 +28,12 @@ export class CloudinaryService implements IStorageService {
             this.logger.error('Thử upload file lên Cloudinary thất bại', error);
             return reject(error);
           }
-          if (!result) return reject(new Error('Khong nhan duoc ket qua tra ve'));
+          if (!result)
+            return reject(new Error('Khong nhan duoc ket qua tra ve'));
           resolve(result.secure_url);
         },
       );
-      
+
       const toStream = Readable.from(file.buffer);
       toStream.pipe(upload);
     });

@@ -3,11 +3,45 @@
 require('dotenv/config');
 
 const { spawnSync } = require('node:child_process');
+const { existsSync, readdirSync } = require('node:fs');
+const { join } = require('node:path');
 const { URL } = require('node:url');
 const { Client } = require('pg');
 
 function quoteIdentifier(identifier) {
   return `"${identifier.replace(/"/g, '""')}"`;
+}
+
+function runPrismaCommand(args, label) {
+  console.log(`[prepare-db] Running ${label}`);
+
+  const result = spawnSync(
+    process.platform === 'win32' ? 'npx.cmd' : 'npx',
+    ['prisma', ...args],
+    {
+      stdio: 'inherit',
+      env: process.env,
+      cwd: process.cwd(),
+    },
+  );
+
+  if (result.status !== 0) {
+    process.exit(result.status ?? 1);
+  }
+}
+
+function hasMigrationFiles() {
+  const migrationsDir = join(process.cwd(), 'prisma', 'migrations');
+
+  if (!existsSync(migrationsDir)) {
+    return false;
+  }
+
+  return readdirSync(migrationsDir, { withFileTypes: true }).some(
+    (entry) =>
+      entry.isDirectory() &&
+      existsSync(join(migrationsDir, entry.name, 'migration.sql')),
+  );
 }
 
 async function ensureDatabaseExists() {
@@ -40,35 +74,33 @@ async function ensureDatabaseExists() {
     if (result.rowCount === 0) {
       console.log(`[prepare-db] Creating database "${databaseName}"`);
       await client.query(`CREATE DATABASE ${quoteIdentifier(databaseName)}`);
+      return true;
     } else {
       console.log(`[prepare-db] Database "${databaseName}" already exists`);
+      return false;
     }
   } finally {
     await client.end();
   }
 }
 
-function pushSchema() {
-  console.log('[prepare-db] Running prisma db push');
-
-  const result = spawnSync(
-    process.platform === 'win32' ? 'npx.cmd' : 'npx',
-    ['prisma', 'db', 'push'],
-    {
-      stdio: 'inherit',
-      env: process.env,
-      cwd: process.cwd(),
-    },
-  );
-
-  if (result.status !== 0) {
-    process.exit(result.status ?? 1);
+function prepareSchema(databaseWasCreated) {
+  if (hasMigrationFiles()) {
+    runPrismaCommand(['migrate', 'deploy'], 'prisma migrate deploy');
+    return;
   }
+
+  if (databaseWasCreated) {
+    runPrismaCommand(['db', 'push'], 'prisma db push');
+    return;
+  }
+
+  runPrismaCommand(['validate'], 'prisma validate');
 }
 
 async function main() {
-  await ensureDatabaseExists();
-  pushSchema();
+  const databaseWasCreated = await ensureDatabaseExists();
+  prepareSchema(databaseWasCreated);
 }
 
 main().catch((error) => {

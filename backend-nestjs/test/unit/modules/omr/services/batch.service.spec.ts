@@ -1,0 +1,209 @@
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { AnswerChoice, OmrBatchStatus, SubmissionStatus } from '@prisma/client';
+import { BatchService } from '../../../../../src/modules/omr/services/batch.service';
+
+describe('BatchService', () => {
+  let service: BatchService;
+
+  const omrRepository = {
+    createBatch: jest.fn(),
+    markBatchStatus: jest.fn(),
+    recordSuccessfulFile: jest.fn(),
+    recordFailedFile: jest.fn(),
+    findBatchById: jest.fn(),
+    findTeacherBatchById: jest.fn(),
+    findTeacherSubmissionById: jest.fn(),
+  };
+
+  const gradingService = {
+    calculateScore: jest.fn(),
+    summarizeSubmission: jest.fn(),
+  };
+  const eventEmitter = {
+    emit: jest.fn(),
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    service = new BatchService(
+      omrRepository as never,
+      gradingService as never,
+      eventEmitter as never,
+    );
+    gradingService.calculateScore.mockReturnValue(7.5);
+    gradingService.summarizeSubmission.mockReturnValue({
+      score: 7.5,
+      maxScore: 10,
+      correctCount: 1,
+      wrongCount: 1,
+      reviewCount: 0,
+    });
+  });
+
+  it('throws not found when batch does not exist', async () => {
+    omrRepository.findBatchById.mockResolvedValue(null);
+
+    await expect(
+      service.getTeacherBatchById('batch-1', 'teacher-1'),
+    ).rejects.toThrow(NotFoundException);
+  });
+
+  it('throws forbidden when batch belongs to another teacher', async () => {
+    omrRepository.findBatchById.mockResolvedValue({
+      id: 'batch-1',
+      teacherId: 'teacher-2',
+    });
+
+    await expect(
+      service.getTeacherBatchById('batch-1', 'teacher-1'),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('maps batch detail to response dto', async () => {
+    omrRepository.findBatchById.mockResolvedValue({
+      id: 'batch-1',
+      teacherId: 'teacher-1',
+    });
+    omrRepository.findTeacherBatchById.mockResolvedValue(buildBatch());
+
+    const result = await service.getTeacherBatchById('batch-1', 'teacher-1');
+
+    expect(result.status).toBe(OmrBatchStatus.COMPLETED);
+    expect(result.progressPercentage).toBe(100);
+    expect(result.submissions[0]).toMatchObject({
+      id: 'submission-1',
+      studentName: 'Student One',
+      status: SubmissionStatus.GRADED,
+      score: 7.5,
+      maxScore: 10,
+      correctCount: 1,
+      wrongCount: 1,
+      reviewCount: 0,
+      annotatedImageUrl: 'https://example.com/annotated.png',
+    });
+  });
+
+  it('maps submission detail response with artifact urls and review reason', async () => {
+    omrRepository.findTeacherSubmissionById.mockResolvedValue({
+      ...buildBatch().submissions[0],
+      examId: 'exam-1',
+      batchId: 'batch-1',
+      exam: buildBatch().exam,
+      createdAt: new Date('2026-04-14T10:00:00.000Z'),
+      updatedAt: new Date('2026-04-14T10:00:00.000Z'),
+    });
+
+    const result = await service.getTeacherSubmissionById(
+      'submission-1',
+      'teacher-1',
+    );
+
+    expect(result).toMatchObject({
+      id: 'submission-1',
+      imageUrl: 'https://example.com/file.png',
+      annotatedImageUrl: 'https://example.com/annotated.png',
+      correctCount: 1,
+      wrongCount: 1,
+      reviewCount: 0,
+    });
+    expect(result.details[1]).toMatchObject({
+      questionNumber: 2,
+      correctAnswer: AnswerChoice.B,
+      detectedAnswer: AnswerChoice.B,
+      finalAnswer: AnswerChoice.C,
+      isCorrect: false,
+      reviewReason: undefined,
+    });
+  });
+
+  it('emits completion event when successful file completes batch', async () => {
+    omrRepository.recordSuccessfulFile.mockResolvedValue({
+      id: 'batch-1',
+      status: OmrBatchStatus.COMPLETED,
+      processedFiles: 1,
+      totalFiles: 1,
+    });
+
+    await service.recordSuccessfulFile({
+      batchId: 'batch-1',
+      examId: 'exam-1',
+      resolvedVariantId: null,
+      imageUrl: 'https://example.com/file.png',
+      studentId: null,
+      studentCode: null,
+      detectedTestId: null,
+      resolvedTestCode: null,
+      testCodeResolutionStatus: 'MISSING_TEST_CODE' as any,
+      status: SubmissionStatus.NEEDS_REVIEW,
+      details: [],
+    });
+
+    expect(eventEmitter.emit).toHaveBeenCalledWith('omr.batch.completed', {
+      batchId: 'batch-1',
+      status: OmrBatchStatus.COMPLETED,
+    });
+  });
+});
+
+function buildBatch() {
+  return {
+    id: 'batch-1',
+    examId: 'exam-1',
+    teacherId: 'teacher-1',
+    status: OmrBatchStatus.COMPLETED,
+    totalFiles: 1,
+    processedFiles: 1,
+    successCount: 1,
+    failedCount: 0,
+    completedAt: new Date('2026-04-14T10:00:00.000Z'),
+    createdAt: new Date('2026-04-14T09:59:00.000Z'),
+    updatedAt: new Date('2026-04-14T10:00:00.000Z'),
+    exam: {
+      maxScore: 10,
+      answerKeys: [
+        { questionNumber: 1, correctAnswer: AnswerChoice.A },
+        { questionNumber: 2, correctAnswer: AnswerChoice.B },
+      ],
+    },
+    submissions: [
+      {
+        id: 'submission-1',
+        studentId: 'student-1',
+        studentCode: 'STU-001',
+        imageUrl: 'https://example.com/file.png',
+        processedImageUrl: 'https://example.com/processed.png',
+        annotatedImageUrl: 'https://example.com/annotated.png',
+        warpOverlayUrl: 'https://example.com/warp.png',
+        answerScoresUrl: 'https://example.com/scores.json',
+        status: SubmissionStatus.GRADED,
+        student: {
+          id: 'student-1',
+          name: 'Student One',
+          studentCode: 'STU-001',
+        },
+        resolvedVariant: {
+          answerKeys: [
+            { questionNumber: 1, correctAnswer: AnswerChoice.A },
+            { questionNumber: 2, correctAnswer: AnswerChoice.B },
+          ],
+        },
+        details: [
+          {
+            questionNumber: 1,
+            detectedAnswer: AnswerChoice.A,
+            finalAnswer: AnswerChoice.A,
+            needsReview: false,
+            reviewReason: null,
+          },
+          {
+            questionNumber: 2,
+            detectedAnswer: AnswerChoice.B,
+            finalAnswer: AnswerChoice.C,
+            needsReview: false,
+            reviewReason: null,
+          },
+        ],
+      },
+    ],
+  };
+}

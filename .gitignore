@@ -21,13 +21,20 @@ build/
 *.seed
 *.pid.lock
 
+# Python/OMR service
+.venv/
+.pytest_cache/
+artifacts/
+
 # IDE
+
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 .DS_Store
+._*
 
 # Testing
 coverage/
@@ -67,6 +74,7 @@ pnpm-debug.log*
 # OS
 Thumbs.db
 .DS_Store
+._*
 .AppleDouble
 .LSOverride
 
@@ -79,3 +87,6 @@ Thumbs.db
 *.old
 
 # Thư mục tài liệu nội bộ
+docs/
+!backend-nestjs/src/modules/**/docs/
+!backend-nestjs/src/modules/**/docs/*.swagger.ts

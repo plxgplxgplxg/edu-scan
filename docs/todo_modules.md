@@ -13,6 +13,7 @@
 - Raw SQL chỉ dùng cho reporting/analytics hoặc khi Prisma không diễn đạt tốt query cần thiết.
 
 Áp dụng cho EduScan:
+
 - Chưa cần repository riêng cho `auth`.
 - Có thể bắt đầu `users` bằng `PrismaService` trực tiếp trong service; chỉ tách `users.repository.ts` nếu phần lọc/phân trang/quyền truy cập phức tạp dần lên.
 - Nên có repository cho `classes`, `exams`, `submissions`, `assignments`, `remarks`, `question-bank`, `reports`.
@@ -21,11 +22,11 @@
 
 ## 🔍 TRẠNG THÁI HIỆN TẠI
 
-| Layer | Trạng thái |
-|---|---|
-| **Backend** | Scaffold rỗng — chỉ có [main.ts](file:///Users/plxg/workspace/edu-scan/backend-nestjs/src/main.ts), [app.module.ts](file:///Users/plxg/workspace/edu-scan/backend-nestjs/src/app.module.ts), thư mục module trống |
-| **OMR Service** | [requirements.txt](file:///Users/plxg/workspace/edu-scan/omr-service/requirements.txt) tồn tại, thư mục `app/` rỗng |
-| **Mobile App** | Cấu trúc thư mục tạo sẵn, chưa có file nào |
+| Layer           | Trạng thái                                                                                                                                                                                                        |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Backend**     | Scaffold rỗng — chỉ có [main.ts](file:///Users/plxg/workspace/edu-scan/backend-nestjs/src/main.ts), [app.module.ts](file:///Users/plxg/workspace/edu-scan/backend-nestjs/src/app.module.ts), thư mục module trống |
+| **OMR Service** | [requirements.txt](file:///Users/plxg/workspace/edu-scan/omr-service/requirements.txt) tồn tại, thư mục `app/` rỗng                                                                                               |
+| **Mobile App**  | Cấu trúc thư mục tạo sẵn, chưa có file nào                                                                                                                                                                        |
 
 ---
 
@@ -34,6 +35,7 @@
 > Bắt buộc làm trước, mọi thứ khác phụ thuộc vào đây
 
 ### 1.1 Backend — Database Schema
+
 - [ ] Thiết kế và viết `prisma/schema.prisma` đầy đủ theo SRS và 3NF thực dụng
 - [ ] Bao gồm các model lõi: `User`, `Class`, `ClassEnrollment`, `Exam`, `ExamClass`, `AnswerKey`, `ExamQuestion`, `OmrBatch`, `Submission`, `SubmissionDetail`, `Assignment`, `AssignmentClass`, `AssignmentSubmit`, `RemarkRequest`, `Question`, `Tag`, `QuestionTag`
 - [ ] Bổ sung `studentCode` cho user/student flow OMR và cho phép `Submission.studentId` nullable để hỗ trợ `NEEDS_REVIEW`
@@ -41,6 +43,7 @@
 - [ ] Seed data mẫu (admin account)
 
 ### 1.2 Backend — Core Infrastructure
+
 - [ ] `database/prisma.service.ts` — wrapper Prisma client
 - [ ] `database/database.module.ts`
 - [ ] `storage/storage.interface.ts` + `storage/cloudinary.service.ts`
@@ -51,6 +54,7 @@
 - [ ] `config/` — jwt.config, database.config, cloudinary.config, redis.config
 
 ### 1.3 Backend — UC001: Auth Module
+
 > Use case: UC001 — Đăng nhập
 
 - [ ] `modules/auth/dtos/login.dto.ts`
@@ -61,6 +65,7 @@
 - [ ] `modules/auth/auth.module.ts`
 
 ### 1.4 Backend — UC002: Users Module (Admin)
+
 > Use case: UC002 — Quản lý người dùng
 
 - [ ] `modules/users/dtos/create-user.dto.ts` + `update-user.dto.ts`
@@ -74,6 +79,7 @@
 ## GIAI ĐOẠN 2 — CORE TEACHER FEATURES
 
 ### 2.1 Backend — UC003: Classes Module
+
 > Use case: UC003 — Quản lý lớp học
 
 - [ ] `modules/classes/dtos/create-class.dto.ts` + `update-class.dto.ts` + `add-student.dto.ts`
@@ -83,6 +89,7 @@
 - [ ] `modules/classes/classes.module.ts`
 
 ### 2.2 Backend — UC004: Exams Module
+
 > Use case: UC004 — Tạo đề thi
 
 - [ ] `modules/exams/dtos/create-exam.dto.ts` + `create-answer-key.dto.ts`
@@ -92,6 +99,7 @@
 - [ ] `modules/exams/exams.module.ts`
 
 ### 2.3 OMR Service — UC005: OMR Pipeline (FastAPI)
+
 > Use case: UC005 — Chấm bài tự động OMR
 
 - [ ] `app/core/config.py` + `app/core/exceptions.py`
@@ -105,20 +113,22 @@
 - [ ] `app/main.py`
 
 ### 2.4 Backend — UC005: OMR Module (NestJS)
+
 > Nhận kết quả từ OMR Service, xử lý batch async
 
 - [ ] Config Redis + Bull Queue
-- [ ] Sử dụng model `OmrBatch` để lưu trạng thái `batch_id`, progress, success/fail counts
-- [ ] `modules/omr/services/omr-client.service.ts` (gọi FastAPI OMR Service)
-- [ ] `modules/omr/services/image-upload.service.ts` (upload lên Cloudinary)
-- [ ] `modules/omr/services/grading.service.ts` (so `SubmissionDetail.finalAnswer` với `AnswerKey`, tính điểm ở tầng service/query thay vì lưu dữ liệu dẫn xuất dư thừa)
-- [ ] `modules/omr/services/batch.service.ts`
-- [ ] `modules/omr/processors/omr.processor.ts` (Bull Queue worker)
-- [ ] `modules/omr/services/omr.service.ts` (orchestration: nhận upload → đẩy queue)
-- [ ] `modules/omr/controllers/omr.controller.ts` (POST /omr/upload, GET /omr/batch/:batchId)
-- [ ] `modules/omr/omr.module.ts`
+- [x] Sử dụng model `OmrBatch` để lưu trạng thái `batch_id`, progress, success/fail counts
+- [x] `modules/omr/services/omr-client.service.ts` (gọi FastAPI OMR Service)
+- [x] `modules/omr/services/image-upload.service.ts` (upload lên Cloudinary)
+- [x] `modules/omr/services/grading.service.ts` (so `SubmissionDetail.finalAnswer` với `AnswerKey`, tính điểm ở tầng service/query thay vì lưu dữ liệu dẫn xuất dư thừa)
+- [x] `modules/omr/services/batch.service.ts`
+- [x] `modules/omr/processors/omr.processor.ts`
+- [x] `modules/omr/services/omr.service.ts` (orchestration: nhận upload → xử lý nền)
+- [x] `modules/omr/controllers/omr.controller.ts` (POST /omr/upload, GET /omr/batch/:batchId)
+- [x] `modules/omr/omr.module.ts`
 
 ### 2.5 Backend — Submissions Module
+
 > Phụ trợ cho OMR: lưu kết quả chấm bài
 
 - [ ] `modules/submissions/repositories/submissions.repository.ts`
@@ -127,6 +137,7 @@
 - [ ] `modules/submissions/submissions.module.ts`
 
 ### 2.6 Backend — UC006: Manual Override
+
 > Use case: UC006 — Chỉnh sửa kết quả thủ công
 
 - [ ] Endpoint PATCH `/submissions/:id/override` trong submissions controller
@@ -138,6 +149,7 @@
 ## GIAI ĐOẠN 3 — STUDENT FEATURES
 
 ### 3.1 Backend — UC009: Student Score View
+
 > Use case: UC009 — Xem kết quả bài thi
 
 - [ ] Endpoint GET `/submissions` (lọc theo student, class, exam)
@@ -145,6 +157,7 @@
 - [ ] Logic phân quyền: học sinh chỉ xem submission của mình
 
 ### 3.2 Backend — UC007 + UC008: Assignments Module
+
 > Use case: UC007 — Quản lý bài tập (Teacher), UC008 — Nộp bài (Student)
 
 - [ ] `modules/assignments/dtos/create-assignment.dto.ts` + `submit-assignment.dto.ts`
@@ -154,6 +167,7 @@
 - [ ] `modules/assignments/assignments.module.ts`
 
 ### 3.3 Backend — UC010: Remarks Module
+
 > Use case: UC010 — Phúc khảo (Student gửi + Teacher duyệt)
 
 - [ ] `modules/remarks/dtos/create-remark.dto.ts` + `review-remark.dto.ts`
@@ -167,6 +181,7 @@
 ## GIAI ĐOẠN 4 — ADVANCED FEATURES
 
 ### 4.1 Backend — UC011: Question Bank
+
 > Use case: UC011 — Ngân hàng câu hỏi
 
 - [ ] `modules/question-bank/dtos/create-question.dto.ts` + `filter-question.dto.ts`
@@ -176,6 +191,7 @@
 - [ ] `modules/question-bank/question-bank.module.ts`
 
 ### 4.2 Backend — UC012: Reports Module
+
 > Use case: UC012 — Xuất báo cáo
 
 - [ ] `modules/reports/generators/report-generator.interface.ts`
@@ -186,6 +202,7 @@
 - [ ] `modules/reports/reports.module.ts`
 
 ### 4.3 Backend — Notifications Module
+
 > Thông báo real-time / push
 
 - [ ] `modules/notifications/services/notifications.service.ts` (gửi thông báo khi batch xong, bài nộp mới, kết quả phúc khảo)
@@ -198,6 +215,7 @@
 > Làm sau khi toàn bộ API backend ổn định
 
 ### 5.1 Core & Shared Setup
+
 - [ ] `core/api/client.ts` — Axios instance + base URL
 - [ ] `core/api/interceptors.ts` — gắn JWT header, handle 401 auto-refresh
 - [ ] `core/api/endpoints.ts`
@@ -207,6 +225,7 @@
 - [ ] `shared/hooks/` (useAuth, useApi, useDebounce)
 
 ### 5.2 Navigation Setup
+
 - [ ] `navigation/RootNavigator.tsx`
 - [ ] `navigation/AuthNavigator.tsx`
 - [ ] `navigation/AdminNavigator.tsx`
@@ -214,17 +233,20 @@
 - [ ] `navigation/StudentNavigator.tsx`
 
 ### 5.3 Feature: Auth — UC001
+
 - [ ] `features/auth/screens/LoginScreen.tsx`
 - [ ] `features/auth/hooks/useLogin.ts`
 - [ ] `features/auth/services/auth.service.ts`
 - [ ] `features/auth/store/auth.store.ts` (Zustand)
 
 ### 5.4 Feature: Admin — UC002
+
 - [ ] `features/admin/screens/UserManagementScreen.tsx` + `CreateUserScreen.tsx`
 - [ ] `features/admin/services/users.service.ts`
 - [ ] `features/admin/hooks/useUsers.ts`
 
 ### 5.5 Feature: Teacher — UC003, UC004, UC005, UC006
+
 - [ ] `DashboardScreen.tsx`
 - [ ] `ClassManagementScreen.tsx` (tạo lớp, thêm/xóa HS)
 - [ ] `ExamCreationScreen.tsx` (tạo đề, nhập answer key)
@@ -233,6 +255,7 @@
 - [ ] `ReportsScreen.tsx`
 
 ### 5.6 Feature: Student — UC008, UC009, UC010
+
 - [ ] `DashboardScreen.tsx` (biểu đồ điểm)
 - [ ] `ScoresScreen.tsx` (lịch sử điểm)
 - [ ] `AssignmentScreen.tsx` (nộp bài, xem deadline)
