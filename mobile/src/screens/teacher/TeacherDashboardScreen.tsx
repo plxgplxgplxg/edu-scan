@@ -30,7 +30,8 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const teacherDashboardModules = [
   { id: 'classes', gradient: ['#5B5BD6', '#7C5CFC'] },
-  { id: 'exams', gradient: ['#3B82F6', '#06B6D4'] },
+  { id: 'omrExams', gradient: ['#3B82F6', '#06B6D4'] },
+  { id: 'classExams', gradient: ['#0EA5E9', '#14B8A6'] },
   { id: 'omr', gradient: ['#8B5CF6', '#A855F7'] },
   { id: 'remarks', gradient: ['#F59E0B', '#F97316'] },
   { id: 'questions', gradient: ['#10B981', '#14B8A6'] },
@@ -39,7 +40,8 @@ const teacherDashboardModules = [
 
 const moduleIcons = {
   classes: <BookOpen size={28} color={appTheme.palette.white} />,
-  exams: <FileText size={28} color={appTheme.palette.white} />,
+  omrExams: <FileText size={28} color={appTheme.palette.white} />,
+  classExams: <FileText size={28} color={appTheme.palette.white} />,
   omr: <ScanLine size={28} color={appTheme.palette.white} />,
   remarks: <MessageSquare size={28} color={appTheme.palette.white} />,
   questions: <HelpCircle size={28} color={appTheme.palette.white} />,
@@ -122,11 +124,17 @@ export function TeacherDashboardScreen() {
             <DashboardModuleCard
               key={module.id}
               icon={moduleIcons[module.id as keyof typeof moduleIcons]}
-              title={content.teacher.dashboard.modules[module.id as keyof typeof content.teacher.dashboard.modules]}
+              title={
+                module.id === 'omrExams'
+                  ? 'Đề OMR'
+                  : module.id === 'classExams'
+                    ? 'Đề lớp học'
+                    : content.teacher.dashboard.modules[module.id as keyof typeof content.teacher.dashboard.modules]
+              }
               subtitle={
                 module.id === 'classes'
                   ? `${String(metrics.classCount)} lớp`
-                  : module.id === 'exams'
+                  : module.id === 'omrExams' || module.id === 'classExams'
                     ? `${String(metrics.examCount)} đề`
                     : module.id === 'remarks'
                       ? `${String(metrics.remarkCount)} yêu cầu`
@@ -137,7 +145,8 @@ export function TeacherDashboardScreen() {
                 if (module.id === 'classes') {
                   navigation.navigate('TeacherTabs', { screen: 'TeacherClasses' });
                 }
-                if (module.id === 'exams') navigation.navigate('TeacherExams');
+                if (module.id === 'omrExams') navigation.navigate('TeacherOmrExams');
+                if (module.id === 'classExams') navigation.navigate('TeacherClassExams');
                 if (module.id === 'omr') {
                   navigation.navigate('TeacherTabs', { screen: 'TeacherOMR' });
                 }

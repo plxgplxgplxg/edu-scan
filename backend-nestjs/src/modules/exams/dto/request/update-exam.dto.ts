@@ -26,7 +26,6 @@ export class UpdateExamDto {
   maxScore?: number;
 
   @IsArray()
-  @ArrayMinSize(1)
   @IsUUID('4', { each: true })
   @IsOptional()
   classIds?: string[];

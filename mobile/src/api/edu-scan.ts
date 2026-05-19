@@ -96,6 +96,7 @@ type ExamApi = {
   id: string;
   title: string;
   maxScore: number;
+  status: 'DRAFT' | 'PUBLISHED';
   classes: Array<{
     id: string;
     name: string;
@@ -121,6 +122,27 @@ type ExamApi = {
       difficulty: DifficultyKey;
     } | null;
   }>;
+  classQuestions: Array<{
+    id: string;
+    orderIndex: number;
+    type: 'MULTIPLE_CHOICE' | 'ESSAY';
+    content: string;
+    optionA: string | null;
+    optionB: string | null;
+    optionC: string | null;
+    optionD: string | null;
+    answerChoice: 'A' | 'B' | 'C' | 'D' | null;
+    answerText: string | null;
+    maxScore: number;
+  }>;
+};
+
+type ClassExamSubmissionApi = {
+  id: string;
+  status: 'PENDING_MANUAL_GRADE' | 'GRADED';
+  autoScore: number;
+  manualScore: number;
+  totalScore: number | null;
 };
 
 type QuestionListApi = {
@@ -267,6 +289,7 @@ export type TeacherExamView = {
   id: string;
   title: string;
   maxScore: number;
+  status: 'DRAFT' | 'PUBLISHED';
   variantCount: number;
   classNames: string[];
   hasSubmissions: boolean;
@@ -408,19 +431,133 @@ export async function listExams(token: string) {
   return requestJson<ExamApi[]>('/exams/my', { token });
 }
 
+export async function listOmrExams(token: string) {
+  return requestJson<ExamApi[]>('/exams/omr/my', { token });
+}
+
+export async function listClassExams(token: string) {
+  return requestJson<ExamApi[]>('/exams/class/my', { token });
+}
+
 export async function createExam(
   token: string,
   payload: {
     title: string;
     maxScore: number;
-    classIds: string[];
-    answerKeys: Array<{
-      questionNumber: number;
-      correctAnswer: 'A' | 'B' | 'C' | 'D';
-    }>;
+    classIds?: string[];
   },
 ) {
   return requestJson<ExamApi>('/exams', {
+    method: 'POST',
+    token,
+    body: payload,
+  });
+}
+
+export async function createOmrExam(
+  token: string,
+  payload: { title: string; maxScore: number; classIds?: string[] },
+) {
+  return requestJson<ExamApi>('/exams/omr', {
+    method: 'POST',
+    token,
+    body: payload,
+  });
+}
+
+export async function createClassExam(
+  token: string,
+  payload: { title: string; maxScore: number; classIds: string[] },
+) {
+  return requestJson<ExamApi>('/exams/class', {
+    method: 'POST',
+    token,
+    body: payload,
+  });
+}
+
+export async function upsertExamQuestionAnswer(
+  token: string,
+  examId: string,
+  payload: {
+    questionNumber: number;
+    correctAnswer: 'A' | 'B' | 'C' | 'D';
+    questionId?: string;
+    testCode?: string;
+  },
+) {
+  return requestJson<ExamApi>(`/exams/${encodeURIComponent(examId)}/questions`, {
+    method: 'POST',
+    token,
+    body: payload,
+  });
+}
+
+export async function removeExamQuestionAnswer(
+  token: string,
+  examId: string,
+  payload: { questionNumber: number; testCode?: string },
+) {
+  return requestJson<ExamApi>(`/exams/${encodeURIComponent(examId)}/questions`, {
+    method: 'DELETE',
+    token,
+    body: payload,
+  });
+}
+
+export async function publishExam(token: string, examId: string) {
+  return requestJson<ExamApi>(`/exams/${encodeURIComponent(examId)}/publish`, {
+    method: 'POST',
+    token,
+  });
+}
+
+export async function upsertClassExamQuestion(
+  token: string,
+  examId: string,
+  payload: {
+    orderIndex: number;
+    type: 'MULTIPLE_CHOICE' | 'ESSAY';
+    content: string;
+    optionA?: string;
+    optionB?: string;
+    optionC?: string;
+    optionD?: string;
+    answerChoice?: 'A' | 'B' | 'C' | 'D';
+    answerText?: string;
+    maxScore: number;
+  },
+) {
+  return requestJson<ExamApi>(`/exams/class/${encodeURIComponent(examId)}/questions`, {
+    method: 'POST',
+    token,
+    body: payload,
+  });
+}
+
+export async function deleteClassExamQuestion(token: string, examId: string, questionId: string) {
+  return requestJson<ExamApi>(`/exams/class/${encodeURIComponent(examId)}/questions`, {
+    method: 'DELETE',
+    token,
+    body: { questionId },
+  });
+}
+
+export async function publishClassExam(token: string, examId: string) {
+  return requestJson<ExamApi>(`/exams/class/${encodeURIComponent(examId)}/publish`, {
+    method: 'POST',
+    token,
+  });
+}
+
+export async function submitClassExam(
+  token: string,
+  examId: string,
+  payload: {
+    answers: Array<{ questionId: string; selectedChoice?: 'A' | 'B' | 'C' | 'D'; essayAnswer?: string }>;
+  },
+) {
+  return requestJson<ClassExamSubmissionApi>(`/class-exams/${encodeURIComponent(examId)}/submissions`, {
     method: 'POST',
     token,
     body: payload,
@@ -681,6 +818,7 @@ export function mapExamSummary(item: ExamApi): TeacherExamView {
     variantCount: item.variants.length,
     classNames: item.classes.map((entry) => entry.name),
     hasSubmissions: false,
+    status: item.status,
     questionCount:
       item.variants[0]?.answerKeys.length ?? item.questionMap.length ?? 0,
   };

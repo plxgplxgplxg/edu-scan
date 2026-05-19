@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
   ForbiddenException,
@@ -8,10 +9,12 @@ import { GetSubmissionsQueryDto } from '../dtos/get-submissions-query.dto';
 import { UpdateSubmissionOverrideDto } from '../dtos/update-override.dto';
 import { QueryMySubmissionsDto } from '../dtos/query-my-submissions.dto';
 import {
+  ClassExamSubmissionStatus,
   Role,
   SubmissionStatus,
   TestCodeResolutionStatus,
   AnswerChoice,
+  QuestionType,
   Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma.service';
@@ -281,5 +284,95 @@ export class SubmissionsService {
       calculatedScore,
       answerKeysMap,
     };
+  }
+
+  async submitClassExam(
+    examId: string,
+    studentId: string,
+    payload: {
+      answers: Array<{
+        questionId: string;
+        selectedChoice?: AnswerChoice;
+        essayAnswer?: string;
+      }>;
+    },
+  ) {
+    const exam = await this.submissionsRepository.findClassExamForSubmission(
+      examId,
+      studentId,
+    );
+    if (!exam) {
+      throw new NotFoundException('Class exam not found');
+    }
+
+    const questionMap = new Map(exam.classQuestions.map((item) => [item.id, item]));
+    let autoScore = 0;
+    let manualRequired = false;
+    const normalizedAnswers = payload.answers.map((answer) => {
+      const question = questionMap.get(answer.questionId);
+      if (!question) {
+        throw new BadRequestException(`Question ${answer.questionId} does not belong to this exam`);
+      }
+
+      if (question.type === QuestionType.MULTIPLE_CHOICE && question.answerChoice) {
+        const isCorrect = answer.selectedChoice === question.answerChoice;
+        const questionAutoScore = isCorrect ? question.maxScore : 0;
+        autoScore += questionAutoScore;
+        return { ...answer, autoScore: questionAutoScore };
+      }
+
+      manualRequired = true;
+      return { ...answer, autoScore: undefined };
+    });
+
+    const status = manualRequired
+      ? ClassExamSubmissionStatus.PENDING_MANUAL_GRADE
+      : ClassExamSubmissionStatus.GRADED;
+    const totalScore = manualRequired ? undefined : autoScore;
+
+    return this.submissionsRepository.upsertClassExamSubmission({
+      examId,
+      studentId,
+      answers: normalizedAnswers,
+      autoScore,
+      manualScore: 0,
+      totalScore,
+      status,
+      gradedAt: manualRequired ? undefined : new Date(),
+    });
+  }
+
+  async gradeClassExamSubmission(
+    submissionId: string,
+    teacherId: string,
+    payload: { manualScores: Array<{ answerId: string; manualScore: number }> },
+  ) {
+    const submission = await this.submissionsRepository.findClassExamSubmissionForTeacher(
+      submissionId,
+      teacherId,
+    );
+    if (!submission) {
+      throw new NotFoundException('Class exam submission not found');
+    }
+
+    const answerMap = new Map(submission.answers.map((answer) => [answer.id, answer]));
+    let manualScore = 0;
+
+    for (const item of payload.manualScores) {
+      const answer = answerMap.get(item.answerId);
+      if (!answer) {
+        throw new BadRequestException(`Answer ${item.answerId} does not belong to submission`);
+      }
+      if (item.manualScore < 0 || item.manualScore > answer.question.maxScore) {
+        throw new BadRequestException(`manualScore for answer ${item.answerId} is out of range`);
+      }
+      manualScore += item.manualScore;
+    }
+
+    return this.submissionsRepository.gradeClassExamSubmission(submissionId, {
+      manualScores: payload.manualScores,
+      manualScore,
+      totalScore: submission.autoScore + manualScore,
+    });
   }
 }

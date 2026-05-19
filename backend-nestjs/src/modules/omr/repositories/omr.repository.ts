@@ -246,8 +246,7 @@ export class OmrRepository {
     });
   }
 
-  async findEligibleStudentForExam(
-    examId: string,
+  async findStudentByStudentCode(
     studentCode: string,
   ): Promise<Pick<User, 'id' | 'name' | 'studentCode'> | null> {
     return this.prismaService.user.findFirst({
@@ -255,17 +254,6 @@ export class OmrRepository {
         role: Role.STUDENT,
         isActive: true,
         studentCode,
-        classEnrollments: {
-          some: {
-            class: {
-              examAssignments: {
-                some: {
-                  examId,
-                },
-              },
-            },
-          },
-        },
       },
       select: {
         id: true,
@@ -282,6 +270,9 @@ export class OmrRepository {
     imageUrl: string;
     studentId: string | null;
     studentCode: string | null;
+    studentCodeRaw: string | null;
+    matchedStudentId: string | null;
+    isExternal: boolean;
     detectedTestId: string | null;
     resolvedTestCode: string | null;
     testCodeResolutionStatus: TestCodeResolutionStatus;
@@ -300,6 +291,9 @@ export class OmrRepository {
           resolvedVariantId: data.resolvedVariantId,
           studentId: data.studentId,
           studentCode: data.studentCode,
+          studentCodeRaw: data.studentCodeRaw,
+          matchedStudentId: data.matchedStudentId,
+          isExternal: data.isExternal,
           detectedTestId: data.detectedTestId,
           resolvedTestCode: data.resolvedTestCode,
           testCodeResolutionStatus: data.testCodeResolutionStatus,

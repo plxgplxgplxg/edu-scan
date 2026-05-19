@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   KeyboardAvoidingView,
+  Keyboard,
   Modal,
   Platform,
   Pressable,
@@ -32,11 +33,15 @@ export function ModalSheet({ visible, onClose, children }: ModalSheetProps) {
     >
       <Pressable style={styles.overlay} onPress={onClose}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ width: '100%' }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
+          style={{ width: '100%', flex: 1, justifyContent: 'flex-end' }}
         >
           <Pressable
-            onPress={event => event.stopPropagation()}
+            onPress={(event) => {
+              event.stopPropagation();
+              Keyboard.dismiss();
+            }}
             style={{
               alignSelf: 'center',
               width: '100%',
@@ -47,6 +52,7 @@ export function ModalSheet({ visible, onClose, children }: ModalSheetProps) {
               paddingHorizontal: layout.isCompact ? appTheme.spacing.xl : appTheme.spacing.xxl,
               paddingTop: layout.sectionGap,
               maxHeight: layout.isCompact ? '92%' : '88%',
+              marginBottom: Platform.OS === 'android' ? insets.bottom : 0,
               ...appTheme.shadows.floating,
             }}
           >
@@ -63,6 +69,8 @@ export function ModalSheet({ visible, onClose, children }: ModalSheetProps) {
             <ScrollView
               bounces={false}
               keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              showsVerticalScrollIndicator={false}
               contentContainerStyle={{
                 paddingBottom: insets.bottom + appTheme.spacing.xxl,
                 gap: appTheme.spacing.md,

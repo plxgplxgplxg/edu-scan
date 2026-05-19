@@ -31,11 +31,14 @@ export type RootStackParamList = {
   TeacherDashboard: undefined;
   TeacherClasses: undefined;
   TeacherClassDetail: { classId?: string } | undefined;
-  TeacherExams: undefined;
+  TeacherOmrExams: undefined;
+  TeacherClassExams: undefined;
   TeacherOMR: undefined;
   TeacherAssignments: undefined;
   TeacherRemarks: undefined;
   TeacherQuestions: undefined;
+  TeacherOmrExamBuilder: { examId: string };
+  TeacherClassExamBuilder: { examId: string };
   StudentDashboard: undefined;
   StudentClasses: undefined;
   StudentClassDetail: { classId?: string } | undefined;

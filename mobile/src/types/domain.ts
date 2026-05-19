@@ -56,6 +56,7 @@ export interface ExamSummary {
   id: string;
   title: string;
   maxScore: number;
+  status?: 'DRAFT' | 'PUBLISHED';
   variantCount: number;
   classNames: string[];
   hasSubmissions: boolean;

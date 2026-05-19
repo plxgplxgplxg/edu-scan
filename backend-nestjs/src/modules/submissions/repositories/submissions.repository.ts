@@ -164,4 +164,160 @@ export class SubmissionsRepository {
 
     return where;
   }
+
+  async findClassExamForSubmission(examId: string, studentId: string) {
+    return this.prisma.exam.findFirst({
+      where: {
+        id: examId,
+        type: 'CLASS_EXAM',
+        status: 'PUBLISHED',
+        classes: {
+          some: {
+            class: {
+              enrollments: {
+                some: {
+                  studentId,
+                },
+              },
+            },
+          },
+        },
+      },
+      include: {
+        classQuestions: {
+          orderBy: { orderIndex: 'asc' },
+        },
+      },
+    });
+  }
+
+  async upsertClassExamSubmission(data: {
+    examId: string;
+    studentId: string;
+    answers: Array<{
+      questionId: string;
+      selectedChoice?: 'A' | 'B' | 'C' | 'D';
+      essayAnswer?: string;
+      autoScore?: number;
+    }>;
+    autoScore: number;
+    manualScore: number;
+    totalScore?: number;
+    status: 'PENDING_MANUAL_GRADE' | 'GRADED';
+    gradedAt?: Date;
+  }) {
+    return this.prisma.$transaction(async (tx) => {
+      const submission = await tx.classExamSubmission.upsert({
+        where: {
+          examId_studentId: {
+            examId: data.examId,
+            studentId: data.studentId,
+          },
+        },
+        create: {
+          examId: data.examId,
+          studentId: data.studentId,
+          autoScore: data.autoScore,
+          manualScore: data.manualScore,
+          totalScore: data.totalScore ?? null,
+          status: data.status,
+          gradedAt: data.gradedAt ?? null,
+        },
+        update: {
+          autoScore: data.autoScore,
+          manualScore: data.manualScore,
+          totalScore: data.totalScore ?? null,
+          status: data.status,
+          gradedAt: data.gradedAt ?? null,
+          submittedAt: new Date(),
+        },
+      });
+
+      await tx.classExamSubmissionAnswer.deleteMany({
+        where: { submissionId: submission.id },
+      });
+
+      if (data.answers.length > 0) {
+        await tx.classExamSubmissionAnswer.createMany({
+          data: data.answers.map((item) => ({
+            submissionId: submission.id,
+            questionId: item.questionId,
+            selectedChoice: item.selectedChoice ?? null,
+            essayAnswer: item.essayAnswer ?? null,
+            autoScore: item.autoScore ?? null,
+          })),
+        });
+      }
+
+      return tx.classExamSubmission.findUniqueOrThrow({
+        where: { id: submission.id },
+        include: {
+          exam: true,
+          student: {
+            select: { id: true, name: true },
+          },
+          answers: {
+            include: {
+              question: true,
+            },
+          },
+        },
+      });
+    });
+  }
+
+  async findClassExamSubmissionForTeacher(submissionId: string, teacherId: string) {
+    return this.prisma.classExamSubmission.findFirst({
+      where: {
+        id: submissionId,
+        exam: {
+          teacherId,
+          type: 'CLASS_EXAM',
+        },
+      },
+      include: {
+        exam: true,
+        student: {
+          select: { id: true, name: true },
+        },
+        answers: {
+          include: { question: true },
+        },
+      },
+    });
+  }
+
+  async gradeClassExamSubmission(submissionId: string, data: {
+    manualScores: Array<{ answerId: string; manualScore: number }>;
+    manualScore: number;
+    totalScore: number;
+  }) {
+    return this.prisma.$transaction(async (tx) => {
+      for (const item of data.manualScores) {
+        await tx.classExamSubmissionAnswer.update({
+          where: { id: item.answerId },
+          data: { manualScore: item.manualScore },
+        });
+      }
+
+      return tx.classExamSubmission.update({
+        where: { id: submissionId },
+        data: {
+          status: 'GRADED',
+          manualScore: data.manualScore,
+          totalScore: data.totalScore,
+          gradedAt: new Date(),
+        },
+        include: {
+          exam: true,
+          student: {
+            select: { id: true, name: true },
+          },
+          answers: {
+            include: { question: true },
+          },
+        },
+      });
+    });
+  }
 }

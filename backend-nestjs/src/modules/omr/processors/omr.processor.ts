@@ -16,6 +16,9 @@ export type ProcessedSubmissionPayload = {
   imageUrl: string;
   studentId: string | null;
   studentCode: string | null;
+  studentCodeRaw: string | null;
+  matchedStudentId: string | null;
+  isExternal: boolean;
   detectedTestId: string | null;
   resolvedTestCode: string | null;
   testCodeResolutionStatus: TestCodeResolutionStatus;
@@ -105,15 +108,12 @@ export class OmrProcessor {
     let status = preparedSubmission.status;
 
     if (preparedSubmission.studentCode) {
-      const student = await this.omrRepository.findEligibleStudentForExam(
-        exam.id,
+      const student = await this.omrRepository.findStudentByStudentCode(
         preparedSubmission.studentCode,
       );
 
       if (student) {
         studentId = student.id;
-      } else {
-        status = SubmissionStatus.NEEDS_REVIEW;
       }
     }
 
@@ -124,6 +124,9 @@ export class OmrProcessor {
       imageUrl,
       studentId,
       studentCode: preparedSubmission.studentCode,
+      studentCodeRaw: preparedSubmission.studentCode,
+      matchedStudentId: studentId,
+      isExternal: !studentId,
       detectedTestId: variantResolution.detectedTestId,
       resolvedTestCode: variantResolution.resolvedTestCode,
       testCodeResolutionStatus: variantResolution.status,

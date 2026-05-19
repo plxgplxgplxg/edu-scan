@@ -152,4 +152,10 @@ export class OmrBatchResponseDto {
 
   @ApiProperty({ type: [OmrSubmissionResponseDto] })
   submissions!: OmrSubmissionResponseDto[];
+
+  @ApiProperty()
+  matchedCount!: number;
+
+  @ApiProperty()
+  unmatchedCount!: number;
 }

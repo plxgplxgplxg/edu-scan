@@ -62,6 +62,26 @@ enum Difficulty {
   HARD
 }
 
+enum ExamStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum ExamType {
+  OMR
+  CLASS_EXAM
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  ESSAY
+}
+
+enum ClassExamSubmissionStatus {
+  PENDING_MANUAL_GRADE
+  GRADED
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -83,6 +103,7 @@ model User {
   exams             Exam[]             @relation("TeacherExams")
   assignments       Assignment[]       @relation("TeacherAssignments")
   omrBatches        OmrBatch[]         @relation("TeacherOmrBatches")
+  classExamSubmissions ClassExamSubmission[]
 }
 
 model Class {
@@ -117,6 +138,8 @@ model Exam {
   id        String   @id @default(uuid())
   title     String
   maxScore  Float
+  status    ExamStatus @default(DRAFT)
+  type      ExamType @default(OMR)
   teacherId String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -127,6 +150,8 @@ model Exam {
   classes     ExamClass[]
   submissions Submission[]
   omrBatches  OmrBatch[]
+  classQuestions ClassExamQuestion[]
+  classSubmissions ClassExamSubmission[]
 }
 
 model ExamVariant {
@@ -204,6 +229,9 @@ model Submission {
   studentId   String?
   batchId     String?
   studentCode String?
+  studentCodeRaw String?
+  matchedStudentId String?
+  isExternal Boolean @default(false)
   detectedTestId String?
   resolvedTestCode String?
   testCodeResolutionStatus TestCodeResolutionStatus
@@ -243,6 +271,68 @@ model SubmissionDetail {
   remarks    RemarkRequest[]
 
   @@unique([submissionId, questionNumber])
+}
+
+model ClassExamQuestion {
+  id          String       @id @default(uuid())
+  examId       String
+  orderIndex   Int
+  type         QuestionType
+  content      String
+  optionA      String?
+  optionB      String?
+  optionC      String?
+  optionD      String?
+  answerChoice AnswerChoice?
+  answerText   String?
+  maxScore     Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  answers ClassExamSubmissionAnswer[]
+
+  @@unique([examId, orderIndex])
+  @@index([examId])
+}
+
+model ClassExamSubmission {
+  id          String @id @default(uuid())
+  examId       String
+  studentId    String
+  status       ClassExamSubmissionStatus @default(PENDING_MANUAL_GRADE)
+  autoScore    Float @default(0)
+  manualScore  Float @default(0)
+  totalScore   Float?
+  submittedAt  DateTime @default(now())
+  gradedAt     DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  answers ClassExamSubmissionAnswer[]
+
+  @@unique([examId, studentId])
+  @@index([examId, studentId])
+}
+
+model ClassExamSubmissionAnswer {
+  id            String @id @default(uuid())
+  submissionId   String
+  questionId     String
+  selectedChoice AnswerChoice?
+  essayAnswer    String?
+  autoScore      Float?
+  manualScore    Float?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  submission ClassExamSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  question ClassExamQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, questionId])
+  @@index([questionId])
 }
 
 model Assignment {

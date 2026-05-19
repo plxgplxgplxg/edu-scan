@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AnswerChoice, Prisma } from '@prisma/client';
+import { AnswerChoice, ExamStatus, ExamType, Prisma, QuestionType } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma.service';
 
 export const examDetailInclude = {
@@ -50,6 +50,11 @@ export const examDetailInclude = {
       questionNumber: 'asc',
     },
   },
+  classQuestions: {
+    orderBy: {
+      orderIndex: 'asc',
+    },
+  },
 } satisfies Prisma.ExamInclude;
 
 export type ExamWithRelations = Prisma.ExamGetPayload<{
@@ -72,6 +77,7 @@ export class ExamsRepository {
     title: string;
     maxScore: number;
     teacherId: string;
+    type?: ExamType;
     classIds: string[];
     variants: VariantInput[];
     questionMap: Array<{
@@ -85,15 +91,18 @@ export class ExamsRepository {
           title: data.title,
           maxScore: data.maxScore,
           teacherId: data.teacherId,
+          type: data.type ?? ExamType.OMR,
         },
       });
 
-      await tx.examClass.createMany({
-        data: data.classIds.map((classId) => ({
-          examId: exam.id,
-          classId,
-        })),
-      });
+      if (data.classIds.length > 0) {
+        await tx.examClass.createMany({
+          data: data.classIds.map((classId) => ({
+            examId: exam.id,
+            classId,
+          })),
+        });
+      }
 
       for (const variant of data.variants) {
         const createdVariant = await tx.examVariant.create({
@@ -136,6 +145,36 @@ export class ExamsRepository {
       orderBy: {
         createdAt: 'desc',
       },
+    });
+  }
+
+  async listTeacherExamsByType(teacherId: string, type: ExamType): Promise<ExamWithRelations[]> {
+    return this.prismaService.exam.findMany({
+      where: { teacherId, type },
+      include: examDetailInclude,
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async listStudentPublishedClassExams(studentId: string): Promise<ExamWithRelations[]> {
+    return this.prismaService.exam.findMany({
+      where: {
+        type: ExamType.CLASS_EXAM,
+        status: ExamStatus.PUBLISHED,
+        classes: {
+          some: {
+            class: {
+              enrollments: {
+                some: {
+                  studentId,
+                },
+              },
+            },
+          },
+        },
+      },
+      include: examDetailInclude,
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -240,12 +279,14 @@ export class ExamsRepository {
         where: { examId },
       });
 
-      await tx.examClass.createMany({
-        data: data.classIds.map((classId) => ({
-          examId,
-          classId,
-        })),
-      });
+      if (data.classIds.length > 0) {
+        await tx.examClass.createMany({
+          data: data.classIds.map((classId) => ({
+            examId,
+            classId,
+          })),
+        });
+      }
 
       for (const variant of data.variants) {
         const createdVariant = await tx.examVariant.create({
@@ -284,6 +325,173 @@ export class ExamsRepository {
   async deleteExam(examId: string) {
     return this.prismaService.exam.delete({
       where: { id: examId },
+    });
+  }
+
+  async upsertExamQuestionAnswer(data: {
+    examId: string;
+    testCode: string;
+    questionNumber: number;
+    questionId?: string;
+    correctAnswer: AnswerChoice;
+  }): Promise<ExamWithRelations> {
+    return this.prismaService.$transaction(async (tx) => {
+      const variant =
+        (await tx.examVariant.findFirst({
+          where: { examId: data.examId, testCode: data.testCode },
+          select: { id: true },
+        })) ??
+        (await tx.examVariant.create({
+          data: {
+            examId: data.examId,
+            testCode: data.testCode,
+          },
+          select: { id: true },
+        }));
+
+      await tx.answerKey.upsert({
+        where: {
+          variantId_questionNumber: {
+            variantId: variant.id,
+            questionNumber: data.questionNumber,
+          },
+        },
+        create: {
+          variantId: variant.id,
+          questionNumber: data.questionNumber,
+          correctAnswer: data.correctAnswer,
+        },
+        update: {
+          correctAnswer: data.correctAnswer,
+        },
+      });
+
+      await tx.examQuestion.upsert({
+        where: {
+          examId_questionNumber: {
+            examId: data.examId,
+            questionNumber: data.questionNumber,
+          },
+        },
+        create: {
+          examId: data.examId,
+          questionNumber: data.questionNumber,
+          questionId: data.questionId ?? null,
+        },
+        update: {
+          questionId: data.questionId ?? null,
+        },
+      });
+
+      return tx.exam.findUniqueOrThrow({
+        where: { id: data.examId },
+        include: examDetailInclude,
+      });
+    });
+  }
+
+  async removeExamQuestionAnswer(data: {
+    examId: string;
+    testCode: string;
+    questionNumber: number;
+  }): Promise<ExamWithRelations> {
+    return this.prismaService.$transaction(async (tx) => {
+      const variant = await tx.examVariant.findFirst({
+        where: { examId: data.examId, testCode: data.testCode },
+        select: { id: true },
+      });
+
+      if (variant) {
+        await tx.answerKey.deleteMany({
+          where: {
+            variantId: variant.id,
+            questionNumber: data.questionNumber,
+          },
+        });
+      }
+
+      await tx.examQuestion.deleteMany({
+        where: {
+          examId: data.examId,
+          questionNumber: data.questionNumber,
+        },
+      });
+
+      return tx.exam.findUniqueOrThrow({
+        where: { id: data.examId },
+        include: examDetailInclude,
+      });
+    });
+  }
+
+  async updateExamStatus(examId: string, status: ExamStatus) {
+    return this.prismaService.exam.update({
+      where: { id: examId },
+      data: { status },
+      include: examDetailInclude,
+    });
+  }
+
+  async upsertClassExamQuestion(data: {
+    examId: string;
+    orderIndex: number;
+    type: QuestionType;
+    content: string;
+    optionA?: string;
+    optionB?: string;
+    optionC?: string;
+    optionD?: string;
+    answerChoice?: AnswerChoice;
+    answerText?: string;
+    maxScore: number;
+  }): Promise<ExamWithRelations> {
+    await this.prismaService.classExamQuestion.upsert({
+      where: {
+        examId_orderIndex: {
+          examId: data.examId,
+          orderIndex: data.orderIndex,
+        },
+      },
+      create: {
+        examId: data.examId,
+        orderIndex: data.orderIndex,
+        type: data.type,
+        content: data.content,
+        optionA: data.optionA ?? null,
+        optionB: data.optionB ?? null,
+        optionC: data.optionC ?? null,
+        optionD: data.optionD ?? null,
+        answerChoice: data.answerChoice ?? null,
+        answerText: data.answerText ?? null,
+        maxScore: data.maxScore,
+      },
+      update: {
+        type: data.type,
+        content: data.content,
+        optionA: data.optionA ?? null,
+        optionB: data.optionB ?? null,
+        optionC: data.optionC ?? null,
+        optionD: data.optionD ?? null,
+        answerChoice: data.answerChoice ?? null,
+        answerText: data.answerText ?? null,
+        maxScore: data.maxScore,
+      },
+    });
+
+    return this.prismaService.exam.findUniqueOrThrow({
+      where: { id: data.examId },
+      include: examDetailInclude,
+    });
+  }
+
+  async removeClassExamQuestion(examId: string, questionId: string): Promise<ExamWithRelations> {
+    await this.prismaService.classExamQuestion.deleteMany({
+      where: { id: questionId, examId },
+    });
+
+    return this.prismaService.exam.findUniqueOrThrow({
+      where: { id: examId },
+      include: examDetailInclude,
     });
   }
 }

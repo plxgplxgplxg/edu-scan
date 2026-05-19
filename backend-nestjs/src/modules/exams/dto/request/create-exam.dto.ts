@@ -26,12 +26,11 @@ export class CreateExamDto {
   maxScore!: number;
 
   @IsArray()
-  @ArrayMinSize(1)
   @IsUUID('4', { each: true })
-  classIds!: string[];
+  @IsOptional()
+  classIds?: string[];
 
   @IsArray()
-  @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => CreateAnswerKeyDto)
   @IsOptional()

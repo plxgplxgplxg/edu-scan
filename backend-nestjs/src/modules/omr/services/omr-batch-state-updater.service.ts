@@ -18,6 +18,9 @@ export class OmrBatchStateUpdaterService {
     imageUrl: string;
     studentId: string | null;
     studentCode: string | null;
+    studentCodeRaw: string | null;
+    matchedStudentId: string | null;
+    isExternal: boolean;
     detectedTestId: string | null;
     resolvedTestCode: string | null;
     testCodeResolutionStatus: TestCodeResolutionStatus;

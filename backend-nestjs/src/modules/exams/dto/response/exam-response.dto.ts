@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { AnswerChoice, Difficulty } from '@prisma/client';
+import { AnswerChoice, Difficulty, ExamStatus, ExamType, QuestionType } from '@prisma/client';
 import { ExamWithRelations } from '../../repositories/exams.repository';
 
 export class ExamClassResponseDto {
@@ -63,6 +63,41 @@ export class ExamQuestionMapResponseDto {
   question?: ExamQuestionReferenceResponseDto | null;
 }
 
+export class ClassExamQuestionResponseDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ example: 1 })
+  orderIndex!: number;
+
+  @ApiProperty({ enum: QuestionType, enumName: 'QuestionType' })
+  type!: QuestionType;
+
+  @ApiProperty()
+  content!: string;
+
+  @ApiProperty({ nullable: true })
+  optionA!: string | null;
+
+  @ApiProperty({ nullable: true })
+  optionB!: string | null;
+
+  @ApiProperty({ nullable: true })
+  optionC!: string | null;
+
+  @ApiProperty({ nullable: true })
+  optionD!: string | null;
+
+  @ApiProperty({ enum: AnswerChoice, nullable: true })
+  answerChoice!: AnswerChoice | null;
+
+  @ApiProperty({ nullable: true })
+  answerText!: string | null;
+
+  @ApiProperty()
+  maxScore!: number;
+}
+
 export class ExamResponseDto {
   @ApiProperty({ format: 'uuid' })
   id!: string;
@@ -72,6 +107,11 @@ export class ExamResponseDto {
 
   @ApiProperty()
   maxScore!: number;
+
+  @ApiProperty({ enum: ExamStatus, enumName: 'ExamStatus' })
+  status!: ExamStatus;
+  @ApiProperty({ enum: ExamType, enumName: 'ExamType' })
+  type!: ExamType;
 
   @ApiProperty({ format: 'uuid' })
   teacherId!: string;
@@ -90,6 +130,8 @@ export class ExamResponseDto {
 
   @ApiProperty({ type: [ExamQuestionMapResponseDto] })
   questionMap!: ExamQuestionMapResponseDto[];
+  @ApiProperty({ type: [ClassExamQuestionResponseDto] })
+  classQuestions!: ClassExamQuestionResponseDto[];
 }
 
 export class DeleteExamResponseDto {
@@ -105,6 +147,8 @@ export function toExamResponseDto(exam: ExamWithRelations): ExamResponseDto {
     id: exam.id,
     title: exam.title,
     maxScore: exam.maxScore,
+    status: exam.status,
+    type: exam.type,
     teacherId: exam.teacherId,
     createdAt: exam.createdAt,
     updatedAt: exam.updatedAt,
@@ -134,6 +178,19 @@ export function toExamResponseDto(exam: ExamWithRelations): ExamResponseDto {
             difficulty: item.question.difficulty,
           }
         : null,
+    })),
+    classQuestions: exam.classQuestions.map((item) => ({
+      id: item.id,
+      orderIndex: item.orderIndex,
+      type: item.type,
+      content: item.content,
+      optionA: item.optionA,
+      optionB: item.optionB,
+      optionC: item.optionC,
+      optionD: item.optionD,
+      answerChoice: item.answerChoice,
+      answerText: item.answerText,
+      maxScore: item.maxScore,
     })),
   };
 }

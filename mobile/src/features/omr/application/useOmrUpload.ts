@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { listExams, uploadOmrBatch } from '../../../api/edu-scan';
+import { listOmrExams, uploadOmrBatch } from '../../../api/edu-scan';
 import { documentTypes, pickMultipleDocuments } from '../../shared/infrastructure/document-picker/document-picker-adapter';
 import type { NativeFile } from '../../shared/domain/native-file';
 import { useToast } from '../../../app/ToastProvider';
@@ -39,7 +39,7 @@ export function useOmrUpload({
     setSubmitError(null);
 
     try {
-      const exams = await listExams(accessToken);
+      const exams = await listOmrExams(accessToken);
       const normalizedExam = examLookup.trim().toLowerCase();
       const exam = exams.find(
         (item) =>

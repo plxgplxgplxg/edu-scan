@@ -12,8 +12,10 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   getClassDetail,
   listAssignments,
+  listClassExams,
   mapClassDetail,
   mapStudentAssignmentSummary,
+  submitClassExam,
 } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
 import { FilterChips } from '../../components/FilterChips';
@@ -35,7 +37,7 @@ import type { RootStackParamList } from '../../navigation/types';
 import { useAssignmentSubmission } from '../../features/assignments/application/useAssignmentSubmission';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-type TabKey = 'assignments' | 'info';
+type TabKey = 'assignments' | 'exams' | 'info';
 
 export function StudentClassDetailScreen() {
   const navigation = useNavigation<Nav>();
@@ -52,9 +54,10 @@ export function StudentClassDetailScreen() {
         return null;
       }
 
-      const [classItem, assignments] = await Promise.all([
+      const [classItem, assignments, exams] = await Promise.all([
         getClassDetail(accessToken, classId),
         listAssignments(accessToken),
+        listClassExams(accessToken),
       ]);
 
       const classMap = new Map([[classItem.id, classItem]]);
@@ -63,6 +66,7 @@ export function StudentClassDetailScreen() {
         assignments: assignments
           .filter((item) => item.classes.some((entry) => entry.classId === classItem.id))
           .map((item) => mapStudentAssignmentSummary(item, classMap)),
+        exams: exams.filter((item) => item.classes.some((entry) => entry.id === classItem.id)),
       };
     },
     [accessToken, classId],
@@ -72,6 +76,7 @@ export function StudentClassDetailScreen() {
     () => data?.assignments ?? [],
     [data?.assignments],
   );
+  const classExams = useMemo(() => data?.exams ?? [], [data?.exams]);
   const {
     selectedFile,
     submitting,
@@ -146,6 +151,7 @@ export function StudentClassDetailScreen() {
           value={tab}
           items={[
             { id: 'assignments', label: `${content.common.tabs.assignments} (${String(classAssignments.length)})` },
+            { id: 'exams', label: `Đề thi (${String(classExams.length)})` },
             { id: 'info', label: content.student.classes.classInfoTitle },
           ]}
           onChange={setTab}
@@ -205,6 +211,25 @@ export function StudentClassDetailScreen() {
                 </SurfaceCard>
               );
             })}
+          </View>
+        ) : null}
+
+        {tab === 'exams' ? (
+          <View style={styles.section}>
+            {classExams.map((item) => (
+              <SurfaceCard key={item.id} style={styles.assignmentCard}>
+                <AppText variant="body" weight="medium">{item.title}</AppText>
+                <AppText variant="caption" color={palette.mutedForeground}>{`Trạng thái: ${item.status}`}</AppText>
+                <PrimaryButton
+                  label="Nộp bài"
+                  onPress={async () => {
+                    if (!accessToken) return;
+                    await submitClassExam(accessToken, item.id, { answers: [] });
+                    await reload();
+                  }}
+                />
+              </SurfaceCard>
+            ))}
           </View>
         ) : null}
 

@@ -4,6 +4,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { ExamType } from '@prisma/client';
 import { BatchService } from './batch.service';
 import { UploadOmrDto } from '../dto/request/upload-omr.dto';
 import { ImageUploadService } from './image-upload.service';
@@ -36,6 +37,10 @@ export class OmrService {
 
     if (exam.teacherId !== teacherId) {
       throw new ForbiddenException('You do not have access to this exam');
+    }
+
+    if (exam.type !== ExamType.OMR) {
+      throw new ForbiddenException('OMR upload only accepts OMR exams');
     }
 
     const batch = await this.batchService.createBatch(

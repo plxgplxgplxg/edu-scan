@@ -5,6 +5,7 @@ import { demoAccounts } from '../api/mockData';
 import type { AppContent } from '../content';
 import type { LanguageCode, UserRole } from '../types/app';
 import { login as loginRequest } from '../api/edu-scan';
+import { configureAuthSession } from '../api/http';
 
 interface AuthState {
   userId: string | null;
@@ -42,6 +43,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   const content = contentByLanguage[state.language];
+
+  configureAuthSession({
+    getSession: () => {
+      if (!state.accessToken || !state.refreshToken) {
+        return null;
+      }
+
+      return {
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+      };
+    },
+    applySession: session => {
+      setState(current => ({
+        ...current,
+        accessToken: session.accessToken,
+        refreshToken: session.refreshToken,
+      }));
+    },
+    clearSession: () => {
+      setState(current => ({
+        ...current,
+        userId: null,
+        role: null,
+        studentCode: null,
+        accessToken: null,
+        refreshToken: null,
+      }));
+    },
+  });
 
   const value = useMemo<AuthContextValue>(
     () => ({

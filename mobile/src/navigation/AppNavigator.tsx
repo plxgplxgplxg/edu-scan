@@ -22,11 +22,14 @@ import { LoginScreen } from '../screens/auth/LoginScreen';
 import { TeacherDashboardScreen } from '../screens/teacher/TeacherDashboardScreen';
 import { TeacherClassesScreen } from '../screens/teacher/TeacherClassesScreen';
 import { TeacherClassDetailScreen } from '../screens/teacher/TeacherClassDetailScreen';
-import { TeacherExamsScreen } from '../screens/teacher/TeacherExamsScreen';
+import { TeacherOmrExamsScreen } from '../screens/teacher/TeacherOmrExamsScreen';
+import { TeacherClassExamsScreen } from '../screens/teacher/TeacherClassExamsScreen';
 import { TeacherOmrScreen } from '../screens/teacher/TeacherOmrScreen';
 import { TeacherAssignmentsScreen } from '../screens/teacher/TeacherAssignmentsScreen';
 import { TeacherRemarksScreen } from '../screens/teacher/TeacherRemarksScreen';
 import { TeacherQuestionsScreen } from '../screens/teacher/TeacherQuestionsScreen';
+import { TeacherExamBuilderScreen } from '../screens/teacher/TeacherExamBuilderScreen';
+import { TeacherClassExamBuilderScreen } from '../screens/teacher/TeacherClassExamBuilderScreen';
 import { StudentDashboardScreen } from '../screens/student/StudentDashboardScreen';
 import { StudentClassesScreen } from '../screens/student/StudentClassesScreen';
 import { StudentClassDetailScreen } from '../screens/student/StudentClassDetailScreen';
@@ -232,9 +235,12 @@ export function AppNavigator() {
           <>
             <Stack.Screen name="TeacherTabs" component={TeacherTabsNavigator} />
             <Stack.Screen name="TeacherClassDetail" component={TeacherClassDetailScreen} />
-            <Stack.Screen name="TeacherExams" component={TeacherExamsScreen} />
+            <Stack.Screen name="TeacherOmrExams" component={TeacherOmrExamsScreen} />
+            <Stack.Screen name="TeacherClassExams" component={TeacherClassExamsScreen} />
             <Stack.Screen name="TeacherRemarks" component={TeacherRemarksScreen} />
             <Stack.Screen name="TeacherQuestions" component={TeacherQuestionsScreen} />
+            <Stack.Screen name="TeacherOmrExamBuilder" component={TeacherExamBuilderScreen} />
+            <Stack.Screen name="TeacherClassExamBuilder" component={TeacherClassExamBuilderScreen} />
             <Stack.Screen name="SharedNotifications" component={NotificationsScreen} />
           </>
         ) : null}

@@ -51,6 +51,9 @@ export class BatchService {
     imageUrl: string;
     studentId: string | null;
     studentCode: string | null;
+    studentCodeRaw: string | null;
+    matchedStudentId: string | null;
+    isExternal: boolean;
     detectedTestId: string | null;
     resolvedTestCode: string | null;
     testCodeResolutionStatus: TestCodeResolutionStatus;
@@ -145,6 +148,8 @@ export class BatchService {
           exam: batch.exam,
         } as OmrSubmissionWithRelations),
       ),
+      matchedCount: batch.submissions.filter((item) => !!item.studentId).length,
+      unmatchedCount: batch.submissions.filter((item) => !item.studentId).length,
     };
   }
 

@@ -32,7 +32,7 @@ const roleModules: Record<UserRole, Record<string, { labelKey: string; icon: Luc
   TEACHER: {
     home: { labelKey: 'home', icon: Home, route: 'TeacherDashboard' },
     classes: { labelKey: 'classes', icon: BookOpen, route: 'TeacherClasses' },
-    exams: { labelKey: 'exams', icon: FileText, route: 'TeacherExams' },
+    exams: { labelKey: 'exams', icon: FileText, route: 'TeacherOmrExams' },
     omr: { labelKey: 'omr', icon: ScanLine, route: 'TeacherOMR' },
     remarks: { labelKey: 'remarks', icon: MessageSquare, route: 'TeacherRemarks' },
     questions: { labelKey: 'questions', icon: HelpCircle, route: 'TeacherQuestions' },
@@ -124,7 +124,7 @@ export function BottomNav({
           ]}
         >
           {tabs.map(tab => (
-            <Pressable key={tab.key} onPress={() => navigation.navigate(tab.route)} style={styles.tab}>
+            <Pressable key={tab.key} onPress={() => navigation.navigate(tab.route as never)} style={styles.tab}>
               <View
                 style={[
                   styles.iconWrap,
