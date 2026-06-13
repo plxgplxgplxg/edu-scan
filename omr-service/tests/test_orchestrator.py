@@ -186,8 +186,10 @@ def test_render_grade_overlay_updates_artifacts(tmp_path):
     assert updated_payload["answers"][0]["isCorrect"] is True
 
 
-def test_process_keeps_legacy_two_step_flow(monkeypatch):
+def test_process_keeps_legacy_two_step_flow(monkeypatch, tmp_path):
     orchestrator = OmrOrchestrator()
+    result_path = tmp_path / "result.json"
+    result_path.write_text("{}", encoding="utf-8")
     monkeypatch.setattr(
         orchestrator,
         "detect",
@@ -208,7 +210,7 @@ def test_process_keeps_legacy_two_step_flow(monkeypatch):
                 "artifacts": type(
                     "Artifacts",
                     (),
-                    {"resultJsonPath": "/tmp/result.json"},
+                    {"resultJsonPath": str(result_path)},
                 )(),
             },
         )(),
@@ -220,17 +222,13 @@ def test_process_keeps_legacy_two_step_flow(monkeypatch):
             "OverlayResponse",
             (),
             {
-                "artifacts": type(
-                    "Artifacts",
-                    (),
-                    {
-                        "processedImagePath": "/tmp/processed.png",
-                        "annotatedImagePath": "/tmp/annotated.png",
-                        "warpOverlayPath": "/tmp/warp.png",
-                        "answerScoresPath": "/tmp/scores.json",
-                        "resultJsonPath": "/tmp/result.json",
-                    },
-                )(),
+                "artifacts": {
+                    "processedImagePath": "/tmp/processed.png",
+                    "annotatedImagePath": "/tmp/annotated.png",
+                    "warpOverlayPath": "/tmp/warp.png",
+                    "answerScoresPath": "/tmp/scores.json",
+                    "resultJsonPath": str(result_path),
+                },
             },
         )(),
     )
