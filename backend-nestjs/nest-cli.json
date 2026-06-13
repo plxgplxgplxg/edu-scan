@@ -4,6 +4,12 @@
   "sourceRoot": "src",
   "compilerOptions": {
     "deleteOutDir": true,
+    "assets": [
+      {
+        "include": "modules/omr/proto/*.proto",
+        "outDir": "dist/modules/omr/proto"
+      }
+    ],
     "plugins": [
       {
         "name": "@nestjs/swagger/plugin",

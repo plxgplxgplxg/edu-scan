@@ -6,8 +6,12 @@ import {
   GradingService,
 } from '../services/grading.service';
 import { ImageUploadService } from '../services/image-upload.service';
-import { OmrClientService } from '../services/omr-client.service';
 import { OmrQueueJobData, OmrSerializedFile } from '../queue/omr-queue.types';
+import {
+  OMR_TRANSPORT_CLIENT,
+} from '../interfaces/omr-transport.interface';
+import { Inject } from '@nestjs/common';
+import type { OmrTransportClient } from '../interfaces/omr-transport.interface';
 
 export type ProcessedSubmissionPayload = {
   batchId: string;
@@ -36,7 +40,8 @@ export class OmrProcessor {
 
   constructor(
     private readonly imageUploadService: ImageUploadService,
-    private readonly omrClientService: OmrClientService,
+    @Inject(OMR_TRANSPORT_CLIENT)
+    private readonly omrClientService: OmrTransportClient,
     private readonly gradingService: GradingService,
     private readonly omrRepository: OmrRepository,
   ) {}

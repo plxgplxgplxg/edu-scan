@@ -6,6 +6,7 @@ import databaseConfig from './config/database.config';
 import jwtConfig from './config/jwt.config';
 import cloudinaryConfig from './config/cloudinary.config';
 import redisConfig from './config/redis.config';
+import omrConfig from './config/omr.config';
 import { DatabaseModule } from './database/database.module';
 import { StorageModule } from './storage/storage.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -24,7 +25,7 @@ import { BullModule } from '@nestjs/bull';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig, jwtConfig, cloudinaryConfig, redisConfig],
+      load: [databaseConfig, jwtConfig, cloudinaryConfig, redisConfig, omrConfig],
     }),
     BullModule.forRootAsync({
       inject: [ConfigService],
