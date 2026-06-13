@@ -1,5 +1,11 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiBody, ApiConsumes, ApiParam } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiConsumes,
+  ApiOkResponse,
+  ApiParam,
+  ApiProduces,
+} from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 import { ApiModuleTag } from '../../../common/swagger/decorators/api-module-tag.decorator';
 import { ApiBearerOperation } from '../../../common/swagger/decorators/api-auth.decorator';
@@ -107,6 +113,31 @@ export const OmrSwagger = {
       ApiWrappedOkResponse({
         type: OmrSubmissionDetailViewResponseDto,
         description: 'Lấy chi tiết bài làm OMR thành công.',
+      }),
+      ApiStandardErrorResponses(401, 403, 404, 500),
+    );
+  },
+  TheoDoiTienDoBatchOmr() {
+    return applyDecorators(
+      ApiBearerOperation({
+        summary: 'Theo dõi tiến độ xử lý batch OMR qua SSE',
+        roles: [Role.TEACHER],
+        notes:
+          'Mở kết nối `text/event-stream` để nhận các event như `batch:file:queued`, `batch:file:processing`, `batch:file:done`, `batch:file:failed`, `batch:completed`.',
+      }),
+      ApiParam({
+        name: 'batchId',
+        description: 'ID batch OMR cần theo dõi',
+        format: 'uuid',
+      }),
+      ApiProduces('text/event-stream'),
+      ApiOkResponse({
+        description: 'Luồng SSE tiến độ xử lý batch OMR.',
+        schema: {
+          type: 'string',
+          example:
+            'event: batch:file:queued\\ndata: {"type":"batch:file:queued","batchId":"uuid","fileIndex":1,"totalFiles":3,"pct":0}\\n\\n',
+        },
       }),
       ApiStandardErrorResponses(401, 403, 404, 500),
     );

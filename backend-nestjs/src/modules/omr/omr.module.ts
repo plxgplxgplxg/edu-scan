@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
 import { OmrController } from './controllers/omr.controller';
+import { OmrSseController } from './controllers/omr-sse.controller';
 import { OmrQueueProcessor } from './processors/omr-queue.processor';
 import { OmrRepository } from './repositories/omr.repository';
 import { OmrProcessor } from './processors/omr.processor';
@@ -14,6 +15,7 @@ import { OmrBatchStateUpdaterService } from './services/omr-batch-state-updater.
 import { OmrClientService } from './services/omr-client.service';
 import { OmrQueueService } from './services/omr-queue.service';
 import { OmrService } from './services/omr.service';
+import { SseRegistryService } from './services/sse-registry.service';
 import { OMR_TRANSPORT_CLIENT } from './interfaces/omr-transport.interface';
 import {
   getOmrGrpcProtoPath,
@@ -48,7 +50,7 @@ import {
       },
     ]),
   ],
-  controllers: [OmrController],
+  controllers: [OmrController, OmrSseController],
   providers: [
     OmrRepository,
     OmrQueueProcessor,
@@ -63,6 +65,7 @@ import {
     },
     OmrBatchStateUpdaterService,
     OmrQueueService,
+    SseRegistryService,
     OmrService,
   ],
   exports: [OmrService],

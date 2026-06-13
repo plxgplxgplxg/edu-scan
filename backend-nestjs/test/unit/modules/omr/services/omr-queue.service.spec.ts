@@ -8,12 +8,15 @@ describe('OmrQueueService', () => {
   const queue = {
     add: addMock,
   } as unknown as Queue;
+  const sseRegistryService = {
+    emit: jest.fn(),
+  };
 
   let service: OmrQueueService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new OmrQueueService(queue);
+    service = new OmrQueueService(queue, sseRegistryService as never);
     addMock.mockResolvedValue(undefined);
   });
 
@@ -43,6 +46,8 @@ describe('OmrQueueService', () => {
     expect(firstCall[0]).toBe(OMR_JOB_PROCESS_FILE);
     expect(firstCall[1].batchId).toBe('batch-1');
     expect(firstCall[1].examId).toBe('exam-1');
+    expect(firstCall[1].fileIndex).toBe(1);
+    expect(firstCall[1].totalFiles).toBe(2);
     expect(firstCall[1].file.originalname).toBe('sheet-1.png');
     expect(firstCall[1].file.bufferBase64).toBe(
       Buffer.from('sheet-1.png').toString('base64'),
@@ -54,6 +59,16 @@ describe('OmrQueueService', () => {
         delay: 1000,
       },
     });
+    expect(sseRegistryService.emit).toHaveBeenNthCalledWith(
+      1,
+      'omr:batch-1',
+      expect.objectContaining({
+        type: 'batch:file:queued',
+        batchId: 'batch-1',
+        fileIndex: 1,
+        totalFiles: 2,
+      }),
+    );
   });
 });
 

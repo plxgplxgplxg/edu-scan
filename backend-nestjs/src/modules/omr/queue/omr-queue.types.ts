@@ -10,6 +10,8 @@ export type OmrSerializedFile = {
 export type OmrQueueJobData = {
   batchId: string;
   examId: string;
+  fileIndex: number;
+  totalFiles: number;
   templateName?: string;
   file: OmrSerializedFile;
 };

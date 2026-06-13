@@ -20,6 +20,8 @@ import {
   OmrRepository,
   OmrSubmissionWithRelations,
 } from '../repositories/omr.repository';
+import { buildOmrSseChannelId, OmrSseEvent } from '../sse/omr-sse-event';
+import { SseRegistryService } from './sse-registry.service';
 
 @Injectable()
 export class BatchService {
@@ -27,6 +29,7 @@ export class BatchService {
     private readonly omrRepository: OmrRepository,
     private readonly gradingService: GradingService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly sseRegistryService: SseRegistryService<OmrSseEvent>,
   ) {}
 
   async createBatch(examId: string, teacherId: string, totalFiles: number) {
@@ -79,15 +82,7 @@ export class BatchService {
     batchId: string,
     teacherId: string,
   ): Promise<OmrBatchResponseDto> {
-    const batch = await this.omrRepository.findBatchById(batchId);
-
-    if (!batch) {
-      throw new NotFoundException('OMR batch not found');
-    }
-
-    if (batch.teacherId !== teacherId) {
-      throw new ForbiddenException('You do not have access to this OMR batch');
-    }
+    await this.assertTeacherBatchAccess(batchId, teacherId);
 
     const teacherBatch = await this.omrRepository.findTeacherBatchById(
       batchId,
@@ -99,6 +94,20 @@ export class BatchService {
     }
 
     return this.toBatchResponseDto(teacherBatch);
+  }
+
+  async assertTeacherBatchAccess(batchId: string, teacherId: string) {
+    const batch = await this.omrRepository.findBatchById(batchId);
+
+    if (!batch) {
+      throw new NotFoundException('OMR batch not found');
+    }
+
+    if (batch.teacherId !== teacherId) {
+      throw new ForbiddenException('You do not have access to this OMR batch');
+    }
+
+    return batch;
   }
 
   async listTeacherBatches(teacherId: string): Promise<OmrBatchResponseDto[]> {
@@ -276,6 +285,16 @@ export class BatchService {
         batchId: batch.id,
         status: batch.status,
       });
+
+      this.sseRegistryService.emit(buildOmrSseChannelId(batch.id), {
+        type: 'batch:completed',
+        batchId: batch.id,
+        status: batch.status,
+        processedFiles: batch.processedFiles,
+        totalFiles: batch.totalFiles,
+        pct: 100,
+      });
+      this.sseRegistryService.complete(buildOmrSseChannelId(batch.id));
     }
   }
 }

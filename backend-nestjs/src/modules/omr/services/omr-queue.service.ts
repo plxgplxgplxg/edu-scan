@@ -7,6 +7,8 @@ import {
   OMR_QUEUE_NAME,
 } from '../queue/omr-queue.constants';
 import { OmrQueueJobData, OmrSerializedFile } from '../queue/omr-queue.types';
+import { buildOmrSseChannelId, OmrSseEvent } from '../sse/omr-sse-event';
+import { SseRegistryService } from './sse-registry.service';
 
 type EnqueueBatchInput = {
   batchId: string;
@@ -19,14 +21,21 @@ type EnqueueBatchInput = {
 export class OmrQueueService {
   private readonly logger = new Logger(OmrQueueService.name);
 
-  constructor(@InjectQueue(OMR_QUEUE_NAME) private readonly queue: Queue) {}
+  constructor(
+    @InjectQueue(OMR_QUEUE_NAME) private readonly queue: Queue,
+    private readonly sseRegistryService: SseRegistryService<OmrSseEvent>,
+  ) {}
 
   async enqueueBatch(input: EnqueueBatchInput) {
-    for (const file of input.files) {
+    const totalFiles = input.files.length;
+
+    for (const [index, file] of input.files.entries()) {
       const serializedFile = this.serializeFile(file);
       const jobData: OmrQueueJobData = {
         batchId: input.batchId,
         examId: input.examId,
+        fileIndex: index + 1,
+        totalFiles,
         templateName: input.templateName,
         file: serializedFile,
       };
@@ -42,10 +51,19 @@ export class OmrQueueService {
         },
         removeOnComplete: true,
       });
+
+      this.sseRegistryService.emit(buildOmrSseChannelId(input.batchId), {
+        type: 'batch:file:queued',
+        batchId: input.batchId,
+        fileIndex: index + 1,
+        totalFiles,
+        processedFiles: 0,
+        pct: 0,
+      });
     }
 
     this.logger.log(
-      `Enqueued ${input.files.length} OMR file jobs for batch ${input.batchId}`,
+      `Enqueued ${totalFiles} OMR file jobs for batch ${input.batchId}`,
     );
   }
 

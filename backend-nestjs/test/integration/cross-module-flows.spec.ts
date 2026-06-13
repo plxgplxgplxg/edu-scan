@@ -12,6 +12,7 @@ import { OmrBatchStateUpdaterService } from '../../src/modules/omr/services/omr-
 import { BatchService } from '../../src/modules/omr/services/batch.service';
 import { OmrRepository } from '../../src/modules/omr/repositories/omr.repository';
 import { GradingService } from '../../src/modules/omr/services/grading.service';
+import { SseRegistryService } from '../../src/modules/omr/services/sse-registry.service';
 import { QuestionsService } from '../../src/modules/questions/services/questions.service';
 import { QuestionsRepository } from '../../src/modules/questions/repositories/questions.repository';
 import { ExamsService } from '../../src/modules/exams/services/exams.service';
@@ -100,6 +101,8 @@ describe('Cross-module hardening flows', () => {
           resolvedTestCode: null,
           testCodeResolutionStatus: 'MISSING_TEST_CODE',
           status: 'NEEDS_REVIEW',
+          score: 0,
+          needsReview: true,
           details: [],
         }),
       };
@@ -127,6 +130,10 @@ describe('Cross-module hardening flows', () => {
             provide: GradingService,
             useValue: { summarizeSubmission: jest.fn() },
           },
+          {
+            provide: SseRegistryService,
+            useValue: { emit: jest.fn(), complete: jest.fn(), stream: jest.fn() },
+          },
         ],
       }).compile();
 
@@ -143,6 +150,8 @@ describe('Cross-module hardening flows', () => {
         data: {
           batchId: 'batch-1',
           examId: 'exam-1',
+          fileIndex: 1,
+          totalFiles: 1,
           file: {
             fieldname: 'files',
             originalname: 'sheet.png',

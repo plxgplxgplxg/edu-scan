@@ -27,6 +27,8 @@ export type ProcessedSubmissionPayload = {
   resolvedTestCode: string | null;
   testCodeResolutionStatus: TestCodeResolutionStatus;
   status: SubmissionStatus;
+  score: number;
+  needsReview: boolean;
   details: PreparedSubmissionDetail[];
   processedImageUrl?: string | null;
   annotatedImageUrl?: string | null;
@@ -46,7 +48,16 @@ export class OmrProcessor {
     private readonly omrRepository: OmrRepository,
   ) {}
 
-  async processJob(data: OmrQueueJobData): Promise<ProcessedSubmissionPayload> {
+  async processJob(
+    data: OmrQueueJobData,
+    hooks?: {
+      onProcessingStart?: (context: {
+        batchId: string;
+        fileIndex: number;
+        totalFiles: number;
+      }) => Promise<void> | void;
+    },
+  ): Promise<ProcessedSubmissionPayload> {
     const exam = await this.omrRepository.findExamById(data.examId);
     if (!exam) {
       throw new Error(
@@ -59,6 +70,11 @@ export class OmrProcessor {
       file,
       data.batchId,
     );
+    await hooks?.onProcessingStart?.({
+      batchId: data.batchId,
+      fileIndex: data.fileIndex,
+      totalFiles: data.totalFiles,
+    });
     const detectResult = await this.omrClientService.detectImage({
       imageUrl,
       templateName: data.templateName,
@@ -77,6 +93,11 @@ export class OmrProcessor {
       resolvedVariant?.answerKeys ?? null,
       detectResult,
       variantResolution.status,
+    );
+    const summary = this.gradingService.summarizeSubmission(
+      resolvedVariant?.answerKeys ?? null,
+      preparedSubmission.details,
+      exam.maxScore,
     );
 
     const overlayResult =
@@ -136,6 +157,8 @@ export class OmrProcessor {
       resolvedTestCode: variantResolution.resolvedTestCode,
       testCodeResolutionStatus: variantResolution.status,
       status,
+      score: summary.score,
+      needsReview: status === SubmissionStatus.NEEDS_REVIEW,
       details: preparedSubmission.details,
       ...artifactUrls,
     };

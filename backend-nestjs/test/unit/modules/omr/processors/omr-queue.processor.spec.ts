@@ -10,6 +10,9 @@ describe('OmrQueueProcessor', () => {
     recordSuccessfulFile: jest.fn(),
     recordFailedFile: jest.fn(),
   };
+  const sseRegistryService = {
+    emit: jest.fn(),
+  };
 
   let processor: OmrQueueProcessor;
 
@@ -18,6 +21,7 @@ describe('OmrQueueProcessor', () => {
     processor = new OmrQueueProcessor(
       omrProcessor as never,
       batchStateUpdater as never,
+      sseRegistryService as never,
     );
     batchStateUpdater.markProcessing.mockResolvedValue(undefined);
     batchStateUpdater.recordSuccessfulFile.mockResolvedValue(undefined);
@@ -29,6 +33,8 @@ describe('OmrQueueProcessor', () => {
       data: {
         batchId: 'batch-1',
         examId: 'exam-1',
+        fileIndex: 1,
+        totalFiles: 1,
         file: buildSerializedFile(),
       },
     });
@@ -43,7 +49,13 @@ describe('OmrQueueProcessor', () => {
       resolvedTestCode: null,
       testCodeResolutionStatus: 'MISSING_TEST_CODE',
       status: 'NEEDS_REVIEW',
+      score: 0,
+      needsReview: true,
       details: [],
+    });
+    batchStateUpdater.recordSuccessfulFile.mockResolvedValue({
+      totalFiles: 1,
+      processedFiles: 1,
     });
 
     await processor.handleProcessFile(job as never);
@@ -53,6 +65,15 @@ describe('OmrQueueProcessor', () => {
     expect(batchStateUpdater.recordSuccessfulFile).toHaveBeenCalledWith(
       expect.objectContaining({
         batchId: 'batch-1',
+      }),
+    );
+    expect(sseRegistryService.emit).toHaveBeenCalledWith(
+      'omr:batch-1',
+      expect.objectContaining({
+        type: 'batch:file:done',
+        batchId: 'batch-1',
+        fileIndex: 1,
+        pct: 100,
       }),
     );
     expect(batchStateUpdater.recordFailedFile).not.toHaveBeenCalled();
@@ -67,6 +88,8 @@ describe('OmrQueueProcessor', () => {
       data: {
         batchId: 'batch-1',
         examId: 'exam-1',
+        fileIndex: 1,
+        totalFiles: 1,
         file: buildSerializedFile(),
       },
     });
@@ -87,15 +110,29 @@ describe('OmrQueueProcessor', () => {
       data: {
         batchId: 'batch-1',
         examId: 'exam-1',
+        fileIndex: 1,
+        totalFiles: 1,
         file: buildSerializedFile(),
       },
     });
     omrProcessor.processJob.mockRejectedValue(new Error('Invalid payload'));
+    batchStateUpdater.recordFailedFile.mockResolvedValue({
+      totalFiles: 1,
+      processedFiles: 1,
+    });
 
     await expect(processor.handleProcessFile(job as never)).rejects.toThrow(
       'Invalid payload',
     );
     expect(batchStateUpdater.recordFailedFile).toHaveBeenCalledWith('batch-1');
+    expect(sseRegistryService.emit).toHaveBeenCalledWith(
+      'omr:batch-1',
+      expect.objectContaining({
+        type: 'batch:file:failed',
+        errorMessage: 'Invalid payload',
+        pct: 100,
+      }),
+    );
   });
 });
 
