@@ -199,7 +199,12 @@ export function StudentResultDetailScreen() {
             {item.needsReview ? (
               <Pressable
                 style={styles.remarkButton}
-                onPress={() => navigation.navigate('StudentRemarks')}
+                onPress={() =>
+                  navigation.navigate('StudentRemarks', {
+                    resultId: selectedResult.id,
+                    questionNumber: item.questionNumber,
+                  })
+                }
               >
                 <AppText variant="caption" weight="medium" color={palette.warning}>
                   {content.student.results.remarkAction}

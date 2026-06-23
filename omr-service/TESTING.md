@@ -27,10 +27,25 @@ Healthcheck:
 curl http://127.0.0.1:8000/health
 ```
 
+gRPC listens in parallel by default on `0.0.0.0:50051`. Override with:
+
+```bash
+export OMR_GRPC_PORT=50051
+export OMR_GRPC_ENABLED=true
+```
+
+Regenerate Python stubs and sync the backend proto copy:
+
+```bash
+python scripts/generate_grpc_stubs.py
+```
+
+gRPC is the only OMR transport. The FastAPI app stays up for `/health` and to host the gRPC server lifecycle, but it no longer exposes `/detect`, `/grade-overlay`, or `/process`.
+
 ## Run Unit Tests
 
 ```bash
-pytest
+.venv/bin/python -m pytest
 ```
 
 ## Inspect a Dataset
@@ -90,52 +105,22 @@ If you want a custom directory:
 PYTHONPATH=. python scripts/run_single_image_debug.py /absolute/path/to/image.jpg --question-count 60 --output-dir artifacts/debug/manual-run
 ```
 
-## Hoppscotch
+## gRPC Smoke Check
 
-1. Open Hoppscotch.
-2. Create a `POST` request to `http://127.0.0.1:8000/process`.
-3. Set `Content-Type: application/json`.
-4. Use a publicly reachable image URL, for example a Cloudinary image URL.
-5. Send this JSON body:
+Start the service, then verify the gRPC bootstrap imports cleanly:
 
-```json
-{
-  "imageUrl": "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-  "questionCount": 10
-}
+```bash
+python -c "from app.main import app; print(app.title)"
 ```
 
-Expected response shape:
-
-```json
-{
-  "studentCode": null,
-  "needsReview": true,
-  "answers": [
-    {
-      "questionNumber": 1,
-      "detectedAnswer": null,
-      "needsReview": true
-    }
-  ]
-}
-```
-
-If the uploaded sheet matches the current synthetic-template assumptions, detected values may be non-null.
+For RPC-level verification, rely on `pytest` coverage in `tests/test_grpc_service.py` or add a temporary client using the generated stub under `app/grpc/generated`.
 
 ## NestJS Integration
 
 Set the backend environment variable:
 
 ```env
-OMR_SERVICE_URL=http://127.0.0.1:8000
+OMR_GRPC_URL=127.0.0.1:50051
 ```
 
-Then start `backend-nestjs` and call the normal OMR upload endpoint. NestJS already posts this payload to FastAPI:
-
-```json
-{
-  "imageUrl": "<cloudinary-url>",
-  "questionCount": 40
-}
-```
+Then start `backend-nestjs` with its gRPC client configuration. There is no REST fallback to `omr-service` in the target architecture for this migration path.

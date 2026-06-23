@@ -23,6 +23,12 @@ type WrappedResponse<T> = {
   statusCode: number;
 };
 
+type BinaryResponse = {
+  buffer: ArrayBuffer;
+  contentType: string;
+  fileName?: string;
+};
+
 type AuthSession = {
   accessToken: string;
   refreshToken: string;
@@ -167,4 +173,43 @@ export async function requestJson<T>(
   }
 
   return (payload as WrappedResponse<T>).data;
+}
+
+export async function requestBinary(
+  path: string,
+  options: RequestOptions = {},
+): Promise<BinaryResponse> {
+  const headers: Record<string, string> = {
+    Accept: '*/*',
+    ...(options.headers ?? {}),
+  };
+
+  const authToken = options.token;
+  if (authToken) {
+    headers.Authorization = `Bearer ${authToken}`;
+  }
+
+  const responseValue = await fetch(`${getApiBaseUrl()}${path}`, {
+    method: options.method ?? 'GET',
+    headers,
+  });
+
+  if (!responseValue.ok) {
+    const text = await responseValue.text();
+    const payload = text ? JSON.parse(text) : null;
+    throw new ApiError(
+      payload?.message || 'Có lỗi xảy ra khi tải tệp',
+      responseValue.status,
+    );
+  }
+
+  const buffer = await responseValue.arrayBuffer();
+  const contentDisposition = responseValue.headers.get('content-disposition');
+  const fileNameMatch = contentDisposition?.match(/filename="([^"]+)"/i);
+
+  return {
+    buffer,
+    contentType: responseValue.headers.get('content-type') || 'application/octet-stream',
+    fileName: fileNameMatch?.[1],
+  };
 }

@@ -16,7 +16,7 @@ describe('OmrProcessor', () => {
   };
   const omrRepository = {
     findExamById: jest.fn(),
-    findEligibleStudentForExam: jest.fn(),
+    findStudentByStudentCode: jest.fn(),
   };
 
   let processor: OmrProcessor;
@@ -73,7 +73,7 @@ describe('OmrProcessor', () => {
         },
       ],
     });
-    omrRepository.findEligibleStudentForExam.mockResolvedValue({
+    omrRepository.findStudentByStudentCode.mockResolvedValue({
       id: 'student-1',
     });
     omrRepository.findExamById.mockResolvedValue({

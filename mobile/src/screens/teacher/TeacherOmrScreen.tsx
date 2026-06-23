@@ -1,15 +1,22 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import {
   ArrowLeft,
+  Check,
   ImageIcon,
   ScanLine,
+  Search,
   Upload,
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { listOmrBatches, mapOmrBatchSummary } from '../../api/edu-scan';
+import {
+  listOmrBatches,
+  listOmrExams,
+  mapExamSummary,
+  mapOmrBatchSummary,
+} from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
 import { ModalSheet } from '../../components/ModalSheet';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -21,10 +28,10 @@ import { SurfaceCard } from '../../components/SurfaceCard';
 import { TextInputField } from '../../components/TextInputField';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { useAppContent } from '../../hooks/useAppContent';
+import type { RootStackParamList } from '../../navigation/types';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
-import type { RootStackParamList } from '../../navigation/types';
 import { useOmrUpload } from '../../features/omr/application/useOmrUpload';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -35,7 +42,8 @@ export function TeacherOmrScreen() {
   const { accessToken } = useAuth();
   const layout = useResponsiveLayout();
   const [showUpload, setShowUpload] = useState(false);
-  const [examCode, setExamCode] = useState('');
+  const [examSearch, setExamSearch] = useState('');
+  const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
   const { data, loading, error, reload } = useAsyncResource(
     async () => {
       if (!accessToken) {
@@ -52,7 +60,28 @@ export function TeacherOmrScreen() {
     },
     [accessToken],
   );
+  const { data: omrExamOptions } = useAsyncResource(
+    async () => {
+      if (!accessToken) {
+        return [];
+      }
+
+      const exams = await listOmrExams(accessToken);
+      return exams.map(mapExamSummary);
+    },
+    [accessToken],
+  );
   const omrBatches = data?.batches ?? [];
+  const filteredExams = useMemo(() => {
+    const keyword = examSearch.trim().toLowerCase();
+    if (!keyword) {
+      return omrExamOptions ?? [];
+    }
+
+    return (omrExamOptions ?? []).filter((item) =>
+      [item.title, ...item.classNames].join(' ').toLowerCase().includes(keyword),
+    );
+  }, [examSearch, omrExamOptions]);
   const { selectedFiles, submitting, submitError, pickFiles, submit } =
     useOmrUpload({
       accessToken,
@@ -130,31 +159,38 @@ export function TeacherOmrScreen() {
           {content.teacher.omr.historyTitle}
         </AppText>
         {omrBatches.map(batch => (
-          <SurfaceCard key={batch.id} style={styles.batchCard}>
-            <View style={styles.batchHead}>
-              <View style={styles.flex}>
-                <AppText variant="body" weight="medium">
-                  {batch.examTitle}
+          <Pressable
+            key={batch.id}
+            onPress={() =>
+              navigation.navigate('TeacherOmrBatchDetail', { batchId: batch.id })
+            }
+          >
+            <SurfaceCard style={styles.batchCard}>
+              <View style={styles.batchHead}>
+                <View style={styles.flex}>
+                  <AppText variant="body" weight="medium">
+                    {batch.examTitle}
+                  </AppText>
+                  <AppText variant="caption" color={palette.mutedForeground}>
+                    {batch.createdAt}
+                  </AppText>
+                </View>
+                <StatusBadge status={batch.status} />
+              </View>
+              <ProgressBar
+                progress={batch.progressPercentage}
+                color={batch.status === 'COMPLETED' ? palette.success : palette.primary}
+              />
+              <View style={styles.batchMeta}>
+                <AppText variant="caption" color={palette.mutedForeground}>
+                  {`${String(batch.successCount)} thành công • ${String(batch.failedCount)} lỗi • ${String(batch.totalFiles)} tổng`}
                 </AppText>
                 <AppText variant="caption" color={palette.mutedForeground}>
-                  {batch.createdAt}
+                  {`${String(batch.progressPercentage)}%`}
                 </AppText>
               </View>
-              <StatusBadge status={batch.status} />
-            </View>
-            <ProgressBar
-              progress={batch.progressPercentage}
-              color={batch.status === 'COMPLETED' ? palette.success : palette.primary}
-            />
-            <View style={styles.batchMeta}>
-              <AppText variant="caption" color={palette.mutedForeground}>
-                {`${String(batch.successCount)} thành công • ${String(batch.failedCount)} lỗi • ${String(batch.totalFiles)} tổng`}
-              </AppText>
-              <AppText variant="caption" color={palette.mutedForeground}>
-                {`${String(batch.progressPercentage)}%`}
-              </AppText>
-            </View>
-          </SurfaceCard>
+            </SurfaceCard>
+          </Pressable>
         ))}
       </View>
 
@@ -167,16 +203,51 @@ export function TeacherOmrScreen() {
           <AppText variant="body" weight="medium" style={styles.center}>
             {content.teacher.omr.selectImages}
           </AppText>
-          <AppText variant="caption" color={palette.mutedForeground} style={styles.center}>
+          <AppText
+            variant="caption"
+            color={palette.mutedForeground}
+            style={styles.center}
+          >
             {content.common.messages.uploadHint}
           </AppText>
         </SurfaceCard>
         <TextInputField
-          label="Mã hoặc tên đề thi"
-          value={examCode}
-          onChangeText={setExamCode}
-          placeholder="Nhập tên đề thi"
+          label="Tìm đề thi OMR"
+          value={examSearch}
+          onChangeText={setExamSearch}
+          placeholder="Nhập tên đề hoặc lớp"
+          trailing={<Search size={18} color={palette.mutedForeground} />}
         />
+        <View style={styles.examList}>
+          {(filteredExams ?? []).map((exam) => {
+            const selected = selectedExamId === exam.id;
+
+            return (
+              <Pressable
+                key={exam.id}
+                style={[styles.examOption, selected ? styles.examOptionActive : null]}
+                onPress={() => setSelectedExamId(exam.id)}
+              >
+                <View style={styles.flex}>
+                  <AppText
+                    variant="body"
+                    weight="medium"
+                    color={selected ? palette.white : palette.foreground}
+                  >
+                    {exam.title}
+                  </AppText>
+                  <AppText
+                    variant="caption"
+                    color={selected ? 'rgba(255,255,255,0.76)' : palette.mutedForeground}
+                  >
+                    {`${String(exam.questionCount)} câu • ${exam.classNames.join(', ') || 'Chưa gán lớp'}`}
+                  </AppText>
+                </View>
+                {selected ? <Check size={16} color={palette.white} /> : null}
+              </Pressable>
+            );
+          })}
+        </View>
         <TextInputField
           label="Ảnh đã chọn"
           value={
@@ -200,10 +271,11 @@ export function TeacherOmrScreen() {
           icon={<ScanLine size={18} color={palette.white} />}
           loading={submitting}
           onPress={async () => {
-            const uploaded = await submit(examCode);
+            const uploaded = await submit(selectedExamId ?? '');
             if (uploaded) {
               setShowUpload(false);
-              setExamCode('');
+              setExamSearch('');
+              setSelectedExamId(null);
             }
           }}
           style={styles.sheetButton}
@@ -278,5 +350,23 @@ const styles = StyleSheet.create({
   },
   sheetButton: {
     marginTop: appTheme.spacing.lg,
+  },
+  examList: {
+    gap: appTheme.spacing.sm,
+  },
+  examOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: appTheme.spacing.md,
+    borderRadius: appTheme.radius.md,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.inputBackground,
+    paddingHorizontal: appTheme.spacing.md,
+    paddingVertical: appTheme.spacing.md,
+  },
+  examOptionActive: {
+    backgroundColor: palette.primary,
+    borderColor: palette.primary,
   },
 });

@@ -2,37 +2,34 @@ import {
   BadGatewayException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import axios from 'axios';
+import { ClientGrpc } from '@nestjs/microservices';
+import { of, throwError } from 'rxjs';
 import { OmrClientService } from '../../../src/modules/omr/services/omr-client.service';
-
-jest.mock('axios');
-
-const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('OmrClientService', () => {
   let service: OmrClientService;
-  let configService: ConfigService;
+  let grpcClient: ClientGrpc;
+  const omrGrpcService = {
+    detect: jest.fn(),
+    gradeOverlay: jest.fn(),
+  };
 
   beforeEach(() => {
-    configService = {
-      get: jest.fn().mockImplementation((key: string) => {
-        if (key === 'OMR_SERVICE_URL') {
-          return 'http://localhost:8000';
-        }
+    grpcClient = {
+      getService: jest.fn().mockReturnValue(omrGrpcService),
+    } as unknown as ClientGrpc;
 
-        return undefined;
-      }),
-    } as unknown as ConfigService;
-
-    service = new OmrClientService(configService);
-    mockedAxios.post.mockReset();
+    service = new OmrClientService(grpcClient);
+    service.onModuleInit();
+    omrGrpcService.detect.mockReset();
+    omrGrpcService.gradeOverlay.mockReset();
   });
 
   it('returns OMR payload when service responds with valid shape', async () => {
-    mockedAxios.post.mockResolvedValue({
-      data: {
+    omrGrpcService.detect.mockReturnValue(
+      of({
         studentCode: '20224871',
+        testId: '001',
         needsReview: false,
         artifacts: {
           processedImagePath: '/tmp/processed.png',
@@ -47,8 +44,8 @@ describe('OmrClientService', () => {
             reviewReason: null,
           },
         ],
-      },
-    });
+      }),
+    );
 
     await expect(
       service.detectImage({
@@ -57,16 +54,19 @@ describe('OmrClientService', () => {
       }),
     ).resolves.toEqual({
       studentCode: '20224871',
+      testId: '001',
       needsReview: false,
       artifacts: {
         processedImagePath: '/tmp/processed.png',
+        annotatedImagePath: null,
+        warpOverlayPath: null,
+        answerScoresPath: null,
+        resultJsonPath: null,
       },
       answers: [
         {
           questionNumber: 1,
           detectedAnswer: 'A',
-          correctAnswer: 'A',
-          isCorrect: true,
           needsReview: false,
           reviewReason: null,
         },
@@ -75,11 +75,11 @@ describe('OmrClientService', () => {
   });
 
   it('raises unprocessable entity when payload shape is invalid', async () => {
-    mockedAxios.post.mockResolvedValue({
-      data: {
+    omrGrpcService.detect.mockReturnValue(
+      of({
         studentCode: '20224871',
-      },
-    });
+      }),
+    );
 
     await expect(
       service.detectImage({
@@ -89,19 +89,35 @@ describe('OmrClientService', () => {
   });
 
   it('maps upstream error to bad gateway exception', async () => {
-    mockedAxios.post.mockRejectedValue({
-      message: 'connect ECONNREFUSED',
-      response: {
-        data: {
-          message: 'OMR upstream failed',
-        },
-      },
-    });
+    omrGrpcService.detect.mockReturnValue(
+      throwError(() => ({
+        code: 14,
+        details: 'OMR upstream failed',
+      })),
+    );
 
     await expect(
       service.detectImage({
         imageUrl: 'https://example.com/sheet.png',
       }),
     ).rejects.toEqual(new BadGatewayException('OMR upstream failed'));
+  });
+
+  it('maps gRPC validation errors to unprocessable entity', async () => {
+    omrGrpcService.gradeOverlay.mockReturnValue(
+      throwError(() => ({
+        code: 3,
+        details: 'Invalid overlay payload',
+      })),
+    );
+
+    await expect(
+      service.renderGradeOverlay({
+        resultJsonPath: '/tmp/result.json',
+        answerKey: [{ questionNumber: 1, correctAnswer: 'A' }],
+      }),
+    ).rejects.toEqual(
+      new UnprocessableEntityException('Invalid overlay payload'),
+    );
   });
 });

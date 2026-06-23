@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package eduscan.omr.v1;
+
+service OmrService {
+  rpc Detect(OmrDetectRequest) returns (OmrProcessResponse);
+  rpc GradeOverlay(OmrGradeOverlayRequest) returns (OmrGradeOverlayResponse);
+  rpc Process(OmrProcessRequest) returns (OmrProcessResponse);
+}
+
+message OmrAnswerKeyItem {
+  int32 question_number = 1;
+  string correct_answer = 2;
+}
+
+message OmrDetectRequest {
+  string image_url = 1;
+  optional string template_name = 2;
+}
+
+message OmrGradeOverlayRequest {
+  string result_json_path = 1;
+  repeated OmrAnswerKeyItem answer_key = 2;
+}
+
+message OmrProcessRequest {
+  string image_url = 1;
+  optional string template_name = 2;
+  repeated OmrAnswerKeyItem answer_key = 3;
+}
+
+message OmrArtifactsResponse {
+  optional string processed_image_path = 1;
+  optional string annotated_image_path = 2;
+  optional string warp_overlay_path = 3;
+  optional string answer_scores_path = 4;
+  optional string result_json_path = 5;
+}
+
+message OmrAnswerResponse {
+  int32 question_number = 1;
+  optional string detected_answer = 2;
+  optional string correct_answer = 3;
+  optional bool is_correct = 4;
+  bool needs_review = 5;
+  optional string review_reason = 6;
+}
+
+message OmrProcessResponse {
+  optional string student_code = 1;
+  optional string test_id = 2;
+  bool needs_review = 3;
+  repeated OmrAnswerResponse answers = 4;
+  OmrArtifactsResponse artifacts = 5;
+}
+
+message OmrGradeOverlayResponse {
+  OmrArtifactsResponse artifacts = 1;
+}

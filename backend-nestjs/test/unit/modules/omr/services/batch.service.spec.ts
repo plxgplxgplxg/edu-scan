@@ -22,6 +22,10 @@ describe('BatchService', () => {
   const eventEmitter = {
     emit: jest.fn(),
   };
+  const sseRegistryService = {
+    emit: jest.fn(),
+    complete: jest.fn(),
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -29,6 +33,7 @@ describe('BatchService', () => {
       omrRepository as never,
       gradingService as never,
       eventEmitter as never,
+      sseRegistryService as never,
     );
     gradingService.calculateScore.mockReturnValue(7.5);
     gradingService.summarizeSubmission.mockReturnValue({
@@ -142,6 +147,15 @@ describe('BatchService', () => {
       batchId: 'batch-1',
       status: OmrBatchStatus.COMPLETED,
     });
+    expect(sseRegistryService.emit).toHaveBeenCalledWith(
+      'omr:batch-1',
+      expect.objectContaining({
+        type: 'batch:completed',
+        batchId: 'batch-1',
+        pct: 100,
+      }),
+    );
+    expect(sseRegistryService.complete).toHaveBeenCalledWith('omr:batch-1');
   });
 });
 

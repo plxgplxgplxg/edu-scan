@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { listOmrExams, uploadOmrBatch } from '../../../api/edu-scan';
+import { uploadOmrBatch } from '../../../api/edu-scan';
 import { documentTypes, pickMultipleDocuments } from '../../shared/infrastructure/document-picker/document-picker-adapter';
 import type { NativeFile } from '../../shared/domain/native-file';
 import { useToast } from '../../../app/ToastProvider';
@@ -25,7 +25,7 @@ export function useOmrUpload({
     }
   };
 
-  const submit = async (examLookup: string) => {
+  const submit = async (examId: string) => {
     if (!accessToken) {
       return false;
     }
@@ -39,21 +39,13 @@ export function useOmrUpload({
     setSubmitError(null);
 
     try {
-      const exams = await listOmrExams(accessToken);
-      const normalizedExam = examLookup.trim().toLowerCase();
-      const exam = exams.find(
-        (item) =>
-          item.title.toLowerCase() === normalizedExam ||
-          item.id.toLowerCase() === normalizedExam,
-      );
-
-      if (!exam) {
+      if (!examId.trim()) {
         setSubmitError('Cần chọn đề thi hợp lệ');
         return false;
       }
 
       await uploadOmrBatch(accessToken, {
-        examId: exam.id,
+        examId: examId.trim(),
         files: selectedFiles.map((file) => ({
           uri: file.uri,
           name: file.name,

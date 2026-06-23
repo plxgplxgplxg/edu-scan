@@ -1,18 +1,34 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
-from app.api.endpoints.omr import router as omr_router
+from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
+from app.grpc.server import GrpcServerManager
 
 
 def create_app() -> FastAPI:
+    grpc_server = GrpcServerManager() if settings.grpc_enabled else None
+
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        if grpc_server is not None:
+            grpc_server.start()
+
+        try:
+            yield
+        finally:
+            if grpc_server is not None:
+                grpc_server.stop()
+
     app = FastAPI(
         title="EduScan OMR Service",
         version="0.1.0",
-        description="FastAPI service for OMR image processing.",
+        description="gRPC-backed OMR image processing service.",
+        lifespan=lifespan,
     )
 
     register_exception_handlers(app)
-    app.include_router(omr_router)
 
     @app.get("/health")
     async def health_check():

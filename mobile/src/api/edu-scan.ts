@@ -2,7 +2,10 @@ import type {
   AssignmentSummary,
   ClassSummary,
   NotificationItem,
+  OmrBatchDetail,
   OmrBatchSummary,
+  OmrSubmissionDetail,
+  OmrSubmissionSummary,
   ProgressPoint,
   QuestionSummary,
   RemarkSummary,
@@ -12,7 +15,7 @@ import type {
   UserSummary,
 } from '../types/domain';
 import type { DifficultyKey, UserRole } from '../types/app';
-import { requestJson } from './http';
+import { requestBinary, requestJson } from './http';
 
 type Role = UserRole;
 
@@ -272,6 +275,40 @@ type OmrBatchApi = {
   failedCount: number;
   progressPercentage: number;
   createdAt: string;
+  completedAt?: string | null;
+  matchedCount: number;
+  unmatchedCount: number;
+  submissions: Array<{
+    id: string;
+    studentId: string | null;
+    studentCode: string | null;
+    studentName: string | null;
+    detectedTestId: string | null;
+    resolvedTestCode: string | null;
+    resolvedVariantId: string | null;
+    testCodeResolutionStatus: string;
+    imageUrl: string | null;
+    processedImageUrl: string | null;
+    annotatedImageUrl: string | null;
+    warpOverlayUrl: string | null;
+    answerScoresUrl: string | null;
+    status: 'GRADED' | 'NEEDS_REVIEW' | 'FAILED';
+    score: number;
+    maxScore: number;
+    correctCount: number;
+    wrongCount: number;
+    reviewCount: number;
+    needsReview: boolean;
+    details: Array<{
+      questionNumber: number;
+      correctAnswer: string | null;
+      detectedAnswer: string | null;
+      finalAnswer: string | null;
+      isCorrect: boolean;
+      needsReview: boolean;
+      reviewReason: string | null;
+    }>;
+  }>;
 };
 
 export type ClassDetailView = {
@@ -309,6 +346,21 @@ export type TeacherQuestionDetailView = {
     D: string;
   };
   correctAnswer: 'A' | 'B' | 'C' | 'D';
+};
+
+export type OmrSubmissionDetailView = OmrSubmissionSummary;
+
+export type ReportExportJob = {
+  jobId: string;
+  classId: string;
+  status: 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  format: 'xlsx' | 'pdf';
+  scope: string;
+  fileName: string | null;
+  mimeType: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+  completedAt: string | null;
 };
 
 export async function login(email: string, password: string) {
@@ -671,6 +723,72 @@ export async function listOmrBatches(token: string) {
   return requestJson<OmrBatchApi[]>('/omr/batches', { token });
 }
 
+export async function getOmrBatchDetail(token: string, batchId: string) {
+  return requestJson<OmrBatchApi>(`/omr/batch/${encodeURIComponent(batchId)}`, { token })
+    .then(mapOmrBatchDetail);
+}
+
+export async function updateSubmissionOverride(
+  token: string,
+  submissionId: string,
+  payload: {
+    studentCode?: string;
+    resolvedTestCode?: string;
+    details?: Array<{
+      questionNumber: number;
+      finalAnswer: 'A' | 'B' | 'C' | 'D';
+    }>;
+  },
+) {
+  return requestJson<SubmissionDetailApi>(
+    `/submissions/${encodeURIComponent(submissionId)}/override`,
+    {
+      method: 'PATCH',
+      token,
+      body: payload,
+    },
+  );
+}
+
+export async function exportClassReport(
+  token: string,
+  classId: string,
+  format: 'xlsx' | 'pdf',
+) {
+  return requestBinary(
+    `/reports/class/${encodeURIComponent(classId)}?format=${encodeURIComponent(format)}&scope=all`,
+    { token },
+  );
+}
+
+export async function createClassReportExportJob(
+  token: string,
+  classId: string,
+  format: 'xlsx' | 'pdf',
+) {
+  return requestJson<ReportExportJob>(
+    `/reports/class/${encodeURIComponent(classId)}/jobs?format=${encodeURIComponent(format)}&scope=all`,
+    {
+      method: 'POST',
+      token,
+    },
+  );
+}
+
+export async function getClassReportExportJob(token: string, jobId: string) {
+  return requestJson<ReportExportJob>(
+    `/reports/jobs/${encodeURIComponent(jobId)}`,
+    { token },
+  );
+}
+
+export async function downloadClassReportExportFile(token: string, jobId: string) {
+  return requestBinary(
+    `/reports/jobs/${encodeURIComponent(jobId)}/file`,
+    { token },
+  );
+}
+
 export async function uploadOmrBatch(
   token: string,
   payload: {
@@ -922,6 +1040,68 @@ export function mapOmrBatchSummary(item: OmrBatchApi): OmrBatchSummary {
     failedCount: item.failedCount,
     progressPercentage: item.progressPercentage,
     createdAt: item.createdAt,
+  };
+}
+
+export function mapOmrSubmissionDetail(item: OmrSubmissionDetailApi): OmrSubmissionDetail {
+  return {
+    questionNumber: item.questionNumber,
+    correctAnswer: item.correctAnswer,
+    detectedAnswer: item.detectedAnswer,
+    finalAnswer: item.finalAnswer,
+    isCorrect: item.isCorrect,
+    needsReview: item.needsReview,
+    reviewReason: item.reviewReason ?? undefined,
+  };
+}
+
+type OmrSubmissionDetailApi = OmrBatchApi['submissions'][number]['details'][number];
+
+export function mapOmrSubmissionSummary(
+  item: OmrBatchApi['submissions'][number],
+): OmrSubmissionSummary {
+  return {
+    id: item.id,
+    studentId: item.studentId,
+    studentCode: item.studentCode,
+    studentName: item.studentName,
+    detectedTestId: item.detectedTestId,
+    resolvedTestCode: item.resolvedTestCode,
+    resolvedVariantId: item.resolvedVariantId,
+    testCodeResolutionStatus: item.testCodeResolutionStatus,
+    imageUrl: item.imageUrl,
+    processedImageUrl: item.processedImageUrl,
+    annotatedImageUrl: item.annotatedImageUrl,
+    warpOverlayUrl: item.warpOverlayUrl,
+    answerScoresUrl: item.answerScoresUrl,
+    status: item.status,
+    score: item.score,
+    maxScore: item.maxScore,
+    correctCount: item.correctCount,
+    wrongCount: item.wrongCount,
+    reviewCount: item.reviewCount,
+    needsReview: item.needsReview,
+    details: item.details.map(mapOmrSubmissionDetail),
+  };
+}
+
+export function mapOmrBatchDetail(item: OmrBatchApi): OmrBatchDetail {
+  return {
+    id: item.id,
+    examId: item.examId,
+    examTitle: item.examTitle,
+    teacherId: item.teacherId,
+    status: item.status,
+    totalFiles: item.totalFiles,
+    processedFiles: item.processedFiles,
+    successCount: item.successCount,
+    failedCount: item.failedCount,
+    progressPercentage: item.progressPercentage,
+    createdAt: item.createdAt,
+    completedAt: item.completedAt,
+    matchedCount: item.matchedCount,
+    unmatchedCount: item.unmatchedCount,
+    submissions: item.submissions.map(mapOmrSubmissionSummary),
   };
 }
 

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import {
   BookOpen,
@@ -15,7 +15,9 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import {
   addStudentToClass,
+  createClassReportExportJob,
   createAssignment,
+  downloadClassReportExportFile,
   getClassDetail,
   listAssignments,
   mapClassDetail,
@@ -34,7 +36,12 @@ import { TextInputField } from '../../components/TextInputField';
 import { FilterChips } from '../../components/FilterChips';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { useAppContent } from '../../hooks/useAppContent';
+import { useToast } from '../../app/ToastProvider';
 import { useCopyClassCode } from '../../features/classes/application/useCopyClassCode';
+import {
+  subscribeReportExportJob,
+  type ReportExportSseEvent,
+} from '../../features/reports/application/report-export-sse';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
@@ -50,6 +57,7 @@ export function TeacherClassDetailScreen() {
   const content = useAppContent();
   const { accessToken } = useAuth();
   const layout = useResponsiveLayout();
+  const { showToast } = useToast();
   const { copyClassCode } = useCopyClassCode();
   const classId = route.params?.classId;
   const [activeTab, setActiveTab] = useState<DetailTab>('students');
@@ -58,6 +66,16 @@ export function TeacherClassDetailScreen() {
   const [showCreateAssignment, setShowCreateAssignment] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const reportJobUnsubscribeRef = useRef<(() => void) | null>(null);
+  const [reportJob, setReportJob] = useState<{
+    jobId: string;
+    status: 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+    format: 'xlsx' | 'pdf';
+    fileName: string | null;
+    errorMessage: string | null;
+    receivedFileName?: string;
+    receivedFileSizeKb?: number;
+  } | null>(null);
   const [assignmentForm, setAssignmentForm] = useState({
     title: '',
     description: '',
@@ -90,8 +108,103 @@ export function TeacherClassDetailScreen() {
   );
 
   const currentClass = data?.currentClass;
+  const currentClassId = currentClass?.id ?? null;
   const classStudents = currentClass?.students ?? [];
   const teacherAssignments = data?.assignments ?? [];
+
+  useEffect(() => {
+    return () => {
+      reportJobUnsubscribeRef.current?.();
+      reportJobUnsubscribeRef.current = null;
+    };
+  }, []);
+
+  const startReportExport = async (format: 'xlsx' | 'pdf') => {
+    if (!accessToken || !currentClassId) {
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const job = await createClassReportExportJob(accessToken, currentClassId, format);
+      setReportJob({
+        jobId: job.jobId,
+        status: job.status,
+        format: job.format,
+        fileName: job.fileName,
+        errorMessage: job.errorMessage,
+      });
+
+      reportJobUnsubscribeRef.current?.();
+      const unsubscribe = subscribeReportExportJob({
+        token: accessToken,
+        jobId: job.jobId,
+        onEvent: async (event: ReportExportSseEvent) => {
+          const nextStatus =
+            event.type === 'report:completed'
+              ? 'COMPLETED'
+              : event.type === 'report:failed'
+                ? 'FAILED'
+                : event.type === 'report:processing'
+                  ? 'PROCESSING'
+                  : 'QUEUED';
+
+          setReportJob((current) =>
+            current && current.jobId === event.jobId
+              ? {
+                  ...current,
+                  status: nextStatus,
+                  fileName: event.fileName ?? current.fileName,
+                  errorMessage: event.errorMessage ?? null,
+                }
+              : current,
+          );
+
+          if (event.type === 'report:completed') {
+            try {
+              const file = await downloadClassReportExportFile(accessToken, event.jobId);
+              const sizeKb = Math.max(1, Math.round(file.buffer.byteLength / 1024));
+              setReportJob((current) =>
+                current && current.jobId === event.jobId
+                  ? {
+                      ...current,
+                      receivedFileName: file.fileName ?? event.fileName ?? undefined,
+                      receivedFileSizeKb: sizeKb,
+                    }
+                  : current,
+              );
+              showToast(
+                `Đã nhận ${file.fileName ?? event.fileName ?? 'report'} (${String(sizeKb)} KB)`,
+              );
+            } catch (err) {
+              setSubmitError(
+                err instanceof Error ? err.message : 'Có lỗi tải file báo cáo',
+              );
+            } finally {
+              unsubscribe();
+              reportJobUnsubscribeRef.current = null;
+            }
+          }
+
+          if (event.type === 'report:failed') {
+            setSubmitError(event.errorMessage || 'Xuất báo cáo thất bại');
+            unsubscribe();
+            reportJobUnsubscribeRef.current = null;
+          }
+        },
+        onError: (err) => {
+          setSubmitError(err.message);
+        },
+      });
+      reportJobUnsubscribeRef.current = unsubscribe;
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const tabItems = useMemo(
     () => [
@@ -316,7 +429,49 @@ export function TeacherClassDetailScreen() {
                 </AppText>
               </SurfaceCard>
             ))}
-            <PrimaryButton label={content.teacher.classes.updateInfo} onPress={() => undefined} />
+            <PrimaryButton
+              label="Xuất báo cáo XLSX"
+              loading={submitting}
+              onPress={async () => {
+                await startReportExport('xlsx');
+              }}
+            />
+            <PrimaryButton
+              variant="outline"
+              label="Xuất báo cáo PDF"
+              loading={submitting}
+              onPress={async () => {
+                await startReportExport('pdf');
+              }}
+            />
+            {reportJob ? (
+              <SurfaceCard style={styles.reportCard}>
+                <AppText variant="caption" color={palette.mutedForeground}>
+                  Export job
+                </AppText>
+                <AppText variant="body" weight="medium">
+                  {`${reportJob.format.toUpperCase()} • ${reportJob.jobId}`}
+                </AppText>
+                <AppText variant="caption" color={palette.mutedForeground}>
+                  {`Trạng thái: ${reportJob.status}`}
+                </AppText>
+                {reportJob.receivedFileName ? (
+                  <AppText variant="caption" color={palette.success}>
+                    {`Đã nhận file ${reportJob.receivedFileName} (${String(reportJob.receivedFileSizeKb ?? 0)} KB)`}
+                  </AppText>
+                ) : null}
+                {reportJob.errorMessage ? (
+                  <AppText variant="caption" color={palette.destructive}>
+                    {reportJob.errorMessage}
+                  </AppText>
+                ) : null}
+              </SurfaceCard>
+            ) : null}
+            {submitError ? (
+              <AppText variant="caption" color={palette.destructive}>
+                {submitError}
+              </AppText>
+            ) : null}
           </View>
         ) : null}
       </View>
@@ -543,6 +698,9 @@ const styles = StyleSheet.create({
   infoCardStack: {
     flexWrap: 'wrap',
     alignItems: 'flex-start',
+  },
+  reportCard: {
+    gap: 4,
   },
   sheetTitle: {
     marginBottom: appTheme.spacing.lg,

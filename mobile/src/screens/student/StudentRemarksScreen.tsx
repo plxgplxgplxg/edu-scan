@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { ArrowLeft, Plus } from 'lucide-react-native';
-import { useNavigation } from '@react-navigation/native';
+import { ArrowLeft, Check, Plus } from 'lucide-react-native';
+import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import {
   createRemark,
   getSubmissionDetail,
   listStudentRemarks,
+  listStudentSubmissions,
   mapRemarkSummary,
+  mapResultSummary,
 } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
 import { ModalSheet } from '../../components/ModalSheet';
@@ -20,16 +22,17 @@ import { SurfaceCard } from '../../components/SurfaceCard';
 import { TextInputField } from '../../components/TextInputField';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { useAppContent } from '../../hooks/useAppContent';
+import type { RootStackParamList } from '../../navigation/types';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import { formatVietnameseDate } from '../../utils/format';
-import type { RootStackParamList } from '../../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export function StudentRemarksScreen() {
   const navigation = useNavigation<Nav>();
+  const route = useRoute<RouteProp<RootStackParamList, 'StudentRemarks'>>();
   const content = useAppContent();
   const { accessToken } = useAuth();
   const layout = useResponsiveLayout();
@@ -52,7 +55,52 @@ export function StudentRemarksScreen() {
     },
     [accessToken],
   );
+  const { data: resultOptions } = useAsyncResource(
+    async () => {
+      if (!accessToken) {
+        return [];
+      }
+
+      const response = await listStudentSubmissions(accessToken);
+      return response.items.map(mapResultSummary);
+    },
+    [accessToken],
+  );
+  const { data: selectedResultDetail } = useAsyncResource(
+    async () => {
+      if (!accessToken || !form.resultId.trim()) {
+        return null;
+      }
+
+      return getSubmissionDetail(accessToken, form.resultId.trim());
+    },
+    [accessToken, form.resultId],
+  );
   const studentRemarks = data ?? [];
+  const questionOptions = useMemo(
+    () => selectedResultDetail?.details ?? [],
+    [selectedResultDetail],
+  );
+
+  useEffect(() => {
+    if (route.params?.resultId && !showCreate) {
+      setShowCreate(true);
+    }
+  }, [route.params?.resultId, showCreate]);
+
+  useEffect(() => {
+    if (!showCreate || !route.params?.resultId) {
+      return;
+    }
+
+    setForm((current) => ({
+      ...current,
+      resultId: current.resultId || route.params?.resultId || '',
+      questionNumber:
+        current.questionNumber
+        || (route.params?.questionNumber ? String(route.params.questionNumber) : ''),
+    }));
+  }, [route.params?.questionNumber, route.params?.resultId, showCreate]);
 
   return (
     <Screen>
@@ -151,12 +199,81 @@ export function StudentRemarksScreen() {
           {content.student.remarks.createTitle}
         </AppText>
         <View style={styles.sheetBody}>
-          <TextInputField
-            label="Result ID"
-            value={form.resultId}
-            onChangeText={value => setForm((current) => ({ ...current, resultId: value }))}
-            placeholder="Nhập ID kết quả"
-          />
+          <AppText variant="label" weight="semibold">
+            Chọn bài thi
+          </AppText>
+          <View style={styles.optionList}>
+            {(resultOptions ?? []).map((item) => {
+              const selected = form.resultId === item.id;
+
+              return (
+                <Pressable
+                  key={item.id}
+                  style={[styles.optionCard, selected ? styles.optionCardActive : null]}
+                  onPress={() =>
+                    setForm((current) => ({
+                      ...current,
+                      resultId: item.id,
+                      questionNumber: '',
+                    }))
+                  }
+                >
+                  <View style={styles.flex}>
+                    <AppText
+                      variant="body"
+                      weight="medium"
+                      color={selected ? palette.white : palette.foreground}
+                    >
+                      {item.examTitle}
+                    </AppText>
+                    <AppText
+                      variant="caption"
+                      color={selected ? 'rgba(255,255,255,0.76)' : palette.mutedForeground}
+                    >
+                      {`${item.score}/${item.maxScore} điểm`}
+                    </AppText>
+                  </View>
+                  {selected ? <Check size={16} color={palette.white} /> : null}
+                </Pressable>
+              );
+            })}
+          </View>
+          {questionOptions.length ? (
+            <>
+              <AppText variant="label" weight="semibold">
+                Chọn câu cần phúc khảo
+              </AppText>
+              <View style={styles.questionWrap}>
+                {questionOptions.map((question) => {
+                  const selected = form.questionNumber === String(question.questionNumber);
+
+                  return (
+                    <Pressable
+                      key={question.id}
+                      style={[
+                        styles.questionChip,
+                        selected ? styles.questionChipActive : null,
+                      ]}
+                      onPress={() =>
+                        setForm((current) => ({
+                          ...current,
+                          questionNumber: String(question.questionNumber),
+                        }))
+                      }
+                    >
+                      <AppText
+                        variant="caption"
+                        weight="semibold"
+                        color={selected ? palette.white : palette.foreground}
+                      >
+                        {`Câu ${String(question.questionNumber)}`}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </>
+          ) : null}
           <TextInputField
             label={content.common.form.questionNumber}
             value={form.questionNumber}
@@ -217,7 +334,6 @@ export function StudentRemarksScreen() {
           ) : null}
         </View>
       </ModalSheet>
-
     </Screen>
   );
 }
@@ -273,5 +389,40 @@ const styles = StyleSheet.create({
   },
   sheetBody: {
     gap: appTheme.spacing.lg,
+  },
+  optionList: {
+    gap: appTheme.spacing.sm,
+  },
+  optionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: appTheme.spacing.md,
+    borderRadius: appTheme.radius.md,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.inputBackground,
+    paddingHorizontal: appTheme.spacing.md,
+    paddingVertical: appTheme.spacing.md,
+  },
+  optionCardActive: {
+    backgroundColor: palette.primary,
+    borderColor: palette.primary,
+  },
+  questionWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: appTheme.spacing.sm,
+  },
+  questionChip: {
+    borderRadius: appTheme.radius.md,
+    borderWidth: 1,
+    borderColor: palette.border,
+    paddingHorizontal: appTheme.spacing.md,
+    paddingVertical: appTheme.spacing.sm,
+    backgroundColor: palette.inputBackground,
+  },
+  questionChipActive: {
+    backgroundColor: palette.primary,
+    borderColor: palette.primary,
   },
 });
