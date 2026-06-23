@@ -5,6 +5,8 @@ import { ReportsRepository } from './repositories/reports.repository';
 import { ReportsService } from './services/reports.service';
 import { ExcelGeneratorService } from './generators/excel-generator.service';
 import { PdfGeneratorService } from './generators/pdf-generator.service';
+import { ReportExportJobService } from './services/report-export-job.service';
+import { SseRegistryService } from '../omr/services/sse-registry.service';
 
 @Module({
   imports: [DatabaseModule],
@@ -14,6 +16,8 @@ import { PdfGeneratorService } from './generators/pdf-generator.service';
     ReportsRepository,
     ExcelGeneratorService,
     PdfGeneratorService,
+    ReportExportJobService,
+    SseRegistryService,
   ],
   exports: [ReportsService],
 })

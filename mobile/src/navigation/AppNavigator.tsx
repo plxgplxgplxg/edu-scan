@@ -30,6 +30,7 @@ import { TeacherRemarksScreen } from '../screens/teacher/TeacherRemarksScreen';
 import { TeacherQuestionsScreen } from '../screens/teacher/TeacherQuestionsScreen';
 import { TeacherExamBuilderScreen } from '../screens/teacher/TeacherExamBuilderScreen';
 import { TeacherClassExamBuilderScreen } from '../screens/teacher/TeacherClassExamBuilderScreen';
+import { TeacherOmrBatchDetailScreen } from '../screens/teacher/TeacherOmrBatchDetailScreen';
 import { StudentDashboardScreen } from '../screens/student/StudentDashboardScreen';
 import { StudentClassesScreen } from '../screens/student/StudentClassesScreen';
 import { StudentClassDetailScreen } from '../screens/student/StudentClassDetailScreen';
@@ -236,6 +237,7 @@ export function AppNavigator() {
             <Stack.Screen name="TeacherTabs" component={TeacherTabsNavigator} />
             <Stack.Screen name="TeacherClassDetail" component={TeacherClassDetailScreen} />
             <Stack.Screen name="TeacherOmrExams" component={TeacherOmrExamsScreen} />
+            <Stack.Screen name="TeacherOmrBatchDetail" component={TeacherOmrBatchDetailScreen} />
             <Stack.Screen name="TeacherClassExams" component={TeacherClassExamsScreen} />
             <Stack.Screen name="TeacherRemarks" component={TeacherRemarksScreen} />
             <Stack.Screen name="TeacherQuestions" component={TeacherQuestionsScreen} />

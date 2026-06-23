@@ -32,6 +32,7 @@ export type RootStackParamList = {
   TeacherClasses: undefined;
   TeacherClassDetail: { classId?: string } | undefined;
   TeacherOmrExams: undefined;
+  TeacherOmrBatchDetail: { batchId: string };
   TeacherClassExams: undefined;
   TeacherOMR: undefined;
   TeacherAssignments: undefined;
@@ -45,7 +46,12 @@ export type RootStackParamList = {
   StudentResults: undefined;
   StudentResultDetail: { resultId?: string } | undefined;
   StudentAssignments: undefined;
-  StudentRemarks: undefined;
+  StudentRemarks:
+    | {
+        resultId?: string;
+        questionNumber?: number;
+      }
+    | undefined;
   StudentProgress: undefined;
   AdminDashboard: undefined;
   AdminUsers: undefined;
