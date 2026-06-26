@@ -13,6 +13,7 @@ describe('OmrProcessor', () => {
   const gradingService = {
     resolveVariant: jest.fn(),
     prepareSubmission: jest.fn(),
+    summarizeSubmission: jest.fn(),
   };
   const omrRepository = {
     findExamById: jest.fn(),
@@ -60,6 +61,13 @@ describe('OmrProcessor', () => {
       detectedTestId: '001',
       resolvedTestCode: '001',
     });
+    gradingService.summarizeSubmission.mockReturnValue({
+      score: 7.5,
+      maxScore: 10,
+      correctCount: 1,
+      wrongCount: 1,
+      reviewCount: 0,
+    });
     gradingService.prepareSubmission.mockReturnValue({
       studentCode: 'STU-001',
       status: SubmissionStatus.GRADED,
@@ -91,6 +99,8 @@ describe('OmrProcessor', () => {
     const payload = await processor.processJob({
       batchId: 'batch-1',
       examId: 'exam-1',
+      fileIndex: 0,
+      totalFiles: 1,
       templateName: 'tnteam_60q_4col_ad',
       file: {
         fieldname: 'files',

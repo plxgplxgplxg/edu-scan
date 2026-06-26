@@ -33,6 +33,8 @@ import { BullModule } from '@nestjs/bull';
         redis: {
           host: configService.get<string>('redis.host', 'localhost'),
           port: configService.get<number>('redis.port', 6379),
+          password: configService.get<string>('redis.password'),
+          tls: configService.get<boolean>('redis.tls') ? {} : undefined,
         },
       }),
     }),

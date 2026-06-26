@@ -21,6 +21,10 @@ describe('BatchService', () => {
   const eventEmitter = {
     emit: jest.fn(),
   };
+  const sseRegistryService = {
+    emit: jest.fn(),
+    complete: jest.fn(),
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -28,6 +32,7 @@ describe('BatchService', () => {
       omrRepository as never,
       new GradingService(),
       eventEmitter as never,
+      sseRegistryService as never,
     );
   });
 

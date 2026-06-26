@@ -137,6 +137,7 @@ function buildExam() {
   return {
     id: 'exam-1',
     teacherId: TEST_TEACHER_ID,
+    type: 'OMR',
     answerKeys: [
       { questionNumber: 1, correctAnswer: AnswerChoice.A },
       { questionNumber: 2, correctAnswer: AnswerChoice.B },

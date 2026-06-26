@@ -5,10 +5,12 @@ services:
     image: postgres:15-alpine
     container_name: eduscan-postgres
     restart: always
+    env_file:
+      - backend-nestjs/.env
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mysecretpassword}
-      POSTGRES_DB: ${POSTGRES_DB:-eduscan}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
@@ -18,11 +20,13 @@ services:
     image: redis:7-alpine
     container_name: eduscan-redis
     restart: always
+    env_file:
+      - backend-nestjs/.env
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
+    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
 
 volumes:
   postgres_data:

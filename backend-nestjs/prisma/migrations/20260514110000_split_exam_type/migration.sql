@@ -10,6 +10,30 @@ CREATE TYPE "ClassExamSubmissionStatus" AS ENUM ('PENDING_MANUAL_GRADE', 'GRADED
 -- AlterTable
 ALTER TABLE "Exam" ADD COLUMN "type" "ExamType" NOT NULL DEFAULT 'OMR';
 
+-- CreateTable
+CREATE TABLE "ExamClass" (
+    "id" TEXT NOT NULL,
+    "examId" TEXT NOT NULL,
+    "classId" TEXT NOT NULL,
+
+    CONSTRAINT "ExamClass_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ExamClass_examId_classId_key" ON "ExamClass"("examId", "classId");
+
+-- Backfill: copy classId from Exam to ExamClass
+INSERT INTO "ExamClass" ("id", "examId", "classId")
+SELECT "id" || '-class', "id", "classId" FROM "Exam";
+
+-- AlterTable: drop old relation
+ALTER TABLE "Exam" DROP CONSTRAINT "Exam_classId_fkey";
+ALTER TABLE "Exam" DROP COLUMN "classId";
+
+-- AddForeignKey
+ALTER TABLE "ExamClass" ADD CONSTRAINT "ExamClass_examId_fkey" FOREIGN KEY ("examId") REFERENCES "Exam"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ExamClass" ADD CONSTRAINT "ExamClass_classId_fkey" FOREIGN KEY ("classId") REFERENCES "Class"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
 -- Backfill: exams with class links become CLASS_EXAM
 UPDATE "Exam"
 SET "type" = 'CLASS_EXAM'

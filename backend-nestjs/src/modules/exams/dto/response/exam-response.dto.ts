@@ -152,22 +152,22 @@ export function toExamResponseDto(exam: ExamWithRelations): ExamResponseDto {
     teacherId: exam.teacherId,
     createdAt: exam.createdAt,
     updatedAt: exam.updatedAt,
-    classes: exam.classes.map((item) => ({
+    classes: (exam.classes ?? []).map((item) => ({
       id: item.class.id,
       name: item.class.name,
       subject: item.class.subject,
       schoolYear: item.class.schoolYear,
       code: item.class.code,
     })),
-    variants: exam.variants.map((variant) => ({
+    variants: (exam.variants ?? []).map((variant) => ({
       id: variant.id,
       testCode: variant.testCode,
-      answerKeys: variant.answerKeys.map((item) => ({
+      answerKeys: (variant.answerKeys ?? []).map((item) => ({
         questionNumber: item.questionNumber,
         correctAnswer: item.correctAnswer,
       })),
     })),
-    questionMap: exam.questionMap.map((item) => ({
+    questionMap: (exam.questionMap ?? []).map((item) => ({
       questionNumber: item.questionNumber,
       questionId: item.questionId,
       question: item.question
@@ -179,7 +179,7 @@ export function toExamResponseDto(exam: ExamWithRelations): ExamResponseDto {
           }
         : null,
     })),
-    classQuestions: exam.classQuestions.map((item) => ({
+    classQuestions: (exam.classQuestions ?? []).map((item) => ({
       id: item.id,
       orderIndex: item.orderIndex,
       type: item.type,
