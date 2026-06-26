@@ -1,3 +1,5 @@
+import logging
+import traceback
 import grpc
 
 from app.core.exceptions import ImageDownloadError, InvalidImageError, OmrServiceError
@@ -15,8 +17,10 @@ from app.grpc.mappers import (
 class OmrGrpcService(omr_service_pb2_grpc.OmrServiceServicer):
     def __init__(self, orchestrator: OmrOrchestrator | None = None) -> None:
         self.orchestrator = orchestrator or OmrOrchestrator()
+        self._logger = logging.getLogger(self.__class__.__name__)
 
     def Detect(self, request, context):
+        self._logger.info("Detect request received for imageUrl: %s, templateName: %s", request.image_url, request.template_name)
         return self._call_with_boundary(
             context,
             lambda: process_response_to_proto(
@@ -25,6 +29,7 @@ class OmrGrpcService(omr_service_pb2_grpc.OmrServiceServicer):
         )
 
     def GradeOverlay(self, request, context):
+        self._logger.info("GradeOverlay request received for resultJsonPath: %s", request.result_json_path)
         return self._call_with_boundary(
             context,
             lambda: grade_overlay_response_to_proto(
@@ -35,6 +40,7 @@ class OmrGrpcService(omr_service_pb2_grpc.OmrServiceServicer):
         )
 
     def Process(self, request, context):
+        self._logger.info("Process request received for imageUrl: %s, templateName: %s", request.image_url, request.template_name)
         return self._call_with_boundary(
             context,
             lambda: process_response_to_proto(
@@ -46,10 +52,17 @@ class OmrGrpcService(omr_service_pb2_grpc.OmrServiceServicer):
         try:
             return operation()
         except ImageDownloadError as exc:
+            self._logger.warning("ImageDownloadError: %s", exc.message)
             context.abort(grpc.StatusCode.UNAVAILABLE, exc.message)
         except InvalidImageError as exc:
+            self._logger.warning("InvalidImageError: %s", exc.message)
             context.abort(grpc.StatusCode.FAILED_PRECONDITION, exc.message)
         except ValueError as exc:
+            self._logger.warning("ValueError: %s", str(exc))
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(exc))
         except OmrServiceError as exc:
+            self._logger.error("OmrServiceError: %s", exc.message)
             context.abort(grpc.StatusCode.INTERNAL, exc.message)
+        except Exception as exc:
+            self._logger.error("Unexpected error in gRPC handler: %s\n%s", str(exc), traceback.format_exc())
+            context.abort(grpc.StatusCode.INTERNAL, f"Unexpected error: {str(exc)}")

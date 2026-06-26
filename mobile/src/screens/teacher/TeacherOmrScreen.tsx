@@ -1,8 +1,9 @@
-import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import {
   ArrowLeft,
   Check,
+  FolderOpen,
   ImageIcon,
   ScanLine,
   Search,
@@ -33,6 +34,7 @@ import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import { useOmrUpload } from '../../features/omr/application/useOmrUpload';
+import { useToast } from '../../app/ToastProvider';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -82,11 +84,60 @@ export function TeacherOmrScreen() {
       [item.title, ...item.classNames].join(' ').toLowerCase().includes(keyword),
     );
   }, [examSearch, omrExamOptions]);
+  const { showToast } = useToast();
+  const prevBatchesRef = useRef<typeof omrBatches>([]);
+  const [showSourceOptions, setShowSourceOptions] = useState(false);
+
   const { selectedFiles, submitting, submitError, pickFiles, submit } =
     useOmrUpload({
       accessToken,
       onUploaded: reload,
     });
+
+  useEffect(() => {
+    if (prevBatchesRef.current.length > 0) {
+      omrBatches.forEach((batch) => {
+        const prevBatch = prevBatchesRef.current.find((b) => b.id === batch.id);
+        if (
+          prevBatch &&
+          (prevBatch.status === 'PENDING' || prevBatch.status === 'PROCESSING') &&
+          batch.status !== 'PENDING' &&
+          batch.status !== 'PROCESSING'
+        ) {
+          if (batch.status === 'COMPLETED') {
+            showToast(
+              `Đã xử lý xong phiếu OMR đề: ${batch.examTitle} (${batch.successCount}/${batch.totalFiles} thành công)!`
+            );
+          } else if (batch.status === 'PARTIAL_FAILED') {
+            showToast(
+              `Đã xử lý xong phiếu OMR đề: ${batch.examTitle} (${batch.successCount} thành công, ${batch.failedCount} lỗi)!`
+            );
+          } else {
+            showToast(
+              `Xử lý thất bại toàn bộ phiếu OMR đề: ${batch.examTitle}!`
+            );
+          }
+        }
+      });
+    }
+    prevBatchesRef.current = omrBatches;
+  }, [omrBatches, showToast]);
+
+  useEffect(() => {
+    const hasActiveBatch = omrBatches.some(
+      (batch) => batch.status === 'PENDING' || batch.status === 'PROCESSING'
+    );
+
+    if (!hasActiveBatch) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      void reload();
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [omrBatches, reload]);
 
   return (
     <Screen>
@@ -198,19 +249,60 @@ export function TeacherOmrScreen() {
         <AppText variant="headline" weight="bold" style={styles.sheetTitle}>
           {content.teacher.omr.uploadTitle}
         </AppText>
-        <SurfaceCard style={styles.dropZone}>
-          <ImageIcon size={40} color={palette.primary} />
-          <AppText variant="body" weight="medium" style={styles.center}>
-            {content.teacher.omr.selectImages}
-          </AppText>
-          <AppText
-            variant="caption"
-            color={palette.mutedForeground}
-            style={styles.center}
-          >
-            {content.common.messages.uploadHint}
-          </AppText>
-        </SurfaceCard>
+        {showSourceOptions ? (
+          <View style={styles.inlineSourceContainer}>
+            <Pressable
+              style={styles.inlineSourceButton}
+              onPress={() => {
+                setShowSourceOptions(false);
+                void pickFiles();
+              }}
+            >
+              <FolderOpen size={24} color={palette.primary} />
+              <AppText variant="caption" weight="semibold" color={palette.primary}>
+                Chọn trong Tệp
+              </AppText>
+            </Pressable>
+            <View style={styles.inlineDivider} />
+            <Pressable
+              style={styles.inlineSourceButton}
+              onPress={() => {
+                setShowSourceOptions(false);
+                void pickFiles();
+              }}
+            >
+              <ImageIcon size={24} color={palette.primary} />
+              <AppText variant="caption" weight="semibold" color={palette.primary}>
+                Chọn trong Ảnh
+              </AppText>
+            </Pressable>
+            <View style={styles.inlineDivider} />
+            <Pressable
+              style={styles.inlineSourceCancelButton}
+              onPress={() => setShowSourceOptions(false)}
+            >
+              <AppText variant="caption" weight="semibold" color={palette.mutedForeground}>
+                Hủy
+              </AppText>
+            </Pressable>
+          </View>
+        ) : (
+          <Pressable onPress={() => setShowSourceOptions(true)}>
+            <SurfaceCard style={styles.dropZone}>
+              <ImageIcon size={40} color={palette.primary} />
+              <AppText variant="body" weight="medium" style={styles.center}>
+                {content.teacher.omr.selectImages}
+              </AppText>
+              <AppText
+                variant="caption"
+                color={palette.mutedForeground}
+                style={styles.center}
+              >
+                {content.common.messages.uploadHint}
+              </AppText>
+            </SurfaceCard>
+          </Pressable>
+        )}
         <TextInputField
           label="Tìm đề thi OMR"
           value={examSearch}
@@ -257,14 +349,6 @@ export function TeacherOmrScreen() {
           }
           editable={false}
           placeholder="Chưa có ảnh nào được chọn"
-        />
-        <PrimaryButton
-          label="Chọn ảnh OMR"
-          variant="outline"
-          onPress={() => {
-            void pickFiles();
-          }}
-          style={styles.sheetButton}
         />
         <PrimaryButton
           label={content.common.buttons.startScan}
@@ -368,5 +452,40 @@ const styles = StyleSheet.create({
   examOptionActive: {
     backgroundColor: palette.primary,
     borderColor: palette.primary,
+  },
+  inlineSourceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(91,91,214,0.25)',
+    backgroundColor: '#F9F9FF',
+    borderRadius: appTheme.radius.md,
+    padding: appTheme.spacing.lg,
+    gap: appTheme.spacing.md,
+  },
+  inlineSourceButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: appTheme.spacing.xs,
+    paddingVertical: appTheme.spacing.sm,
+    backgroundColor: palette.white,
+    borderRadius: appTheme.radius.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(91,91,214,0.12)',
+    ...appTheme.shadows.card,
+  },
+  inlineDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: 'rgba(91,91,214,0.15)',
+  },
+  inlineSourceCancelButton: {
+    paddingHorizontal: appTheme.spacing.sm,
+    paddingVertical: appTheme.spacing.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

@@ -54,7 +54,11 @@ export function configureAuthSession(options: {
 }
 
 function isFormData(value: unknown): value is FormData {
-  return typeof FormData !== 'undefined' && value instanceof FormData;
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    typeof (value as any).append === 'function'
+  );
 }
 
 async function refreshAccessToken(): Promise<AuthSession> {

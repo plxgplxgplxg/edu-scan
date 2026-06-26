@@ -64,19 +64,30 @@ export class OmrProcessor {
     }
 
     const file = this.deserializeFile(data.file);
+    this.logger.log(`Starting OMR processing for batch ${data.batchId}, file: ${file.originalname}`);
     const imageUrl = await this.imageUploadService.uploadFile(
       file,
       data.batchId,
     );
+    this.logger.log(`File uploaded to storage: ${imageUrl}`);
     await hooks?.onProcessingStart?.({
       batchId: data.batchId,
       fileIndex: data.fileIndex,
       totalFiles: data.totalFiles,
     });
-    const detectResult = await this.omrClientService.detectImage({
-      imageUrl,
-      templateName: data.templateName,
-    });
+    let detectResult;
+    try {
+      this.logger.log(`Calling OMR gRPC service detectImage: imageUrl=${imageUrl}, templateName=${data.templateName}`);
+      detectResult = await this.omrClientService.detectImage({
+        imageUrl,
+        templateName: data.templateName,
+      });
+      this.logger.log(`OMR gRPC service call succeeded: studentCode=${detectResult.studentCode}, testId=${detectResult.testId}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`OMR gRPC service call failed: ${message}`);
+      throw error;
+    }
     const variantResolution = this.gradingService.resolveVariant(
       exam,
       detectResult.testId,
