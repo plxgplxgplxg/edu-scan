@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from uuid import uuid4
 
@@ -31,6 +32,7 @@ from app.domain.services.tnteam_block_locator import TnTeamBlockLocator
 
 class OmrOrchestrator:
     def __init__(self) -> None:
+        self._logger = logging.getLogger(self.__class__.__name__)
         self.image_loader = ImageLoader()
         self.image_validator = ImageValidator()
         self.image_processor = ImageProcessor()
@@ -39,29 +41,46 @@ class OmrOrchestrator:
         self.student_id_detector = StudentIdDetector()
         self.answer_detector = AnswerDetector()
         self.grading_overlay_renderer = GradingOverlayRenderer()
+        self._logger.info(
+            "OmrOrchestrator initialized, templates=%d",
+            len(self.template_registry.list_templates()),
+        )
 
     def detect(self, request: OmrDetectRequest) -> OmrProcessResponse:
+        self._logger.info("detect start: imageUrl=%s templateName=%s", request.imageUrl, request.templateName or "auto")
+
+        self._logger.info("loading image from url")
         image = self.image_loader.load_from_url(str(request.imageUrl))
+        self._logger.info("image loaded: shape=%s", image.shape if hasattr(image, "shape") else "unknown")
         self.image_validator.validate(image)
 
+        self._logger.info("aligning and preprocessing image")
         aligned_image = self.image_processor.align(image)
         processed_image = self.image_processor.preprocess(image)
         if processed_image.size == 0:
             raise InvalidImageError("Image preprocessing failed")
+        self._logger.info("image preprocessed: shape=%s", processed_image.shape)
 
+        self._logger.info("resolving template")
         template = self._resolve_template(processed_image, request.templateName)
         question_count = template.question_count
+        self._logger.info("template resolved: name=%s questions=%d", template.name, question_count)
 
+        self._logger.info("detecting student id")
         detected_fields, _ = self.student_id_detector.detect_fields_with_debug(
             processed_image,
             template,
         )
         student_code = self.student_id_detector.detect(processed_image, template)
+        self._logger.info("student id detected: studentCode=%s testId=%s", student_code, detected_fields.get("test_id"))
+
+        self._logger.info("detecting answers")
         answers, answer_debug = self.answer_detector.detect_with_debug(
             processed_image,
             question_count,
             template,
         )
+        self._logger.info("answers detected: count=%d", len(answers))
 
         enriched_questions = []
         answer_responses = []

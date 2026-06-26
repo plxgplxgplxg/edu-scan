@@ -56,20 +56,27 @@ export class OmrProcessor {
       }) => Promise<void> | void;
     },
   ): Promise<ProcessedSubmissionPayload> {
+    this.logger.log(
+      `processJob start: batchId=${data.batchId} examId=${data.examId} fileIndex=${data.fileIndex}/${data.totalFiles} file=${data.file.originalname} template=${data.templateName ?? 'auto'}`,
+    );
+
     const exam = await this.omrRepository.findExamById(data.examId);
     if (!exam) {
       throw new Error(
         `Exam ${data.examId} not found for batch ${data.batchId}`,
       );
     }
+    this.logger.log(
+      `exam loaded: id=${exam.id} variants=${exam.variants.length}`,
+    );
 
     const file = this.deserializeFile(data.file);
-    this.logger.log(`Starting OMR processing for batch ${data.batchId}, file: ${file.originalname}`);
+    this.logger.log(`uploading file: ${file.originalname} size=${file.size}bytes`);
     const imageUrl = await this.imageUploadService.uploadFile(
       file,
       data.batchId,
     );
-    this.logger.log(`File uploaded to storage: ${imageUrl}`);
+    this.logger.log(`file uploaded: ${imageUrl}`);
     await hooks?.onProcessingStart?.({
       batchId: data.batchId,
       fileIndex: data.fileIndex,
@@ -85,7 +92,10 @@ export class OmrProcessor {
       this.logger.log(`OMR gRPC service call succeeded: studentCode=${detectResult.studentCode}, testId=${detectResult.testId}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(`OMR gRPC service call failed: ${message}`);
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(
+        `OMR detect failed: batchId=${data.batchId} file=${data.file.originalname} error=${message}${stack ? ' stack=' + stack : ''}`,
+      );
       throw error;
     }
     const variantResolution = this.gradingService.resolveVariant(
@@ -107,6 +117,10 @@ export class OmrProcessor {
       resolvedVariant?.answerKeys ?? null,
       preparedSubmission.details,
       exam.maxScore,
+    );
+
+    this.logger.log(
+      `grading: variant=${resolvedVariant?.id ?? 'none'} testCodeStatus=${variantResolution.status}`,
     );
 
     const overlayResult =
@@ -173,7 +187,7 @@ export class OmrProcessor {
     };
 
     this.logger.log(
-      `Processed OMR file ${data.file.originalname} for batch ${data.batchId}`,
+      `processJob done: batchId=${data.batchId} file=${data.file.originalname} status=${submissionPayload.status} score=${submissionPayload.score} needsReview=${submissionPayload.needsReview}`,
     );
     return submissionPayload;
   }

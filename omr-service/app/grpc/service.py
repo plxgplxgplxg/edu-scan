@@ -20,17 +20,34 @@ class OmrGrpcService(omr_service_pb2_grpc.OmrServiceServicer):
         self._logger = logging.getLogger(self.__class__.__name__)
 
     def Detect(self, request, context):
-        self._logger.info("Detect request received for imageUrl: %s, templateName: %s", request.image_url, request.template_name)
-        return self._call_with_boundary(
+        self._logger.info(
+            "Detect start: imageUrl=%s templateName=%s",
+            request.image_url,
+            request.template_name or "auto",
+        )
+        result = self._call_with_boundary(
             context,
             lambda: process_response_to_proto(
                 self.orchestrator.detect(detect_request_from_proto(request))
             ),
         )
+        if result is not None:
+            self._logger.info(
+                "Detect done: studentCode=%s testId=%s needsReview=%s answers=%d",
+                result.student_code or "null",
+                result.test_id or "null",
+                result.needs_review,
+                len(result.answers),
+            )
+        return result
 
     def GradeOverlay(self, request, context):
-        self._logger.info("GradeOverlay request received for resultJsonPath: %s", request.result_json_path)
-        return self._call_with_boundary(
+        self._logger.info(
+            "GradeOverlay start: resultJsonPath=%s answerKeyCount=%d",
+            request.result_json_path,
+            len(request.answer_key),
+        )
+        result = self._call_with_boundary(
             context,
             lambda: grade_overlay_response_to_proto(
                 self.orchestrator.render_grade_overlay(
@@ -38,15 +55,25 @@ class OmrGrpcService(omr_service_pb2_grpc.OmrServiceServicer):
                 )
             ),
         )
+        if result is not None:
+            self._logger.info("GradeOverlay done")
+        return result
 
     def Process(self, request, context):
-        self._logger.info("Process request received for imageUrl: %s, templateName: %s", request.image_url, request.template_name)
-        return self._call_with_boundary(
+        self._logger.info(
+            "Process start: imageUrl=%s templateName=%s",
+            request.image_url,
+            request.template_name or "auto",
+        )
+        result = self._call_with_boundary(
             context,
             lambda: process_response_to_proto(
                 self.orchestrator.process(process_request_from_proto(request))
             ),
         )
+        if result is not None:
+            self._logger.info("Process done")
+        return result
 
     def _call_with_boundary(self, context, operation):
         try:

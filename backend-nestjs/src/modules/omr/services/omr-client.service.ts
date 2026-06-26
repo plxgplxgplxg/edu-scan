@@ -75,16 +75,26 @@ export class OmrClientService implements OmrTransportClient, OnModuleInit {
   }
 
   async detectImage(payload: OmrDetectRequest): Promise<OmrServiceResponse> {
+    this.logger.log(
+      `detectImage: imageUrl=${payload.imageUrl} templateName=${payload.templateName ?? 'auto'}`,
+    );
     const response = await this.invokeGrpc(() =>
       this.omrGrpcService.detect(payload),
     );
     this.validateDetectResponse(response);
-    return this.mapProcessResponse(response);
+    const mapped = this.mapProcessResponse(response);
+    this.logger.log(
+      `detectImage done: studentCode=${mapped.studentCode ?? 'null'} testId=${mapped.testId ?? 'null'} answers=${mapped.answers.length} needsReview=${mapped.needsReview}`,
+    );
+    return mapped;
   }
 
   async renderGradeOverlay(
     payload: OmrGradeOverlayRequest,
   ): Promise<OmrGradeOverlayResponse> {
+    this.logger.log(
+      `renderGradeOverlay: resultJsonPath=${payload.resultJsonPath} answerKeyCount=${payload.answerKey.length}`,
+    );
     const response = await this.invokeGrpc(() =>
       this.omrGrpcService.gradeOverlay(payload),
     );
@@ -163,10 +173,13 @@ export class OmrClientService implements OmrTransportClient, OnModuleInit {
       code?: number;
       details?: string;
       message?: string;
+      stack?: string;
     };
     const message =
       grpcError.details || grpcError.message || 'OMR service request failed';
-    this.logger.error('OMR service request failed', message);
+    this.logger.error(
+      `OMR gRPC error: code=${grpcError.code ?? 'unknown'} message=${message}${grpcError.stack ? ' stack=' + grpcError.stack : ''}`,
+    );
 
     if (grpcError.code === 3 || grpcError.code === 9 || grpcError.code === 11) {
       throw new UnprocessableEntityException(message);
