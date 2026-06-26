@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { contentByLanguage } from '../content';
 import { demoAccounts } from '../api/mockData';
@@ -41,8 +42,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshToken: null,
     language: 'vi',
   });
+  const [initialized, setInitialized] = useState(false);
 
-  const content = contentByLanguage[state.language];
+  useEffect(() => {
+    const loadSession = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('@eduscan/auth_session');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setState(current => ({
+            ...current,
+            ...parsed,
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to load session', error);
+      } finally {
+        setInitialized(true);
+      }
+    };
+    loadSession();
+  }, []);
+
+  useEffect(() => {
+    if (!initialized) {
+      return;
+    }
+    AsyncStorage.setItem(
+      '@eduscan/auth_session',
+      JSON.stringify({
+        userId: state.userId,
+        role: state.role,
+        profileName: state.profileName,
+        email: state.email,
+        studentCode: state.studentCode,
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+        language: state.language,
+      }),
+    ).catch(err => {
+      console.error(err);
+    });
+  }, [state, initialized]);
 
   configureAuthSession({
     getSession: () => {
@@ -73,6 +114,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }));
     },
   });
+
+  const content = contentByLanguage[state.language];
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -127,6 +170,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }),
     [content, state],
   );
+
+  if (!initialized) {
+    return null;
+  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

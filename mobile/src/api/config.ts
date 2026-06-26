@@ -1,4 +1,35 @@
-export function getApiBaseUrl() {
-  return 'https://backend-nestjs-production-f175.up.railway.app';
+import { NativeModules, Platform } from 'react-native';
+
+const ANDROID_EMULATOR_HOST = '10.0.2.2';
+const PRODUCTION_URL = 'https://backend-nestjs-production-f175.up.railway.app';
+const FORCE_PRODUCTION = true;
+
+function resolveHost(): string {
+  const scriptUrl = NativeModules.SourceCode?.scriptURL as string | undefined;
+
+  if (scriptUrl) {
+    try {
+      const url = new URL(scriptUrl);
+      if (Platform.OS === 'android') {
+        return url.hostname === 'localhost' ? ANDROID_EMULATOR_HOST : url.hostname;
+      }
+      return url.hostname;
+    } catch {}
+  }
+
+  if (Platform.OS === 'android') {
+    return ANDROID_EMULATOR_HOST;
+  }
+
+  return 'localhost';
 }
+
+export function getApiBaseUrl(): string {
+  if (__DEV__ && !FORCE_PRODUCTION) {
+    const host = resolveHost();
+    return `http://${host}:3000`;
+  }
+  return PRODUCTION_URL;
+}
+
 

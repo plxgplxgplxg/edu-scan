@@ -76,7 +76,7 @@ export function LoginScreen() {
       contentContainerStyle={styles.screenContent}
     >
       <GradientBackground
-        colors={['#4338CA', '#6D28D9', '#7C3AED', '#8B5CF6']}
+        colors={['#5B5BD6', '#7C5CFC']}
         style={StyleSheet.absoluteFill}
       />
       <View
@@ -132,11 +132,6 @@ export function LoginScreen() {
           <AppText variant="body" color="rgba(255,255,255,0.75)" style={styles.center}>
             {content.meta.slogan}
           </AppText>
-          <View style={styles.versionPill}>
-            <AppText variant="caption" color="rgba(255,255,255,0.82)">
-              {content.meta.version}
-            </AppText>
-          </View>
         </View>
 
         <SurfaceCard
@@ -194,28 +189,7 @@ export function LoginScreen() {
             />
           </View>
 
-          <View style={styles.demoBlock}>
-            <AppText variant="caption" color={appTheme.palette.mutedForeground} style={styles.center}>
-              {content.auth.demoTitle}
-            </AppText>
-            <View style={[styles.demoRow, layout.isCompact ? styles.demoRowStack : null]}>
-              {demoRoleLabels.map(account => (
-                <Pressable
-                  key={account.email}
-                  onPress={() => {
-                    setEmail(account.email);
-                    setPassword(account.password);
-                    setError(undefined);
-                  }}
-                  style={styles.demoCard}
-                >
-                  <AppText variant="caption" weight="semibold" color={appTheme.palette.secondaryForeground}>
-                    {account.label}
-                  </AppText>
-                </Pressable>
-              ))}
-            </View>
-          </View>
+          
         </SurfaceCard>
       </KeyboardAvoidingView>
     </Screen>
@@ -294,12 +268,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: -70,
     top: 164,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
   heroBubbleRight: {
     position: 'absolute',
     right: -32,
     top: 24,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
 });

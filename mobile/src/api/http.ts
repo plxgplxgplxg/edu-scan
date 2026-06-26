@@ -152,8 +152,7 @@ export async function requestJson<T>(
   const isAccessExpired =
     responseValue.status === 401
     && options.token
-    && path !== '/auth/refresh'
-    && String(payload?.message ?? '').toLowerCase().includes('expired');
+    && path !== '/auth/refresh';
 
   if (isAccessExpired) {
     try {
@@ -179,20 +178,41 @@ export async function requestBinary(
   path: string,
   options: RequestOptions = {},
 ): Promise<BinaryResponse> {
-  const headers: Record<string, string> = {
-    Accept: '*/*',
-    ...(options.headers ?? {}),
+  const attemptRequest = async (tokenOverride?: string | null) => {
+    const headers: Record<string, string> = {
+      Accept: '*/*',
+      ...(options.headers ?? {}),
+    };
+
+    const authToken = tokenOverride ?? options.token;
+    if (authToken) {
+      headers.Authorization = `Bearer ${authToken}`;
+    }
+
+    const responseValue = await fetch(`${getApiBaseUrl()}${path}`, {
+      method: options.method ?? 'GET',
+      headers,
+    });
+
+    return responseValue;
   };
 
-  const authToken = options.token;
-  if (authToken) {
-    headers.Authorization = `Bearer ${authToken}`;
-  }
+  let responseValue = await attemptRequest();
 
-  const responseValue = await fetch(`${getApiBaseUrl()}${path}`, {
-    method: options.method ?? 'GET',
-    headers,
-  });
+  const isAccessExpired =
+    responseValue.status === 401
+    && options.token
+    && path !== '/auth/refresh';
+
+  if (isAccessExpired) {
+    try {
+      const nextSession = await ensureRefreshedSession();
+      responseValue = await attemptRequest(nextSession.accessToken);
+    } catch (error) {
+      clearSession();
+      throw error;
+    }
+  }
 
   if (!responseValue.ok) {
     const text = await responseValue.text();
