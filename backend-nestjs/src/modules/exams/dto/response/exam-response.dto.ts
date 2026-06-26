@@ -6,7 +6,7 @@ import {
   ExamType,
   QuestionType,
 } from '@prisma/client';
-import { ExamWithRelations } from '../../repositories/exams.repository';
+import { ExamLightweight, ExamWithRelations } from '../../repositories/exams.repository';
 
 export class ExamClassResponseDto {
   @ApiProperty({ format: 'uuid' })
@@ -198,5 +198,39 @@ export function toExamResponseDto(exam: ExamWithRelations): ExamResponseDto {
       answerText: item.answerText,
       maxScore: item.maxScore,
     })),
+  };
+}
+
+export function toExamListResponseDto(exam: ExamLightweight): ExamResponseDto {
+  return {
+    id: exam.id,
+    title: exam.title,
+    maxScore: exam.maxScore,
+    status: exam.status,
+    type: exam.type,
+    teacherId: exam.teacherId,
+    createdAt: exam.createdAt,
+    updatedAt: exam.updatedAt,
+    classes: (exam.classes ?? []).map((item) => ({
+      id: item.class.id,
+      name: item.class.name,
+      subject: item.class.subject,
+      schoolYear: item.class.schoolYear,
+      code: item.class.code,
+    })),
+    variants: (exam.variants ?? []).map((variant) => ({
+      id: variant.id,
+      testCode: variant.testCode,
+      answerKeys: (variant.answerKeys ?? []).map((item) => ({
+        questionNumber: item.questionNumber,
+        correctAnswer: AnswerChoice.A,
+      })),
+    })),
+    questionMap: (exam.questionMap ?? []).map((item) => ({
+      questionNumber: item.questionNumber,
+      questionId: null,
+      question: null,
+    })),
+    classQuestions: [],
   };
 }

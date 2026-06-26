@@ -16,6 +16,7 @@ import {
 } from '../dto/response/omr-batch-response.dto';
 import { PreparedSubmissionDetail, GradingService } from './grading.service';
 import {
+  OmrBatchLightweight,
   OmrBatchWithRelations,
   OmrRepository,
   OmrSubmissionWithRelations,
@@ -112,7 +113,7 @@ export class BatchService {
 
   async listTeacherBatches(teacherId: string): Promise<OmrBatchResponseDto[]> {
     const batches = await this.omrRepository.listTeacherBatches(teacherId);
-    return batches.map((batch) => this.toBatchResponseDto(batch));
+    return batches.map((batch) => this.toBatchListResponseDto(batch));
   }
 
   async getTeacherSubmissionById(
@@ -160,6 +161,32 @@ export class BatchService {
       matchedCount: batch.submissions.filter((item) => !!item.studentId).length,
       unmatchedCount: batch.submissions.filter((item) => !item.studentId)
         .length,
+    };
+  }
+
+  private toBatchListResponseDto(
+    batch: OmrBatchLightweight,
+  ): OmrBatchResponseDto {
+    return {
+      id: batch.id,
+      examId: batch.examId,
+      examTitle: batch.exam.title,
+      teacherId: batch.teacherId,
+      status: batch.status,
+      totalFiles: batch.totalFiles,
+      processedFiles: batch.processedFiles,
+      successCount: batch.successCount,
+      failedCount: batch.failedCount,
+      progressPercentage:
+        batch.totalFiles === 0
+          ? 0
+          : Math.round((batch.processedFiles / batch.totalFiles) * 100),
+      completedAt: batch.completedAt,
+      createdAt: batch.createdAt,
+      updatedAt: batch.updatedAt,
+      submissions: [],
+      matchedCount: batch.submissions.filter((item) => !!item.studentId).length,
+      unmatchedCount: batch.submissions.filter((item) => !item.studentId).length,
     };
   }
 

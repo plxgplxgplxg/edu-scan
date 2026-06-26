@@ -15,9 +15,10 @@ import {
   DeleteExamResponseDto,
   ExamResponseDto,
   toExamResponseDto,
+  toExamListResponseDto,
 } from '../dto/response/exam-response.dto';
 import { UpdateExamDto } from '../dto/request/update-exam.dto';
-import { ExamsRepository } from '../repositories/exams.repository';
+import { ExamsRepository, ExamLightweight } from '../repositories/exams.repository';
 import { CreateClassExamDto } from '../dto/request/create-class-exam.dto';
 import { UpsertClassExamQuestionDto } from '../dto/request/upsert-class-exam-question.dto';
 
@@ -91,7 +92,7 @@ export class ExamsService {
       teacherId,
       ExamType.OMR,
     );
-    return exams.map(toExamResponseDto);
+    return exams.map(toExamListResponseDto);
   }
 
   async listClassExams(userId: string, role: Role): Promise<ExamResponseDto[]> {
@@ -103,12 +104,12 @@ export class ExamsService {
           )
         : await this.examsRepository.listStudentPublishedClassExams(userId);
 
-    return exams.map(toExamResponseDto);
+    return exams.map(toExamListResponseDto);
   }
 
   async listTeacherExams(teacherId: string): Promise<ExamResponseDto[]> {
     const exams = await this.examsRepository.listTeacherExams(teacherId);
-    return exams.map(toExamResponseDto);
+    return exams.map(toExamListResponseDto);
   }
 
   async getTeacherExamById(

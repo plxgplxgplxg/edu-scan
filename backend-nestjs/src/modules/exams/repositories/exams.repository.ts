@@ -63,8 +63,44 @@ export const examDetailInclude = {
   },
 } satisfies Prisma.ExamInclude;
 
+export const examListInclude = {
+  classes: {
+    select: {
+      class: {
+        select: {
+          id: true,
+          name: true,
+          subject: true,
+          schoolYear: true,
+          code: true,
+        },
+      },
+    },
+  },
+  variants: {
+    select: {
+      id: true,
+      testCode: true,
+      answerKeys: {
+        select: {
+          questionNumber: true,
+        },
+      },
+    },
+  },
+  questionMap: {
+    select: {
+      questionNumber: true,
+    },
+  },
+} satisfies Prisma.ExamInclude;
+
 export type ExamWithRelations = Prisma.ExamGetPayload<{
   include: typeof examDetailInclude;
+}>;
+
+export type ExamLightweight = Prisma.ExamGetPayload<{
+  include: typeof examListInclude;
 }>;
 
 type VariantInput = {
@@ -144,10 +180,10 @@ export class ExamsRepository {
     });
   }
 
-  async listTeacherExams(teacherId: string): Promise<ExamWithRelations[]> {
+  async listTeacherExams(teacherId: string): Promise<ExamLightweight[]> {
     return this.prismaService.exam.findMany({
       where: { teacherId },
-      include: examDetailInclude,
+      include: examListInclude,
       orderBy: {
         createdAt: 'desc',
       },
@@ -157,17 +193,17 @@ export class ExamsRepository {
   async listTeacherExamsByType(
     teacherId: string,
     type: ExamType,
-  ): Promise<ExamWithRelations[]> {
+  ): Promise<ExamLightweight[]> {
     return this.prismaService.exam.findMany({
       where: { teacherId, type },
-      include: examDetailInclude,
+      include: examListInclude,
       orderBy: { createdAt: 'desc' },
     });
   }
 
   async listStudentPublishedClassExams(
     studentId: string,
-  ): Promise<ExamWithRelations[]> {
+  ): Promise<ExamLightweight[]> {
     return this.prismaService.exam.findMany({
       where: {
         type: ExamType.CLASS_EXAM,
@@ -184,7 +220,7 @@ export class ExamsRepository {
           },
         },
       },
-      include: examDetailInclude,
+      include: examListInclude,
       orderBy: { createdAt: 'desc' },
     });
   }

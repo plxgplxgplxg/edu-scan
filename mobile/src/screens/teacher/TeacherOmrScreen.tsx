@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 import {
   ArrowLeft,
   Check,
@@ -182,7 +182,6 @@ export function TeacherOmrScreen() {
           },
         ]}
       >
-        {loading ? <LoadingState label={content.common.labels.loading} /> : null}
         {error ? (
           <ErrorState
             message={error}
@@ -209,40 +208,46 @@ export function TeacherOmrScreen() {
         <AppText variant="headline" weight="semibold">
           {content.teacher.omr.historyTitle}
         </AppText>
-        {omrBatches.map(batch => (
-          <Pressable
-            key={batch.id}
-            onPress={() =>
-              navigation.navigate('TeacherOmrBatchDetail', { batchId: batch.id })
-            }
-          >
-            <SurfaceCard style={styles.batchCard}>
-              <View style={styles.batchHead}>
-                <View style={styles.flex}>
-                  <AppText variant="body" weight="medium">
-                    {batch.examTitle}
+        {loading && omrBatches.length === 0 ? (
+          <View style={styles.historyLoadingContainer}>
+            <ActivityIndicator size="small" color={palette.primary} />
+          </View>
+        ) : (
+          omrBatches.map(batch => (
+            <Pressable
+              key={batch.id}
+              onPress={() =>
+                navigation.navigate('TeacherOmrBatchDetail', { batchId: batch.id })
+              }
+            >
+              <SurfaceCard style={styles.batchCard}>
+                <View style={styles.batchHead}>
+                  <View style={styles.flex}>
+                    <AppText variant="body" weight="medium">
+                      {batch.examTitle}
+                    </AppText>
+                    <AppText variant="caption" color={palette.mutedForeground}>
+                      {batch.createdAt}
+                    </AppText>
+                  </View>
+                  <StatusBadge status={batch.status} />
+                </View>
+                <ProgressBar
+                  progress={batch.progressPercentage}
+                  color={batch.status === 'COMPLETED' ? palette.success : palette.primary}
+                />
+                <View style={styles.batchMeta}>
+                  <AppText variant="caption" color={palette.mutedForeground}>
+                    {`${String(batch.successCount)} thành công • ${String(batch.failedCount)} lỗi • ${String(batch.totalFiles)} tổng`}
                   </AppText>
                   <AppText variant="caption" color={palette.mutedForeground}>
-                    {batch.createdAt}
+                    {`${String(batch.progressPercentage)}%`}
                   </AppText>
                 </View>
-                <StatusBadge status={batch.status} />
-              </View>
-              <ProgressBar
-                progress={batch.progressPercentage}
-                color={batch.status === 'COMPLETED' ? palette.success : palette.primary}
-              />
-              <View style={styles.batchMeta}>
-                <AppText variant="caption" color={palette.mutedForeground}>
-                  {`${String(batch.successCount)} thành công • ${String(batch.failedCount)} lỗi • ${String(batch.totalFiles)} tổng`}
-                </AppText>
-                <AppText variant="caption" color={palette.mutedForeground}>
-                  {`${String(batch.progressPercentage)}%`}
-                </AppText>
-              </View>
-            </SurfaceCard>
-          </Pressable>
-        ))}
+              </SurfaceCard>
+            </Pressable>
+          ))
+        )}
       </View>
 
       <ModalSheet visible={showUpload} onClose={() => setShowUpload(false)}>
@@ -485,6 +490,11 @@ const styles = StyleSheet.create({
   inlineSourceCancelButton: {
     paddingHorizontal: appTheme.spacing.sm,
     paddingVertical: appTheme.spacing.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  historyLoadingContainer: {
+    paddingVertical: appTheme.spacing.xl,
     justifyContent: 'center',
     alignItems: 'center',
   },

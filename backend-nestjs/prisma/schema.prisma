@@ -120,6 +120,8 @@ model Class {
   enrollments     ClassEnrollment[]
   examAssignments ExamClass[]
   assignments     AssignmentClass[]
+
+  @@index([teacherId])
 }
 
 model ClassEnrollment {
@@ -132,6 +134,7 @@ model ClassEnrollment {
   student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([classId, studentId])
+  @@index([studentId])
 }
 
 model Exam {
@@ -152,6 +155,8 @@ model Exam {
   omrBatches  OmrBatch[]
   classQuestions ClassExamQuestion[]
   classSubmissions ClassExamSubmission[]
+
+  @@index([teacherId])
 }
 
 model ExamVariant {
@@ -220,6 +225,9 @@ model OmrBatch {
   exam        Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
   teacher     User         @relation("TeacherOmrBatches", fields: [teacherId], references: [id])
   submissions Submission[]
+
+  @@index([teacherId])
+  @@index([examId])
 }
 
 model Submission {
@@ -350,6 +358,8 @@ model Assignment {
   teacher User               @relation("TeacherAssignments", fields: [teacherId], references: [id])
   classes AssignmentClass[]
   submits AssignmentSubmit[]
+
+  @@index([teacherId])
 }
 
 model AssignmentClass {
@@ -379,6 +389,7 @@ model AssignmentSubmit {
   student    User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([assignmentId, studentId])
+  @@index([studentId])
 }
 
 model RemarkRequest {
@@ -398,6 +409,8 @@ model RemarkRequest {
   reviewer         User?            @relation("TeacherReviewedRemarks", fields: [reviewerId], references: [id], onDelete: SetNull)
 
   @@unique([submissionDetailId, studentId])
+  @@index([studentId])
+  @@index([reviewerId])
 }
 
 model Question {
@@ -417,6 +430,8 @@ model Question {
   teacher     User           @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   tags        QuestionTag[]
   examEntries ExamQuestion[]
+
+  @@index([teacherId])
 }
 
 model Tag {

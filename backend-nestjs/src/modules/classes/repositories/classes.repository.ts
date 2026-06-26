@@ -28,6 +28,25 @@ const classDetailInclude = {
   },
 } satisfies Prisma.ClassInclude;
 
+export const classListInclude = {
+  teacher: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+    },
+  },
+  _count: {
+    select: {
+      enrollments: true,
+    },
+  },
+} satisfies Prisma.ClassInclude;
+
+export type ClassLightweight = Prisma.ClassGetPayload<{
+  include: typeof classListInclude;
+}>;
+
 @Injectable()
 export class ClassesRepository {
   constructor(private readonly prismaService: PrismaService) {}
@@ -45,17 +64,17 @@ export class ClassesRepository {
     });
   }
 
-  async listTeacherClasses(teacherId: string) {
+  async listTeacherClasses(teacherId: string): Promise<ClassLightweight[]> {
     return this.prismaService.class.findMany({
       where: { teacherId },
-      include: classDetailInclude,
+      include: classListInclude,
       orderBy: {
         createdAt: 'desc',
       },
     });
   }
 
-  async listStudentClasses(studentId: string) {
+  async listStudentClasses(studentId: string): Promise<ClassLightweight[]> {
     return this.prismaService.class.findMany({
       where: {
         enrollments: {
@@ -64,16 +83,16 @@ export class ClassesRepository {
           },
         },
       },
-      include: classDetailInclude,
+      include: classListInclude,
       orderBy: {
         createdAt: 'desc',
       },
     });
   }
 
-  async listAllClasses() {
+  async listAllClasses(): Promise<ClassLightweight[]> {
     return this.prismaService.class.findMany({
-      include: classDetailInclude,
+      include: classListInclude,
       orderBy: {
         createdAt: 'desc',
       },

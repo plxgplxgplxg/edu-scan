@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
-import { ClassesRepository } from '../repositories/classes.repository';
+import { ClassesRepository, ClassLightweight } from '../repositories/classes.repository';
 import { CreateClassDto } from '../dto/request/create-class.dto';
 import { UpdateClassDto } from '../dto/request/update-class.dto';
 import { AddStudentDto } from '../dto/request/add-student.dto';
@@ -25,19 +25,44 @@ export class ClassesService {
   }
 
   async listTeacherClasses(teacherId: string) {
-    return this.classesRepository.listTeacherClasses(teacherId);
+    const classes = await this.classesRepository.listTeacherClasses(teacherId);
+    return classes.map((item) => this.mapClassLightweightToResponse(item));
   }
 
   async listClasses(currentUser: AuthenticatedUser) {
+    let classes: ClassLightweight[] = [];
     if (currentUser.role === Role.TEACHER) {
-      return this.classesRepository.listTeacherClasses(currentUser.id);
+      classes = await this.classesRepository.listTeacherClasses(currentUser.id);
+    } else if (currentUser.role === Role.STUDENT) {
+      classes = await this.classesRepository.listStudentClasses(currentUser.id);
+    } else {
+      classes = await this.classesRepository.listAllClasses();
     }
+    return classes.map((item) => this.mapClassLightweightToResponse(item));
+  }
 
-    if (currentUser.role === Role.STUDENT) {
-      return this.classesRepository.listStudentClasses(currentUser.id);
-    }
-
-    return this.classesRepository.listAllClasses();
+  private mapClassLightweightToResponse(item: ClassLightweight) {
+    return {
+      id: item.id,
+      name: item.name,
+      subject: item.subject,
+      schoolYear: item.schoolYear,
+      code: item.code,
+      teacherId: item.teacherId,
+      teacher: item.teacher,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+      enrollments: Array.from({ length: item._count?.enrollments ?? 0 }, () => ({
+        joinedAt: new Date(),
+        student: {
+          id: '',
+          name: '',
+          email: '',
+          studentCode: '',
+          isActive: true,
+        },
+      })),
+    };
   }
 
   async getTeacherClassById(classId: string, teacherId: string) {

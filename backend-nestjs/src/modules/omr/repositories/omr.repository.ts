@@ -58,8 +58,27 @@ export const omrBatchDetailInclude = {
   },
 } satisfies Prisma.OmrBatchInclude;
 
+export const omrBatchListInclude = {
+  exam: {
+    select: {
+      id: true,
+      title: true,
+    },
+  },
+  submissions: {
+    select: {
+      id: true,
+      studentId: true,
+    },
+  },
+} satisfies Prisma.OmrBatchInclude;
+
 export type OmrBatchWithRelations = Prisma.OmrBatchGetPayload<{
   include: typeof omrBatchDetailInclude;
+}>;
+
+export type OmrBatchLightweight = Prisma.OmrBatchGetPayload<{
+  include: typeof omrBatchListInclude;
 }>;
 
 export const omrExamInclude = {
@@ -165,12 +184,12 @@ export class OmrRepository {
     });
   }
 
-  async listTeacherBatches(teacherId: string) {
+  async listTeacherBatches(teacherId: string): Promise<OmrBatchLightweight[]> {
     return this.prismaService.omrBatch.findMany({
       where: {
         teacherId,
       },
-      include: omrBatchDetailInclude,
+      include: omrBatchListInclude,
       orderBy: {
         createdAt: 'desc',
       },
