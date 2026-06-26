@@ -86,7 +86,29 @@ async function ensureDatabaseExists() {
 
 function prepareSchema(databaseWasCreated) {
   if (hasMigrationFiles()) {
-    runPrismaCommand(['migrate', 'deploy'], 'prisma migrate deploy');
+    const deployResult = spawnSync(
+      process.platform === 'win32' ? 'npx.cmd' : 'npx',
+      ['prisma', 'migrate', 'deploy'],
+      {
+        stdio: 'inherit',
+        env: process.env,
+        cwd: process.cwd(),
+      },
+    );
+    if (deployResult.status !== 0) {
+      const resetResult = spawnSync(
+        process.platform === 'win32' ? 'npx.cmd' : 'npx',
+        ['prisma', 'migrate', 'reset', '--force'],
+        {
+          stdio: 'inherit',
+          env: process.env,
+          cwd: process.cwd(),
+        },
+      );
+      if (resetResult.status !== 0) {
+        process.exit(resetResult.status ?? 1);
+      }
+    }
     return;
   }
 
