@@ -25,7 +25,13 @@ import { BullModule } from '@nestjs/bull';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig, jwtConfig, cloudinaryConfig, redisConfig, omrConfig],
+      load: [
+        databaseConfig,
+        jwtConfig,
+        cloudinaryConfig,
+        redisConfig,
+        omrConfig,
+      ],
     }),
     BullModule.forRootAsync({
       inject: [ConfigService],

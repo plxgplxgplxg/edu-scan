@@ -1,4 +1,12 @@
-import { Body, Controller, Param, Patch, Post, Request, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Param,
+  Patch,
+  Post,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { Roles } from '../../../common/decorators/auth/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/auth/jwt-auth.guard';
@@ -26,7 +34,11 @@ export class ClassExamSubmissionsController {
       }>;
     },
   ) {
-    return this.submissionsService.submitClassExam(examId, req.user.id, payload);
+    return this.submissionsService.submitClassExam(
+      examId,
+      req.user.id,
+      payload,
+    );
   }
 
   @Patch('class-exam-submissions/:id/grade')
@@ -34,8 +46,13 @@ export class ClassExamSubmissionsController {
   gradeClassExamSubmission(
     @Param('id') submissionId: string,
     @Request() req: AuthenticatedRequest,
-    @Body() payload: { manualScores: Array<{ answerId: string; manualScore: number }> },
+    @Body()
+    payload: { manualScores: Array<{ answerId: string; manualScore: number }> },
   ) {
-    return this.submissionsService.gradeClassExamSubmission(submissionId, req.user.id, payload);
+    return this.submissionsService.gradeClassExamSubmission(
+      submissionId,
+      req.user.id,
+      payload,
+    );
   }
 }

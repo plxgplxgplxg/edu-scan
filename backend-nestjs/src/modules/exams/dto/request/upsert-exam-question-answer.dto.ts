@@ -1,5 +1,13 @@
 import { AnswerChoice } from '@prisma/client';
-import { IsEnum, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class UpsertExamQuestionAnswerDto {
   @IsInt()

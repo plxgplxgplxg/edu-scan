@@ -266,7 +266,10 @@ export class SubmissionsRepository {
     });
   }
 
-  async findClassExamSubmissionForTeacher(submissionId: string, teacherId: string) {
+  async findClassExamSubmissionForTeacher(
+    submissionId: string,
+    teacherId: string,
+  ) {
     return this.prisma.classExamSubmission.findFirst({
       where: {
         id: submissionId,
@@ -287,11 +290,14 @@ export class SubmissionsRepository {
     });
   }
 
-  async gradeClassExamSubmission(submissionId: string, data: {
-    manualScores: Array<{ answerId: string; manualScore: number }>;
-    manualScore: number;
-    totalScore: number;
-  }) {
+  async gradeClassExamSubmission(
+    submissionId: string,
+    data: {
+      manualScores: Array<{ answerId: string; manualScore: number }>;
+      manualScore: number;
+      totalScore: number;
+    },
+  ) {
     return this.prisma.$transaction(async (tx) => {
       for (const item of data.manualScores) {
         await tx.classExamSubmissionAnswer.update({

@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { AnswerChoice, ExamStatus, ExamType, Prisma, QuestionType } from '@prisma/client';
+import {
+  AnswerChoice,
+  ExamStatus,
+  ExamType,
+  Prisma,
+  QuestionType,
+} from '@prisma/client';
 import { PrismaService } from '../../../database/prisma.service';
 
 export const examDetailInclude = {
@@ -148,7 +154,10 @@ export class ExamsRepository {
     });
   }
 
-  async listTeacherExamsByType(teacherId: string, type: ExamType): Promise<ExamWithRelations[]> {
+  async listTeacherExamsByType(
+    teacherId: string,
+    type: ExamType,
+  ): Promise<ExamWithRelations[]> {
     return this.prismaService.exam.findMany({
       where: { teacherId, type },
       include: examDetailInclude,
@@ -156,7 +165,9 @@ export class ExamsRepository {
     });
   }
 
-  async listStudentPublishedClassExams(studentId: string): Promise<ExamWithRelations[]> {
+  async listStudentPublishedClassExams(
+    studentId: string,
+  ): Promise<ExamWithRelations[]> {
     return this.prismaService.exam.findMany({
       where: {
         type: ExamType.CLASS_EXAM,
@@ -484,7 +495,10 @@ export class ExamsRepository {
     });
   }
 
-  async removeClassExamQuestion(examId: string, questionId: string): Promise<ExamWithRelations> {
+  async removeClassExamQuestion(
+    examId: string,
+    questionId: string,
+  ): Promise<ExamWithRelations> {
     await this.prismaService.classExamQuestion.deleteMany({
       where: { id: questionId, examId },
     });

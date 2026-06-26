@@ -4,9 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import {
-  ExportedReportFileDto,
-} from '../dto/response/export-class-report-response.dto';
+import { ExportedReportFileDto } from '../dto/response/export-class-report-response.dto';
 import {
   ReportFormat,
   ReportScope,
@@ -127,14 +125,18 @@ export class ReportExportJobService {
       job.status = 'COMPLETED';
       job.completedAt = new Date().toISOString();
       this.emit(job, 'report:completed');
-      this.sseRegistryService.complete(buildReportExportSseChannelId(job.jobId));
+      this.sseRegistryService.complete(
+        buildReportExportSseChannelId(job.jobId),
+      );
     } catch (error) {
       job.status = 'FAILED';
       job.errorMessage =
         error instanceof Error ? error.message : 'Failed to export report';
       job.completedAt = new Date().toISOString();
       this.emit(job, 'report:failed');
-      this.sseRegistryService.complete(buildReportExportSseChannelId(job.jobId));
+      this.sseRegistryService.complete(
+        buildReportExportSseChannelId(job.jobId),
+      );
     }
   }
 

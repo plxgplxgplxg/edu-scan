@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { AnswerChoice, Difficulty, ExamStatus, ExamType, QuestionType } from '@prisma/client';
+import {
+  AnswerChoice,
+  Difficulty,
+  ExamStatus,
+  ExamType,
+  QuestionType,
+} from '@prisma/client';
 import { ExamWithRelations } from '../../repositories/exams.repository';
 
 export class ExamClassResponseDto {

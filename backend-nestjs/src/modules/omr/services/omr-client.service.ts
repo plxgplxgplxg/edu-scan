@@ -69,8 +69,9 @@ export class OmrClientService implements OmrTransportClient, OnModuleInit {
   ) {}
 
   onModuleInit() {
-    this.omrGrpcService =
-      this.grpcClient.getService<OmrGrpcService>(OMR_GRPC_SERVICE_NAME);
+    this.omrGrpcService = this.grpcClient.getService<OmrGrpcService>(
+      OMR_GRPC_SERVICE_NAME,
+    );
   }
 
   async detectImage(payload: OmrDetectRequest): Promise<OmrServiceResponse> {
@@ -114,7 +115,9 @@ export class OmrClientService implements OmrTransportClient, OnModuleInit {
     }
   }
 
-  private mapProcessResponse(payload: OmrGrpcProcessResponse): OmrServiceResponse {
+  private mapProcessResponse(
+    payload: OmrGrpcProcessResponse,
+  ): OmrServiceResponse {
     return {
       studentCode: this.normalizeNullableString(payload.studentCode),
       testId: this.normalizeNullableString(payload.testId),
@@ -137,10 +140,16 @@ export class OmrClientService implements OmrTransportClient, OnModuleInit {
     }
 
     return {
-      processedImagePath: this.normalizeNullableString(artifacts.processedImagePath),
-      annotatedImagePath: this.normalizeNullableString(artifacts.annotatedImagePath),
+      processedImagePath: this.normalizeNullableString(
+        artifacts.processedImagePath,
+      ),
+      annotatedImagePath: this.normalizeNullableString(
+        artifacts.annotatedImagePath,
+      ),
       warpOverlayPath: this.normalizeNullableString(artifacts.warpOverlayPath),
-      answerScoresPath: this.normalizeNullableString(artifacts.answerScoresPath),
+      answerScoresPath: this.normalizeNullableString(
+        artifacts.answerScoresPath,
+      ),
       resultJsonPath: this.normalizeNullableString(artifacts.resultJsonPath),
     };
   }
@@ -155,7 +164,8 @@ export class OmrClientService implements OmrTransportClient, OnModuleInit {
       details?: string;
       message?: string;
     };
-    const message = grpcError.details || grpcError.message || 'OMR service request failed';
+    const message =
+      grpcError.details || grpcError.message || 'OMR service request failed';
     this.logger.error('OMR service request failed', message);
 
     if (grpcError.code === 3 || grpcError.code === 9 || grpcError.code === 11) {

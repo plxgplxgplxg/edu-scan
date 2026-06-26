@@ -158,7 +158,8 @@ export class BatchService {
         } as OmrSubmissionWithRelations),
       ),
       matchedCount: batch.submissions.filter((item) => !!item.studentId).length,
-      unmatchedCount: batch.submissions.filter((item) => !item.studentId).length,
+      unmatchedCount: batch.submissions.filter((item) => !item.studentId)
+        .length,
     };
   }
 

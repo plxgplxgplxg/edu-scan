@@ -83,7 +83,7 @@ enum ClassExamSubmissionStatus {
 }
 
 model User {
-  id           String   @id @default(uuid())
+  id           String   @id @default(uuid()) @db.Uuid
   email        String   @unique
   passwordHash String
   name         String
@@ -107,12 +107,12 @@ model User {
 }
 
 model Class {
-  id         String   @id @default(uuid())
+  id         String   @id @default(uuid()) @db.Uuid
   name       String
   subject    String
   schoolYear String
   code       String   @unique
-  teacherId  String
+  teacherId  String   @db.Uuid
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -123,9 +123,9 @@ model Class {
 }
 
 model ClassEnrollment {
-  id        String   @id @default(uuid())
-  classId   String
-  studentId String
+  id        String   @id @default(uuid()) @db.Uuid
+  classId   String   @db.Uuid
+  studentId String   @db.Uuid
   joinedAt  DateTime @default(now())
 
   class   Class @relation(fields: [classId], references: [id], onDelete: Cascade)
@@ -135,12 +135,12 @@ model ClassEnrollment {
 }
 
 model Exam {
-  id        String   @id @default(uuid())
+  id        String   @id @default(uuid()) @db.Uuid
   title     String
   maxScore  Float
   status    ExamStatus @default(DRAFT)
   type      ExamType @default(OMR)
-  teacherId String
+  teacherId String   @db.Uuid
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -155,8 +155,8 @@ model Exam {
 }
 
 model ExamVariant {
-  id        String   @id @default(uuid())
-  examId     String
+  id        String   @id @default(uuid()) @db.Uuid
+  examId     String  @db.Uuid
   testCode   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -170,9 +170,9 @@ model ExamVariant {
 }
 
 model ExamClass {
-  id      String @id @default(uuid())
-  examId  String
-  classId String
+  id      String @id @default(uuid()) @db.Uuid
+  examId  String @db.Uuid
+  classId String @db.Uuid
 
   exam  Exam  @relation(fields: [examId], references: [id], onDelete: Cascade)
   class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
@@ -181,8 +181,8 @@ model ExamClass {
 }
 
 model AnswerKey {
-  id             String       @id @default(uuid())
-  variantId      String
+  id             String       @id @default(uuid()) @db.Uuid
+  variantId      String       @db.Uuid
   questionNumber Int
   correctAnswer  AnswerChoice
 
@@ -192,10 +192,10 @@ model AnswerKey {
 }
 
 model ExamQuestion {
-  id             String  @id @default(uuid())
-  examId         String
+  id             String  @id @default(uuid()) @db.Uuid
+  examId         String  @db.Uuid
   questionNumber Int
-  questionId     String?
+  questionId     String? @db.Uuid
 
   exam     Exam      @relation(fields: [examId], references: [id], onDelete: Cascade)
   question Question? @relation(fields: [questionId], references: [id], onDelete: SetNull)
@@ -205,9 +205,9 @@ model ExamQuestion {
 }
 
 model OmrBatch {
-  id             String         @id @default(uuid())
-  examId         String
-  teacherId      String
+  id             String         @id @default(uuid()) @db.Uuid
+  examId         String         @db.Uuid
+  teacherId      String         @db.Uuid
   status         OmrBatchStatus @default(PENDING)
   totalFiles     Int
   processedFiles Int            @default(0)
@@ -223,14 +223,14 @@ model OmrBatch {
 }
 
 model Submission {
-  id          String           @id @default(uuid())
-  examId      String
-  resolvedVariantId String?
-  studentId   String?
-  batchId     String?
+  id          String           @id @default(uuid()) @db.Uuid
+  examId      String           @db.Uuid
+  resolvedVariantId String?    @db.Uuid
+  studentId   String?          @db.Uuid
+  batchId     String?          @db.Uuid
   studentCode String?
   studentCodeRaw String?
-  matchedStudentId String?
+  matchedStudentId String?     @db.Uuid
   isExternal Boolean @default(false)
   detectedTestId String?
   resolvedTestCode String?
@@ -259,8 +259,8 @@ model Submission {
 }
 
 model SubmissionDetail {
-  id             String        @id @default(uuid())
-  submissionId   String
+  id             String        @id @default(uuid()) @db.Uuid
+  submissionId   String        @db.Uuid
   questionNumber Int
   detectedAnswer String?
   finalAnswer    AnswerChoice?
@@ -274,8 +274,8 @@ model SubmissionDetail {
 }
 
 model ClassExamQuestion {
-  id          String       @id @default(uuid())
-  examId       String
+  id          String       @id @default(uuid()) @db.Uuid
+  examId       String        @db.Uuid
   orderIndex   Int
   type         QuestionType
   content      String
@@ -297,9 +297,9 @@ model ClassExamQuestion {
 }
 
 model ClassExamSubmission {
-  id          String @id @default(uuid())
-  examId       String
-  studentId    String
+  id          String @id @default(uuid()) @db.Uuid
+  examId       String @db.Uuid
+  studentId    String @db.Uuid
   status       ClassExamSubmissionStatus @default(PENDING_MANUAL_GRADE)
   autoScore    Float @default(0)
   manualScore  Float @default(0)
@@ -318,9 +318,9 @@ model ClassExamSubmission {
 }
 
 model ClassExamSubmissionAnswer {
-  id            String @id @default(uuid())
-  submissionId   String
-  questionId     String
+  id            String @id @default(uuid()) @db.Uuid
+  submissionId   String @db.Uuid
+  questionId     String @db.Uuid
   selectedChoice AnswerChoice?
   essayAnswer    String?
   autoScore      Float?
@@ -336,14 +336,14 @@ model ClassExamSubmissionAnswer {
 }
 
 model Assignment {
-  id             String   @id @default(uuid())
+  id             String   @id @default(uuid()) @db.Uuid
   title          String
   description    String?
   deadline       DateTime
   allowLate      Boolean  @default(false)
   latePenaltyPct Float    @default(0)
   maxScore       Float    @default(10)
-  teacherId      String
+  teacherId      String   @db.Uuid
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -353,9 +353,9 @@ model Assignment {
 }
 
 model AssignmentClass {
-  id           String @id @default(uuid())
-  assignmentId String
-  classId      String
+  id           String @id @default(uuid()) @db.Uuid
+  assignmentId String @db.Uuid
+  classId      String @db.Uuid
 
   assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   class      Class      @relation(fields: [classId], references: [id], onDelete: Cascade)
@@ -364,9 +364,9 @@ model AssignmentClass {
 }
 
 model AssignmentSubmit {
-  id           String       @id @default(uuid())
-  assignmentId String
-  studentId    String
+  id           String       @id @default(uuid()) @db.Uuid
+  assignmentId String       @db.Uuid
+  studentId    String       @db.Uuid
   fileUrl      String
   submitStatus SubmitStatus
   gradeStatus  GradeStatus  @default(PENDING)
@@ -382,10 +382,10 @@ model AssignmentSubmit {
 }
 
 model RemarkRequest {
-  id                 String       @id @default(uuid())
-  submissionDetailId String
-  studentId          String
-  reviewerId         String?
+  id                 String       @id @default(uuid()) @db.Uuid
+  submissionDetailId String       @db.Uuid
+  studentId          String       @db.Uuid
+  reviewerId         String?      @db.Uuid
   reason             String
   status             RemarkStatus @default(PENDING)
   teacherComment     String?
@@ -401,7 +401,7 @@ model RemarkRequest {
 }
 
 model Question {
-  id            String       @id @default(uuid())
+  id            String       @id @default(uuid()) @db.Uuid
   content       String
   optionA       String
   optionB       String
@@ -410,7 +410,7 @@ model Question {
   correctAnswer AnswerChoice
   subject       String
   difficulty    Difficulty
-  teacherId     String
+  teacherId     String       @db.Uuid
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
@@ -420,14 +420,14 @@ model Question {
 }
 
 model Tag {
-  id        String        @id @default(uuid())
+  id        String        @id @default(uuid()) @db.Uuid
   name      String        @unique
   questions QuestionTag[]
 }
 
 model QuestionTag {
-  questionId String
-  tagId      String
+  questionId String @db.Uuid
+  tagId      String @db.Uuid
 
   question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
   tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)

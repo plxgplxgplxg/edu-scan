@@ -305,16 +305,23 @@ export class SubmissionsService {
       throw new NotFoundException('Class exam not found');
     }
 
-    const questionMap = new Map(exam.classQuestions.map((item) => [item.id, item]));
+    const questionMap = new Map(
+      exam.classQuestions.map((item) => [item.id, item]),
+    );
     let autoScore = 0;
     let manualRequired = false;
     const normalizedAnswers = payload.answers.map((answer) => {
       const question = questionMap.get(answer.questionId);
       if (!question) {
-        throw new BadRequestException(`Question ${answer.questionId} does not belong to this exam`);
+        throw new BadRequestException(
+          `Question ${answer.questionId} does not belong to this exam`,
+        );
       }
 
-      if (question.type === QuestionType.MULTIPLE_CHOICE && question.answerChoice) {
+      if (
+        question.type === QuestionType.MULTIPLE_CHOICE &&
+        question.answerChoice
+      ) {
         const isCorrect = answer.selectedChoice === question.answerChoice;
         const questionAutoScore = isCorrect ? question.maxScore : 0;
         autoScore += questionAutoScore;
@@ -347,24 +354,31 @@ export class SubmissionsService {
     teacherId: string,
     payload: { manualScores: Array<{ answerId: string; manualScore: number }> },
   ) {
-    const submission = await this.submissionsRepository.findClassExamSubmissionForTeacher(
-      submissionId,
-      teacherId,
-    );
+    const submission =
+      await this.submissionsRepository.findClassExamSubmissionForTeacher(
+        submissionId,
+        teacherId,
+      );
     if (!submission) {
       throw new NotFoundException('Class exam submission not found');
     }
 
-    const answerMap = new Map(submission.answers.map((answer) => [answer.id, answer]));
+    const answerMap = new Map(
+      submission.answers.map((answer) => [answer.id, answer]),
+    );
     let manualScore = 0;
 
     for (const item of payload.manualScores) {
       const answer = answerMap.get(item.answerId);
       if (!answer) {
-        throw new BadRequestException(`Answer ${item.answerId} does not belong to submission`);
+        throw new BadRequestException(
+          `Answer ${item.answerId} does not belong to submission`,
+        );
       }
       if (item.manualScore < 0 || item.manualScore > answer.question.maxScore) {
-        throw new BadRequestException(`manualScore for answer ${item.answerId} is out of range`);
+        throw new BadRequestException(
+          `manualScore for answer ${item.answerId} is out of range`,
+        );
       }
       manualScore += item.manualScore;
     }

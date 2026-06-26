@@ -3,7 +3,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AnswerChoice, ExamStatus, ExamType, QuestionType, Role } from '@prisma/client';
+import {
+  AnswerChoice,
+  ExamStatus,
+  ExamType,
+  QuestionType,
+  Role,
+} from '@prisma/client';
 import { CreateExamDto } from '../dto/request/create-exam.dto';
 import {
   DeleteExamResponseDto,
@@ -30,11 +36,17 @@ type NormalizedVariant = {
 export class ExamsService {
   constructor(private readonly examsRepository: ExamsRepository) {}
 
-  async createOmrExam(teacherId: string, createExamDto: CreateExamDto): Promise<ExamResponseDto> {
+  async createOmrExam(
+    teacherId: string,
+    createExamDto: CreateExamDto,
+  ): Promise<ExamResponseDto> {
     return this.createExamByType(teacherId, createExamDto, ExamType.OMR);
   }
 
-  async createClassExam(teacherId: string, createExamDto: CreateClassExamDto): Promise<ExamResponseDto> {
+  async createClassExam(
+    teacherId: string,
+    createExamDto: CreateClassExamDto,
+  ): Promise<ExamResponseDto> {
     const normalized = this.normalizeExamPayload(
       {
         title: createExamDto.title,
@@ -47,7 +59,9 @@ export class ExamsService {
     );
 
     if (normalized.classIds.length === 0) {
-      throw new BadRequestException('Class exam must belong to at least one class');
+      throw new BadRequestException(
+        'Class exam must belong to at least one class',
+      );
     }
 
     await this.ensureTeacherOwnsClasses(teacherId, normalized.classIds);
@@ -65,19 +79,28 @@ export class ExamsService {
     return toExamResponseDto(exam);
   }
 
-  async createExam(teacherId: string, createExamDto: CreateExamDto): Promise<ExamResponseDto> {
+  async createExam(
+    teacherId: string,
+    createExamDto: CreateExamDto,
+  ): Promise<ExamResponseDto> {
     return this.createOmrExam(teacherId, createExamDto);
   }
 
   async listTeacherOmrExams(teacherId: string): Promise<ExamResponseDto[]> {
-    const exams = await this.examsRepository.listTeacherExamsByType(teacherId, ExamType.OMR);
+    const exams = await this.examsRepository.listTeacherExamsByType(
+      teacherId,
+      ExamType.OMR,
+    );
     return exams.map(toExamResponseDto);
   }
 
   async listClassExams(userId: string, role: Role): Promise<ExamResponseDto[]> {
     const exams =
       role === Role.TEACHER
-        ? await this.examsRepository.listTeacherExamsByType(userId, ExamType.CLASS_EXAM)
+        ? await this.examsRepository.listTeacherExamsByType(
+            userId,
+            ExamType.CLASS_EXAM,
+          )
         : await this.examsRepository.listStudentPublishedClassExams(userId);
 
     return exams.map(toExamResponseDto);
@@ -88,8 +111,14 @@ export class ExamsService {
     return exams.map(toExamResponseDto);
   }
 
-  async getTeacherExamById(examId: string, teacherId: string): Promise<ExamResponseDto> {
-    const exam = await this.examsRepository.findTeacherExamById(examId, teacherId);
+  async getTeacherExamById(
+    examId: string,
+    teacherId: string,
+  ): Promise<ExamResponseDto> {
+    const exam = await this.examsRepository.findTeacherExamById(
+      examId,
+      teacherId,
+    );
 
     if (!exam) {
       throw new NotFoundException('Exam not found');
@@ -98,8 +127,15 @@ export class ExamsService {
     return toExamResponseDto(exam);
   }
 
-  async updateExam(examId: string, teacherId: string, updateExamDto: UpdateExamDto): Promise<ExamResponseDto> {
-    const existingExam = await this.examsRepository.findTeacherExamById(examId, teacherId);
+  async updateExam(
+    examId: string,
+    teacherId: string,
+    updateExamDto: UpdateExamDto,
+  ): Promise<ExamResponseDto> {
+    const existingExam = await this.examsRepository.findTeacherExamById(
+      examId,
+      teacherId,
+    );
 
     if (!existingExam) {
       throw new NotFoundException('Exam not found');
@@ -110,7 +146,9 @@ export class ExamsService {
     const normalized = this.normalizeExamPayload({
       title: updateExamDto.title ?? existingExam.title,
       maxScore: updateExamDto.maxScore ?? existingExam.maxScore,
-      classIds: updateExamDto.classIds ?? existingExam.classes.map((item) => item.class.id),
+      classIds:
+        updateExamDto.classIds ??
+        existingExam.classes.map((item) => item.class.id),
       answerKeys: updateExamDto.answerKeys,
       variants:
         updateExamDto.variants ??
@@ -129,8 +167,10 @@ export class ExamsService {
         })),
     });
 
-    const dependencies = await this.examsRepository.countExamDependencies(examId);
-    const hasDependentData = dependencies.submissionCount > 0 || dependencies.batchCount > 0;
+    const dependencies =
+      await this.examsRepository.countExamDependencies(examId);
+    const hasDependentData =
+      dependencies.submissionCount > 0 || dependencies.batchCount > 0;
 
     if (
       hasDependentData &&
@@ -145,7 +185,10 @@ export class ExamsService {
     }
 
     await this.ensureTeacherOwnsClasses(teacherId, normalized.classIds);
-    await this.ensureTeacherOwnsMappedQuestions(teacherId, normalized.questionMap);
+    await this.ensureTeacherOwnsMappedQuestions(
+      teacherId,
+      normalized.questionMap,
+    );
     this.ensureQuestionMapMatchesVariants(
       normalized.variants,
       normalized.questionMap.map((item) => item.questionNumber),
@@ -165,9 +208,17 @@ export class ExamsService {
   async upsertExamQuestionAnswer(
     examId: string,
     teacherId: string,
-    payload: { questionNumber: number; correctAnswer: AnswerChoice; questionId?: string; testCode?: string },
+    payload: {
+      questionNumber: number;
+      correctAnswer: AnswerChoice;
+      questionId?: string;
+      testCode?: string;
+    },
   ): Promise<ExamResponseDto> {
-    const exam = await this.examsRepository.findTeacherExamById(examId, teacherId);
+    const exam = await this.examsRepository.findTeacherExamById(
+      examId,
+      teacherId,
+    );
     if (!exam) throw new NotFoundException('Exam not found');
 
     this.assertExamType(exam.type, ExamType.OMR, 'update OMR answers');
@@ -177,12 +228,19 @@ export class ExamsService {
     }
 
     if (payload.questionId) {
-      await this.ensureTeacherOwnsMappedQuestions(teacherId, [{ questionNumber: payload.questionNumber, questionId: payload.questionId }]);
+      await this.ensureTeacherOwnsMappedQuestions(teacherId, [
+        {
+          questionNumber: payload.questionNumber,
+          questionId: payload.questionId,
+        },
+      ]);
     }
 
     const updated = await this.examsRepository.upsertExamQuestionAnswer({
       examId,
-      testCode: this.normalizeTestCode(payload.testCode ?? DRAFT_VARIANT_TEST_CODE),
+      testCode: this.normalizeTestCode(
+        payload.testCode ?? DRAFT_VARIANT_TEST_CODE,
+      ),
       questionNumber: payload.questionNumber,
       questionId: payload.questionId,
       correctAnswer: payload.correctAnswer,
@@ -196,7 +254,10 @@ export class ExamsService {
     teacherId: string,
     payload: { questionNumber: number; testCode?: string },
   ): Promise<ExamResponseDto> {
-    const exam = await this.examsRepository.findTeacherExamById(examId, teacherId);
+    const exam = await this.examsRepository.findTeacherExamById(
+      examId,
+      teacherId,
+    );
     if (!exam) throw new NotFoundException('Exam not found');
 
     this.assertExamType(exam.type, ExamType.OMR, 'remove OMR answers');
@@ -207,15 +268,23 @@ export class ExamsService {
 
     const updated = await this.examsRepository.removeExamQuestionAnswer({
       examId,
-      testCode: this.normalizeTestCode(payload.testCode ?? DRAFT_VARIANT_TEST_CODE),
+      testCode: this.normalizeTestCode(
+        payload.testCode ?? DRAFT_VARIANT_TEST_CODE,
+      ),
       questionNumber: payload.questionNumber,
     });
 
     return toExamResponseDto(updated);
   }
 
-  async publishExam(examId: string, teacherId: string): Promise<ExamResponseDto> {
-    const exam = await this.examsRepository.findTeacherExamById(examId, teacherId);
+  async publishExam(
+    examId: string,
+    teacherId: string,
+  ): Promise<ExamResponseDto> {
+    const exam = await this.examsRepository.findTeacherExamById(
+      examId,
+      teacherId,
+    );
     if (!exam) throw new NotFoundException('Exam not found');
 
     this.assertExamType(exam.type, ExamType.OMR, 'publish OMR exam');
@@ -236,12 +305,22 @@ export class ExamsService {
       questionNumbers,
     );
 
-    const updated = await this.examsRepository.updateExamStatus(examId, ExamStatus.PUBLISHED);
+    const updated = await this.examsRepository.updateExamStatus(
+      examId,
+      ExamStatus.PUBLISHED,
+    );
     return toExamResponseDto(updated);
   }
 
-  async upsertClassExamQuestion(examId: string, teacherId: string, payload: UpsertClassExamQuestionDto): Promise<ExamResponseDto> {
-    const exam = await this.examsRepository.findTeacherExamById(examId, teacherId);
+  async upsertClassExamQuestion(
+    examId: string,
+    teacherId: string,
+    payload: UpsertClassExamQuestionDto,
+  ): Promise<ExamResponseDto> {
+    const exam = await this.examsRepository.findTeacherExamById(
+      examId,
+      teacherId,
+    );
     if (!exam) throw new NotFoundException('Exam not found');
 
     this.assertExamType(exam.type, ExamType.CLASS_EXAM, 'update class exam');
@@ -250,8 +329,16 @@ export class ExamsService {
       throw new BadRequestException('Cannot modify published exam');
     }
 
-    if (payload.type === QuestionType.MULTIPLE_CHOICE && (!payload.optionA || !payload.optionB || !payload.optionC || !payload.optionD)) {
-      throw new BadRequestException('Multiple choice question must include options A/B/C/D');
+    if (
+      payload.type === QuestionType.MULTIPLE_CHOICE &&
+      (!payload.optionA ||
+        !payload.optionB ||
+        !payload.optionC ||
+        !payload.optionD)
+    ) {
+      throw new BadRequestException(
+        'Multiple choice question must include options A/B/C/D',
+      );
     }
 
     const updated = await this.examsRepository.upsertClassExamQuestion({
@@ -262,8 +349,15 @@ export class ExamsService {
     return toExamResponseDto(updated);
   }
 
-  async removeClassExamQuestion(examId: string, teacherId: string, questionId: string): Promise<ExamResponseDto> {
-    const exam = await this.examsRepository.findTeacherExamById(examId, teacherId);
+  async removeClassExamQuestion(
+    examId: string,
+    teacherId: string,
+    questionId: string,
+  ): Promise<ExamResponseDto> {
+    const exam = await this.examsRepository.findTeacherExamById(
+      examId,
+      teacherId,
+    );
     if (!exam) throw new NotFoundException('Exam not found');
 
     this.assertExamType(exam.type, ExamType.CLASS_EXAM, 'update class exam');
@@ -272,39 +366,64 @@ export class ExamsService {
       throw new BadRequestException('Cannot modify published exam');
     }
 
-    const updated = await this.examsRepository.removeClassExamQuestion(examId, questionId);
+    const updated = await this.examsRepository.removeClassExamQuestion(
+      examId,
+      questionId,
+    );
     return toExamResponseDto(updated);
   }
 
-  async publishClassExam(examId: string, teacherId: string): Promise<ExamResponseDto> {
-    const exam = await this.examsRepository.findTeacherExamById(examId, teacherId);
+  async publishClassExam(
+    examId: string,
+    teacherId: string,
+  ): Promise<ExamResponseDto> {
+    const exam = await this.examsRepository.findTeacherExamById(
+      examId,
+      teacherId,
+    );
     if (!exam) throw new NotFoundException('Exam not found');
 
     this.assertExamType(exam.type, ExamType.CLASS_EXAM, 'publish class exam');
 
     if (exam.classes.length === 0) {
-      throw new BadRequestException('Class exam must belong to at least one class');
+      throw new BadRequestException(
+        'Class exam must belong to at least one class',
+      );
     }
 
     if (exam.classQuestions.length === 0) {
-      throw new BadRequestException('Class exam must contain at least one question');
+      throw new BadRequestException(
+        'Class exam must contain at least one question',
+      );
     }
 
-    const updated = await this.examsRepository.updateExamStatus(examId, ExamStatus.PUBLISHED);
+    const updated = await this.examsRepository.updateExamStatus(
+      examId,
+      ExamStatus.PUBLISHED,
+    );
     return toExamResponseDto(updated);
   }
 
-  async deleteExam(examId: string, teacherId: string): Promise<DeleteExamResponseDto> {
-    const exam = await this.examsRepository.findTeacherExamById(examId, teacherId);
+  async deleteExam(
+    examId: string,
+    teacherId: string,
+  ): Promise<DeleteExamResponseDto> {
+    const exam = await this.examsRepository.findTeacherExamById(
+      examId,
+      teacherId,
+    );
 
     if (!exam) {
       throw new NotFoundException('Exam not found');
     }
 
-    const dependencies = await this.examsRepository.countExamDependencies(examId);
+    const dependencies =
+      await this.examsRepository.countExamDependencies(examId);
 
     if (dependencies.submissionCount > 0 || dependencies.batchCount > 0) {
-      throw new BadRequestException('Cannot delete exam that already has submissions or OMR batches');
+      throw new BadRequestException(
+        'Cannot delete exam that already has submissions or OMR batches',
+      );
     }
 
     await this.examsRepository.deleteExam(examId);
@@ -315,11 +434,18 @@ export class ExamsService {
     };
   }
 
-  private async createExamByType(teacherId: string, createExamDto: CreateExamDto, type: ExamType): Promise<ExamResponseDto> {
+  private async createExamByType(
+    teacherId: string,
+    createExamDto: CreateExamDto,
+    type: ExamType,
+  ): Promise<ExamResponseDto> {
     const normalized = this.normalizeExamPayload(createExamDto, true);
 
     await this.ensureTeacherOwnsClasses(teacherId, normalized.classIds);
-    await this.ensureTeacherOwnsMappedQuestions(teacherId, normalized.questionMap);
+    await this.ensureTeacherOwnsMappedQuestions(
+      teacherId,
+      normalized.questionMap,
+    );
     this.ensureQuestionMapMatchesVariants(
       normalized.variants,
       normalized.questionMap.map((item) => item.questionNumber),
@@ -343,15 +469,30 @@ export class ExamsService {
       title: string;
       maxScore: number;
       classIds?: string[];
-      answerKeys?: Array<{ questionNumber: number; correctAnswer: AnswerChoice }>;
-      variants?: Array<{ testCode: string; answerKeys: Array<{ questionNumber: number; correctAnswer: AnswerChoice }> }>;
+      answerKeys?: Array<{
+        questionNumber: number;
+        correctAnswer: AnswerChoice;
+      }>;
+      variants?: Array<{
+        testCode: string;
+        answerKeys: Array<{
+          questionNumber: number;
+          correctAnswer: AnswerChoice;
+        }>;
+      }>;
       questionMap?: Array<{ questionNumber: number; questionId?: string }>;
     },
     allowDraftWithoutVariants = false,
   ) {
-    const classIds = [...new Set((payload.classIds ?? []).map((item) => item.trim()))];
+    const classIds = [
+      ...new Set((payload.classIds ?? []).map((item) => item.trim())),
+    ];
 
-    const variants = this.normalizeVariants(payload.variants, payload.answerKeys, allowDraftWithoutVariants);
+    const variants = this.normalizeVariants(
+      payload.variants,
+      payload.answerKeys,
+      allowDraftWithoutVariants,
+    );
     const questionMap = [...(payload.questionMap ?? [])]
       .map((item) => ({
         questionNumber: item.questionNumber,
@@ -359,12 +500,19 @@ export class ExamsService {
       }))
       .sort((left, right) => left.questionNumber - right.questionNumber);
 
-    this.ensureUniqueQuestionNumbers(questionMap.map((item) => item.questionNumber), 'Question map numbers must be unique');
+    this.ensureUniqueQuestionNumbers(
+      questionMap.map((item) => item.questionNumber),
+      'Question map numbers must be unique',
+    );
 
-    const mappedQuestionIds = questionMap.map((item) => item.questionId).filter((item): item is string => !!item);
+    const mappedQuestionIds = questionMap
+      .map((item) => item.questionId)
+      .filter((item): item is string => !!item);
 
     if (mappedQuestionIds.length !== new Set(mappedQuestionIds).size) {
-      throw new BadRequestException('A question can only be mapped once in the same exam');
+      throw new BadRequestException(
+        'A question can only be mapped once in the same exam',
+      );
     }
 
     return {
@@ -386,11 +534,15 @@ export class ExamsService {
           }>;
         }>
       | undefined,
-    legacyAnswerKeys: Array<{ questionNumber: number; correctAnswer: AnswerChoice }> | undefined,
+    legacyAnswerKeys:
+      | Array<{ questionNumber: number; correctAnswer: AnswerChoice }>
+      | undefined,
     allowEmpty = false,
   ): NormalizedVariant[] {
     if ((variants?.length ?? 0) > 0 && (legacyAnswerKeys?.length ?? 0) > 0) {
-      throw new BadRequestException('Provide either variants or legacy answerKeys, not both');
+      throw new BadRequestException(
+        'Provide either variants or legacy answerKeys, not both',
+      );
     }
 
     const rawVariants =
@@ -426,7 +578,9 @@ export class ExamsService {
       .sort((left, right) => left.testCode.localeCompare(right.testCode));
 
     const seenTestCodes = new Set<string>();
-    const questionSignature = normalizedVariants[0].answerKeys.map((item) => item.questionNumber).join(',');
+    const questionSignature = normalizedVariants[0].answerKeys
+      .map((item) => item.questionNumber)
+      .join(',');
 
     for (const variant of normalizedVariants) {
       if (seenTestCodes.has(variant.testCode)) {
@@ -440,13 +594,19 @@ export class ExamsService {
       );
 
       if (variant.answerKeys.length === 0) {
-        throw new BadRequestException(`Variant ${variant.testCode} must contain at least one answer key`);
+        throw new BadRequestException(
+          `Variant ${variant.testCode} must contain at least one answer key`,
+        );
       }
 
-      const currentSignature = variant.answerKeys.map((item) => item.questionNumber).join(',');
+      const currentSignature = variant.answerKeys
+        .map((item) => item.questionNumber)
+        .join(',');
 
       if (currentSignature !== questionSignature) {
-        throw new BadRequestException('All variants must define the same question number set');
+        throw new BadRequestException(
+          'All variants must define the same question number set',
+        );
       }
     }
 
@@ -459,25 +619,40 @@ export class ExamsService {
     }
   }
 
-  private ensureQuestionMapMatchesVariants(variants: NormalizedVariant[], mappedNumbers: number[]) {
+  private ensureQuestionMapMatchesVariants(
+    variants: NormalizedVariant[],
+    mappedNumbers: number[],
+  ) {
     if (variants.length === 0) {
       return;
     }
 
-    const allowedNumbers = new Set(variants[0]?.answerKeys.map((item) => item.questionNumber) ?? []);
+    const allowedNumbers = new Set(
+      variants[0]?.answerKeys.map((item) => item.questionNumber) ?? [],
+    );
 
     for (const questionNumber of mappedNumbers) {
       if (!allowedNumbers.has(questionNumber)) {
-        throw new BadRequestException(`Question map contains questionNumber ${questionNumber} that does not exist in variant answer keys`);
+        throw new BadRequestException(
+          `Question map contains questionNumber ${questionNumber} that does not exist in variant answer keys`,
+        );
       }
     }
   }
 
-  private async ensureTeacherOwnsClasses(teacherId: string, classIds: string[]) {
-    const classes = await this.examsRepository.findTeacherClassesByIds(teacherId, classIds);
+  private async ensureTeacherOwnsClasses(
+    teacherId: string,
+    classIds: string[],
+  ) {
+    const classes = await this.examsRepository.findTeacherClassesByIds(
+      teacherId,
+      classIds,
+    );
 
     if (classes.length !== classIds.length) {
-      throw new BadRequestException('One or more classes do not exist or do not belong to this teacher');
+      throw new BadRequestException(
+        'One or more classes do not exist or do not belong to this teacher',
+      );
     }
   }
 
@@ -485,14 +660,21 @@ export class ExamsService {
     teacherId: string,
     questionMap: Array<{ questionNumber: number; questionId?: string }>,
   ) {
-    const questionIds = questionMap.map((item) => item.questionId).filter((item): item is string => !!item);
+    const questionIds = questionMap
+      .map((item) => item.questionId)
+      .filter((item): item is string => !!item);
 
     if (questionIds.length === 0) return;
 
-    const questions = await this.examsRepository.findTeacherQuestionsByIds(teacherId, questionIds);
+    const questions = await this.examsRepository.findTeacherQuestionsByIds(
+      teacherId,
+      questionIds,
+    );
 
     if (questions.length !== questionIds.length) {
-      throw new BadRequestException('One or more mapped questions do not exist or do not belong to this teacher');
+      throw new BadRequestException(
+        'One or more mapped questions do not exist or do not belong to this teacher',
+      );
     }
   }
 

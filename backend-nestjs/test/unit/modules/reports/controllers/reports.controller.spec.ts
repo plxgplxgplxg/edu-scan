@@ -136,10 +136,10 @@ describe('ReportsController', () => {
       const collected: any[] = [];
 
       controller
-        .streamExportJob(
-          'job-1',
-          { id: 'teacher-1', role: Role.TEACHER } as never,
-        )
+        .streamExportJob('job-1', {
+          id: 'teacher-1',
+          role: Role.TEACHER,
+        } as never)
         .subscribe({
           next: (value) => collected.push(value),
           error: reject,

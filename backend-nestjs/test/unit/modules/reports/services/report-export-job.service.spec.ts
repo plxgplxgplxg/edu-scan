@@ -103,9 +103,9 @@ describe('ReportExportJobService', () => {
         errorMessage: 'boom',
       }),
     );
-    expect(() =>
-      service.getCompletedFile(created.jobId, 'teacher-1'),
-    ).toThrow(BadRequestException);
+    expect(() => service.getCompletedFile(created.jobId, 'teacher-1')).toThrow(
+      BadRequestException,
+    );
   });
 
   it('rejects access for missing or foreign job', () => {

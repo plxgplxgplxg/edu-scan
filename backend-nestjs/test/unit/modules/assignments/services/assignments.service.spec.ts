@@ -368,15 +368,10 @@ describe('AssignmentsService', () => {
       repository.findSubmitByStudentAndAssignment.mockResolvedValue(null);
 
       await expect(
-        service.submitAssignment(
-          ASSIGNMENT_ID,
-          STUDENT_ID,
-          {},
-          {
-            ...multipartFile,
-            mimetype: 'application/zip',
-          } as Express.Multer.File,
-        ),
+        service.submitAssignment(ASSIGNMENT_ID, STUDENT_ID, {}, {
+          ...multipartFile,
+          mimetype: 'application/zip',
+        } as Express.Multer.File),
       ).rejects.toThrow(BadRequestException);
     });
   });

@@ -91,7 +91,10 @@ export class OmrQueueProcessor {
     }
   }
 
-  private calculateProgressPercentage(processedFiles: number, totalFiles: number) {
+  private calculateProgressPercentage(
+    processedFiles: number,
+    totalFiles: number,
+  ) {
     if (totalFiles === 0) {
       return 0;
     }

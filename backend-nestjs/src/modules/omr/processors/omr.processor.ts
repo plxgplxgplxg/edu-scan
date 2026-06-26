@@ -7,9 +7,7 @@ import {
 } from '../services/grading.service';
 import { ImageUploadService } from '../services/image-upload.service';
 import { OmrQueueJobData, OmrSerializedFile } from '../queue/omr-queue.types';
-import {
-  OMR_TRANSPORT_CLIENT,
-} from '../interfaces/omr-transport.interface';
+import { OMR_TRANSPORT_CLIENT } from '../interfaces/omr-transport.interface';
 import { Inject } from '@nestjs/common';
 import type { OmrTransportClient } from '../interfaces/omr-transport.interface';
 
@@ -131,7 +129,7 @@ export class OmrProcessor {
     };
 
     let studentId: string | null = null;
-    let status = preparedSubmission.status;
+    const status = preparedSubmission.status;
 
     if (preparedSubmission.studentCode) {
       const student = await this.omrRepository.findStudentByStudentCode(

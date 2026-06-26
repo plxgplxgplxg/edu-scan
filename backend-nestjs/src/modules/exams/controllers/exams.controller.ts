@@ -78,7 +78,11 @@ export class ExamsController {
     @CurrentUser('id') teacherId: string,
     @Body() payload: UpsertClassExamQuestionDto,
   ) {
-    return this.examsService.upsertClassExamQuestion(examId, teacherId, payload);
+    return this.examsService.upsertClassExamQuestion(
+      examId,
+      teacherId,
+      payload,
+    );
   }
 
   @Delete('class/:id/questions')
@@ -88,7 +92,11 @@ export class ExamsController {
     @CurrentUser('id') teacherId: string,
     @Body() payload: { questionId: string },
   ) {
-    return this.examsService.removeClassExamQuestion(examId, teacherId, payload.questionId);
+    return this.examsService.removeClassExamQuestion(
+      examId,
+      teacherId,
+      payload.questionId,
+    );
   }
 
   @Post('class/:id/publish')
@@ -135,7 +143,11 @@ export class ExamsController {
     @CurrentUser('id') teacherId: string,
     @Body() payload: UpsertExamQuestionAnswerDto,
   ) {
-    return this.examsService.upsertExamQuestionAnswer(examId, teacherId, payload);
+    return this.examsService.upsertExamQuestionAnswer(
+      examId,
+      teacherId,
+      payload,
+    );
   }
 
   @Delete(':id/questions')
@@ -145,7 +157,11 @@ export class ExamsController {
     @CurrentUser('id') teacherId: string,
     @Body() payload: RemoveExamQuestionAnswerDto,
   ) {
-    return this.examsService.removeExamQuestionAnswer(examId, teacherId, payload);
+    return this.examsService.removeExamQuestionAnswer(
+      examId,
+      teacherId,
+      payload,
+    );
   }
 
   @Post(':id/publish')

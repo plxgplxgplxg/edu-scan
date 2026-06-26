@@ -132,7 +132,11 @@ describe('Cross-module hardening flows', () => {
           },
           {
             provide: SseRegistryService,
-            useValue: { emit: jest.fn(), complete: jest.fn(), stream: jest.fn() },
+            useValue: {
+              emit: jest.fn(),
+              complete: jest.fn(),
+              stream: jest.fn(),
+            },
           },
         ],
       }).compile();
