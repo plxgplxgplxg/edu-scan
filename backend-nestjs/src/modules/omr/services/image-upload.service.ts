@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common';
 import { readFile } from 'node:fs/promises';
 import { basename, extname } from 'node:path';
 import { IStorageService } from '../../../storage/storage.interface';
@@ -12,6 +12,8 @@ const SUPPORTED_MIME_TYPES = new Set([
 
 @Injectable()
 export class ImageUploadService {
+  private readonly logger = new Logger(ImageUploadService.name);
+
   constructor(
     @Inject(IStorageService)
     private readonly storageService: IStorageService,
@@ -47,23 +49,29 @@ export class ImageUploadService {
       return artifactRef;
     }
 
-    const buffer = await readFile(artifactRef);
-    const fileName = basename(artifactRef);
-    return this.storageService.uploadFile(
-      {
-        fieldname: 'artifact',
-        originalname: fileName,
-        encoding: '7bit',
-        mimetype: this.resolveMimeType(fileName),
-        size: buffer.byteLength,
-        buffer,
-        stream: undefined as never,
-        destination: '',
-        filename: fileName,
-        path: artifactRef,
-      },
-      `eduscan/omr/${batchId}/artifacts`,
-    );
+    try {
+      const buffer = await readFile(artifactRef);
+      const fileName = basename(artifactRef);
+      return await this.storageService.uploadFile(
+        {
+          fieldname: 'artifact',
+          originalname: fileName,
+          encoding: '7bit',
+          mimetype: this.resolveMimeType(fileName),
+          size: buffer.byteLength,
+          buffer,
+          stream: undefined as never,
+          destination: '',
+          filename: fileName,
+          path: artifactRef,
+        },
+        `eduscan/omr/${batchId}/artifacts`,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Failed to upload OMR artifact from ${artifactRef}: ${message}`);
+      return null;
+    }
   }
 
   private resolveMimeType(fileName: string) {
