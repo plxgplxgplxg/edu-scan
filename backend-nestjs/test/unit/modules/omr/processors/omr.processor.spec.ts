@@ -14,6 +14,7 @@ describe('OmrProcessor', () => {
     resolveVariant: jest.fn(),
     prepareSubmission: jest.fn(),
     summarizeSubmission: jest.fn(),
+    buildOverlayMarks: jest.fn(),
   };
   const omrRepository = {
     findExamById: jest.fn(),
@@ -67,7 +68,11 @@ describe('OmrProcessor', () => {
       correctCount: 1,
       wrongCount: 1,
       reviewCount: 0,
+      gradedAt: new Date(),
     });
+    gradingService.buildOverlayMarks.mockReturnValue([
+      { questionNumber: 1, status: 'CORRECT' },
+    ]);
     gradingService.prepareSubmission.mockReturnValue({
       studentCode: 'STU-001',
       status: SubmissionStatus.GRADED,

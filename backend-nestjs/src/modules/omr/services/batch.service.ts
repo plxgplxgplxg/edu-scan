@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
+  AnswerChoice,
   OmrBatchStatus,
   SubmissionStatus,
   TestCodeResolutionStatus,
@@ -14,7 +15,7 @@ import {
   OmrSubmissionDetailViewResponseDto,
   OmrSubmissionResponseDto,
 } from '../dto/response/omr-batch-response.dto';
-import { PreparedSubmissionDetail, GradingService } from './grading.service';
+import { GradingService, PreparedSubmissionDetail } from './grading.service';
 import {
   OmrBatchLightweight,
   OmrBatchWithRelations,
@@ -62,6 +63,12 @@ export class BatchService {
     resolvedTestCode: string | null;
     testCodeResolutionStatus: TestCodeResolutionStatus;
     status: SubmissionStatus;
+    score: number;
+    maxScore: number;
+    correctCount: number;
+    wrongCount: number;
+    reviewCount: number;
+    gradedAt: Date;
     details: PreparedSubmissionDetail[];
     processedImageUrl?: string | null;
     annotatedImageUrl?: string | null;
@@ -130,6 +137,82 @@ export class BatchService {
     }
 
     return this.toSubmissionDetailResponseDto(submission);
+  }
+
+  async regradeSubmission(
+    submissionId: string,
+    teacherId: string,
+  ): Promise<OmrSubmissionDetailViewResponseDto> {
+    const submission = await this.omrRepository.findTeacherSubmissionById(
+      submissionId,
+      teacherId,
+    );
+
+    if (!submission) {
+      throw new NotFoundException('Submission not found');
+    }
+
+    const answerKeys = submission.resolvedVariant?.answerKeys ?? null;
+    const preparedDetails = submission.details.map((d) => ({
+      questionNumber: d.questionNumber,
+      detectedAnswer: d.detectedAnswer,
+      finalAnswer: d.finalAnswer,
+      needsReview: d.needsReview,
+      reviewReason: d.reviewReason,
+      correctAnswer: d.correctAnswer as AnswerChoice | null,
+      isCorrect: d.isCorrect ?? false,
+    }));
+    const summary = this.gradingService.summarizeSubmission(
+      answerKeys,
+      preparedDetails,
+      submission.exam.maxScore,
+    );
+
+    const details = submission.details.map((detail) => {
+      const answerKey = answerKeys?.find(
+        (k) => k.questionNumber === detail.questionNumber,
+      );
+      const isCorrect =
+        answerKey !== undefined &&
+        !detail.needsReview &&
+        detail.finalAnswer !== null &&
+        detail.finalAnswer === answerKey.correctAnswer;
+
+      return {
+        id: detail.id,
+        correctAnswer: answerKey?.correctAnswer ?? null,
+        isCorrect,
+      };
+    });
+
+    const needsReview = submission.details.some((d) => d.needsReview);
+    const status = needsReview
+      ? SubmissionStatus.NEEDS_REVIEW
+      : SubmissionStatus.GRADED;
+
+    await this.omrRepository.updateSubmissionScores({
+      submissionId,
+      score: summary.score,
+      maxScore: summary.maxScore,
+      correctCount: summary.correctCount,
+      wrongCount: summary.wrongCount,
+      reviewCount: summary.reviewCount,
+      gradedAt: summary.gradedAt,
+      status,
+      details,
+    });
+
+    const updatedSubmission =
+      await this.omrRepository.findTeacherSubmissionById(
+        submissionId,
+        teacherId,
+      );
+
+    if (!updatedSubmission) {
+      throw new NotFoundException('Submission not found after regrade');
+    }
+
+    return this.toSubmissionDetailResponseDto(updatedSubmission);
   }
 
   private toBatchResponseDto(
@@ -207,16 +290,9 @@ export class BatchService {
   private toSubmissionResponseDto(
     submission: OmrSubmissionWithRelations,
   ): OmrSubmissionResponseDto {
-    const answerKeys = submission.resolvedVariant?.answerKeys ?? null;
     const details = this.mapSubmissionDetails(
-      answerKeys,
       submission.details,
       submission.testCodeResolutionStatus,
-    );
-    const summary = this.gradingService.summarizeSubmission(
-      answerKeys,
-      submission.details,
-      submission.exam.maxScore,
     );
 
     return {
@@ -234,39 +310,29 @@ export class BatchService {
       warpOverlayUrl: submission.warpOverlayUrl,
       answerScoresUrl: submission.answerScoresUrl,
       status: submission.status,
-      score: summary.score,
-      maxScore: summary.maxScore,
-      correctCount: summary.correctCount,
-      wrongCount: summary.wrongCount,
-      reviewCount: summary.reviewCount,
+      score: submission.score ?? 0,
+      maxScore: submission.maxScore ?? submission.exam.maxScore,
+      correctCount: submission.correctCount ?? 0,
+      wrongCount: submission.wrongCount ?? 0,
+      reviewCount: submission.reviewCount ?? 0,
       needsReview: submission.status === SubmissionStatus.NEEDS_REVIEW,
       details,
     };
   }
 
   private mapSubmissionDetails(
-    answerKeys: Array<{
-      questionNumber: number;
-      correctAnswer: string | null;
-    }> | null,
     details: Array<{
       questionNumber: number;
       detectedAnswer: string | null;
       finalAnswer: string | null;
       needsReview: boolean;
       reviewReason: string | null;
+      correctAnswer: string | null;
+      isCorrect: boolean | null;
     }>,
     testCodeResolutionStatus: TestCodeResolutionStatus,
   ) {
-    const answerKeyMap = new Map(
-      (answerKeys ?? []).map((item) => [
-        item.questionNumber,
-        item.correctAnswer,
-      ]),
-    );
-
     return details.map((detail) => {
-      const correctAnswer = answerKeyMap.get(detail.questionNumber) ?? null;
       const reviewReason =
         detail.reviewReason ??
         (testCodeResolutionStatus === TestCodeResolutionStatus.MATCHED
@@ -275,14 +341,10 @@ export class BatchService {
 
       return {
         questionNumber: detail.questionNumber,
-        correctAnswer,
+        correctAnswer: detail.correctAnswer,
         detectedAnswer: detail.detectedAnswer,
         finalAnswer: detail.finalAnswer,
-        isCorrect:
-          correctAnswer !== null &&
-          !detail.needsReview &&
-          detail.finalAnswer !== null &&
-          detail.finalAnswer === correctAnswer,
+        isCorrect: detail.isCorrect ?? false,
         needsReview: detail.needsReview,
         reviewReason,
       };

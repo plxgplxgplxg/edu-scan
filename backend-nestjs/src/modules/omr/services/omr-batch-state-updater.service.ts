@@ -25,6 +25,12 @@ export class OmrBatchStateUpdaterService {
     resolvedTestCode: string | null;
     testCodeResolutionStatus: TestCodeResolutionStatus;
     status: SubmissionStatus;
+    score: number;
+    maxScore: number;
+    correctCount: number;
+    wrongCount: number;
+    reviewCount: number;
+    gradedAt: Date;
     details: PreparedSubmissionDetail[];
     processedImageUrl?: string | null;
     annotatedImageUrl?: string | null;

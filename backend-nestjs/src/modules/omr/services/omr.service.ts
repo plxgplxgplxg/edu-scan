@@ -76,4 +76,8 @@ export class OmrService {
   async getSubmissionById(submissionId: string, teacherId: string) {
     return this.batchService.getTeacherSubmissionById(submissionId, teacherId);
   }
+
+  async regradeSubmission(submissionId: string, teacherId: string) {
+    return this.batchService.regradeSubmission(submissionId, teacherId);
+  }
 }

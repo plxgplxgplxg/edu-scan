@@ -37,6 +37,8 @@ describe('GradingService', () => {
         finalAnswer: AnswerChoice.A,
         needsReview: false,
         reviewReason: null,
+        correctAnswer: AnswerChoice.A,
+        isCorrect: true,
       },
       {
         questionNumber: 2,
@@ -44,6 +46,8 @@ describe('GradingService', () => {
         finalAnswer: AnswerChoice.B,
         needsReview: false,
         reviewReason: null,
+        correctAnswer: AnswerChoice.B,
+        isCorrect: true,
       },
     ]);
   });
@@ -99,6 +103,8 @@ describe('GradingService', () => {
         finalAnswer: null,
         needsReview: true,
         reviewReason: 'LOW_CONFIDENCE',
+        correctAnswer: AnswerChoice.A,
+        isCorrect: false,
       },
       {
         questionNumber: 2,
@@ -106,6 +112,8 @@ describe('GradingService', () => {
         finalAnswer: null,
         needsReview: true,
         reviewReason: 'LOW_CONFIDENCE',
+        correctAnswer: AnswerChoice.B,
+        isCorrect: false,
       },
     ]);
   });
@@ -120,6 +128,8 @@ describe('GradingService', () => {
           finalAnswer: AnswerChoice.A,
           needsReview: false,
           reviewReason: null,
+          correctAnswer: AnswerChoice.A,
+          isCorrect: true,
         },
         {
           questionNumber: 2,
@@ -127,6 +137,8 @@ describe('GradingService', () => {
           finalAnswer: AnswerChoice.C,
           needsReview: false,
           reviewReason: null,
+          correctAnswer: AnswerChoice.B,
+          isCorrect: false,
         },
       ],
       10,
@@ -163,6 +175,8 @@ describe('GradingService', () => {
       finalAnswer: null,
       needsReview: true,
       reviewReason: 'MULTI_MARK',
+      correctAnswer: AnswerChoice.A,
+      isCorrect: false,
     });
   });
 

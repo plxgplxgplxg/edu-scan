@@ -5,6 +5,7 @@ import {
 import { ClientGrpc } from '@nestjs/microservices';
 import { of, throwError } from 'rxjs';
 import { OmrClientService } from '../../../src/modules/omr/services/omr-client.service';
+import { OmrMarkStatus } from '../../../src/modules/omr/interfaces/omr-transport.interface';
 
 describe('OmrClientService', () => {
   let service: OmrClientService;
@@ -114,7 +115,7 @@ describe('OmrClientService', () => {
     await expect(
       service.renderGradeOverlay({
         resultJsonPath: '/tmp/result.json',
-        answerKey: [{ questionNumber: 1, correctAnswer: 'A' }],
+        marks: [{ questionNumber: 1, status: OmrMarkStatus.CORRECT }],
       }),
     ).rejects.toEqual(
       new UnprocessableEntityException('Invalid overlay payload'),

@@ -15,16 +15,17 @@ describe('BatchService', () => {
     findTeacherSubmissionById: jest.fn(),
   };
 
-  const gradingService = {
-    calculateScore: jest.fn(),
-    summarizeSubmission: jest.fn(),
-  };
   const eventEmitter = {
     emit: jest.fn(),
   };
   const sseRegistryService = {
     emit: jest.fn(),
     complete: jest.fn(),
+  };
+
+  const gradingService = {
+    calculateScore: jest.fn(),
+    summarizeSubmission: jest.fn(),
   };
 
   beforeEach(() => {
@@ -42,6 +43,7 @@ describe('BatchService', () => {
       correctCount: 1,
       wrongCount: 1,
       reviewCount: 0,
+      gradedAt: new Date(),
     });
   });
 
@@ -143,6 +145,12 @@ describe('BatchService', () => {
       resolvedTestCode: null,
       testCodeResolutionStatus: 'MISSING_TEST_CODE' as any,
       status: SubmissionStatus.NEEDS_REVIEW,
+      score: 0,
+      maxScore: 10,
+      correctCount: 0,
+      wrongCount: 0,
+      reviewCount: 0,
+      gradedAt: new Date(),
       details: [],
     });
 
@@ -193,6 +201,12 @@ function buildBatch() {
         warpOverlayUrl: 'https://example.com/warp.png',
         answerScoresUrl: 'https://example.com/scores.json',
         status: SubmissionStatus.GRADED,
+        score: 7.5,
+        maxScore: 10,
+        correctCount: 1,
+        wrongCount: 1,
+        reviewCount: 0,
+        gradedAt: new Date('2026-04-14T10:00:00.000Z'),
         student: {
           id: 'student-1',
           name: 'Student One',
@@ -211,6 +225,8 @@ function buildBatch() {
             finalAnswer: AnswerChoice.A,
             needsReview: false,
             reviewReason: null,
+            correctAnswer: AnswerChoice.A,
+            isCorrect: true,
           },
           {
             questionNumber: 2,
@@ -218,6 +234,8 @@ function buildBatch() {
             finalAnswer: AnswerChoice.C,
             needsReview: false,
             reviewReason: null,
+            correctAnswer: AnswerChoice.B,
+            isCorrect: false,
           },
         ],
       },

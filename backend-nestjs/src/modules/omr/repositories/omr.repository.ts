@@ -141,6 +141,8 @@ type SubmissionDetailInput = {
   finalAnswer: Prisma.SubmissionDetailCreateManySubmissionInput['finalAnswer'];
   needsReview: boolean;
   reviewReason: string | null;
+  correctAnswer: Prisma.SubmissionDetailCreateManySubmissionInput['correctAnswer'];
+  isCorrect: boolean;
 };
 
 export const resolveFinalBatchStatus = (
@@ -296,6 +298,12 @@ export class OmrRepository {
     resolvedTestCode: string | null;
     testCodeResolutionStatus: TestCodeResolutionStatus;
     status: SubmissionStatus;
+    score: number;
+    maxScore: number;
+    correctCount: number;
+    wrongCount: number;
+    reviewCount: number;
+    gradedAt: Date;
     details: SubmissionDetailInput[];
     processedImageUrl?: string | null;
     annotatedImageUrl?: string | null;
@@ -322,6 +330,12 @@ export class OmrRepository {
           warpOverlayUrl: data.warpOverlayUrl,
           answerScoresUrl: data.answerScoresUrl,
           status: data.status,
+          score: data.score,
+          maxScore: data.maxScore,
+          correctCount: data.correctCount,
+          wrongCount: data.wrongCount,
+          reviewCount: data.reviewCount,
+          gradedAt: data.gradedAt,
           details: {
             createMany: {
               data: data.details,
@@ -394,6 +408,47 @@ export class OmrRepository {
         status,
         completedAt: new Date(),
       },
+    });
+  }
+
+  async updateSubmissionScores(data: {
+    submissionId: string;
+    score: number;
+    maxScore: number;
+    correctCount: number;
+    wrongCount: number;
+    reviewCount: number;
+    gradedAt: Date;
+    status: SubmissionStatus;
+    details: Array<{
+      id: string;
+      correctAnswer: Prisma.SubmissionDetailUpdateInput['correctAnswer'];
+      isCorrect: boolean;
+    }>;
+  }) {
+    return this.prismaService.$transaction(async (tx) => {
+      await tx.submission.update({
+        where: { id: data.submissionId },
+        data: {
+          score: data.score,
+          maxScore: data.maxScore,
+          correctCount: data.correctCount,
+          wrongCount: data.wrongCount,
+          reviewCount: data.reviewCount,
+          gradedAt: data.gradedAt,
+          status: data.status,
+        },
+      });
+
+      for (const detail of data.details) {
+        await tx.submissionDetail.update({
+          where: { id: detail.id },
+          data: {
+            correctAnswer: detail.correctAnswer,
+            isCorrect: detail.isCorrect,
+          },
+        });
+      }
     });
   }
 }

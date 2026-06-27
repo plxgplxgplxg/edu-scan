@@ -5,28 +5,31 @@ package eduscan.omr.v1;
 service OmrService {
   rpc Detect(OmrDetectRequest) returns (OmrProcessResponse);
   rpc GradeOverlay(OmrGradeOverlayRequest) returns (OmrGradeOverlayResponse);
-  rpc Process(OmrProcessRequest) returns (OmrProcessResponse);
+  // Process is deprecated — backend handles all grading.
+  // It is kept for reference during migration and will be removed in a future release.
+  rpc Process(OmrProcessRequest) returns (OmrProcessResponse) {
+    option deprecated = true;
+  }
 }
+
+// ------------------------------------------------------------------
+// Enums
+// ------------------------------------------------------------------
+
+enum OmrMarkStatus {
+  OMR_MARK_STATUS_UNSPECIFIED = 0;
+  CORRECT = 1;
+  WRONG = 2;
+  REVIEW = 3;
+}
+
+// ------------------------------------------------------------------
+// Shared messages
+// ------------------------------------------------------------------
 
 message OmrAnswerKeyItem {
   int32 question_number = 1;
   string correct_answer = 2;
-}
-
-message OmrDetectRequest {
-  string image_url = 1;
-  optional string template_name = 2;
-}
-
-message OmrGradeOverlayRequest {
-  string result_json_path = 1;
-  repeated OmrAnswerKeyItem answer_key = 2;
-}
-
-message OmrProcessRequest {
-  string image_url = 1;
-  optional string template_name = 2;
-  repeated OmrAnswerKeyItem answer_key = 3;
 }
 
 message OmrArtifactsResponse {
@@ -37,13 +40,24 @@ message OmrArtifactsResponse {
   optional string result_json_path = 5;
 }
 
+// ------------------------------------------------------------------
+// Detect
+// ------------------------------------------------------------------
+
+message OmrDetectRequest {
+  string image_url = 1;
+  optional string template_name = 2;
+}
+
 message OmrAnswerResponse {
   int32 question_number = 1;
   optional string detected_answer = 2;
-  optional string correct_answer = 3;
-  optional bool is_correct = 4;
-  bool needs_review = 5;
-  optional string review_reason = 6;
+  bool needs_review = 3;
+  optional string review_reason = 4;
+  // correct_answer and is_correct are deprecated.
+  // Grading is solely performed by the backend.
+  reserved 3, 4;
+  reserved "correct_answer", "is_correct";
 }
 
 message OmrProcessResponse {
@@ -54,6 +68,34 @@ message OmrProcessResponse {
   OmrArtifactsResponse artifacts = 5;
 }
 
+// ------------------------------------------------------------------
+// GradeOverlay
+// ------------------------------------------------------------------
+
+message OmrQuestionMark {
+  int32 question_number = 1;
+  OmrMarkStatus status = 2;
+}
+
+message OmrGradeOverlayRequest {
+  string result_json_path = 1;
+  repeated OmrQuestionMark marks = 2;
+  // answer_key is deprecated — replaced by marks.
+  // The backend now computes mark statuses and sends them directly.
+  reserved 3;
+  reserved "answer_key";
+}
+
 message OmrGradeOverlayResponse {
   OmrArtifactsResponse artifacts = 1;
+}
+
+// ------------------------------------------------------------------
+// Process (deprecated)
+// ------------------------------------------------------------------
+
+message OmrProcessRequest {
+  string image_url = 1;
+  optional string template_name = 2;
+  repeated OmrAnswerKeyItem answer_key = 3;
 }

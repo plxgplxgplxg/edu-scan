@@ -4,7 +4,6 @@ import {
   TestCodeResolutionStatus,
 } from '@prisma/client';
 import { BatchService } from '../../../../../src/modules/omr/services/batch.service';
-import { GradingService } from '../../../../../src/modules/omr/services/grading.service';
 
 describe('BatchService', () => {
   const omrRepository = {
@@ -18,6 +17,10 @@ describe('BatchService', () => {
   };
 
   let service: BatchService;
+  const gradingService = {
+    calculateScore: jest.fn(),
+    summarizeSubmission: jest.fn(),
+  };
   const eventEmitter = {
     emit: jest.fn(),
   };
@@ -30,10 +33,18 @@ describe('BatchService', () => {
     jest.clearAllMocks();
     service = new BatchService(
       omrRepository as never,
-      new GradingService(),
+      gradingService as never,
       eventEmitter as never,
       sseRegistryService as never,
     );
+    gradingService.summarizeSubmission.mockReturnValue({
+      score: 0,
+      maxScore: 10,
+      correctCount: 0,
+      wrongCount: 0,
+      reviewCount: 1,
+      gradedAt: new Date(),
+    });
   });
 
   it('returns test-code resolution fields in batch list', async () => {
@@ -64,6 +75,12 @@ describe('BatchService', () => {
       detectedTestId: 'Z99',
       resolvedTestCode: null,
       testCodeResolutionStatus: TestCodeResolutionStatus.UNKNOWN_TEST_CODE,
+      score: 0,
+      maxScore: 10,
+      correctCount: 0,
+      wrongCount: 0,
+      reviewCount: 1,
+      gradedAt: new Date(),
       details: [
         {
           questionNumber: 1,
@@ -71,6 +88,8 @@ describe('BatchService', () => {
           finalAnswer: 'A',
           needsReview: true,
           reviewReason: null,
+          correctAnswer: null,
+          isCorrect: false,
         },
       ],
     });
@@ -132,6 +151,12 @@ function buildSubmissionEntity(
     warpOverlayUrl: 'https://example.com/warp.png',
     answerScoresUrl: 'https://example.com/scores.json',
     status: SubmissionStatus.GRADED,
+    score: 10,
+    maxScore: 10,
+    correctCount: 30,
+    wrongCount: 0,
+    reviewCount: 0,
+    gradedAt: new Date(),
     createdAt: new Date('2026-04-17T00:00:00.000Z'),
     updatedAt: new Date('2026-04-17T00:00:00.000Z'),
     student: {
@@ -158,6 +183,8 @@ function buildSubmissionEntity(
       finalAnswer: 'A',
       needsReview: false,
       reviewReason: null,
+      correctAnswer: 'A',
+      isCorrect: true,
     })),
     ...overrides,
   };

@@ -248,10 +248,18 @@ model Submission {
   annotatedImageUrl String?
   warpOverlayUrl    String?
   answerScoresUrl   String?
+  score        Float?
+  maxScore     Float?
+  correctCount Int?
+  wrongCount   Int?
+  reviewCount  Int?
+  gradedAt     DateTime?
   status      SubmissionStatus @default(NEEDS_REVIEW)
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   reviewedAt  DateTime?
+
+  @@index([examId, score])
 
   exam    Exam               @relation(fields: [examId], references: [id], onDelete: Cascade)
   resolvedVariant ExamVariant? @relation(fields: [resolvedVariantId], references: [id], onDelete: SetNull)
@@ -274,6 +282,8 @@ model SubmissionDetail {
   finalAnswer    AnswerChoice?
   needsReview    Boolean       @default(false)
   reviewReason   String?
+  correctAnswer  AnswerChoice?
+  isCorrect      Boolean?
 
   submission Submission      @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   remarks    RemarkRequest[]

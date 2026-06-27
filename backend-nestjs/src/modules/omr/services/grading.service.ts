@@ -13,6 +13,7 @@ import {
   OmrAnswerResult,
   OmrServiceResponse,
 } from '../interfaces/omr-response.interface';
+import { OmrMarkStatus } from '../interfaces/omr-transport.interface';
 
 type VariantAnswerKey = Array<{
   questionNumber: number;
@@ -25,6 +26,8 @@ export type PreparedSubmissionDetail = {
   finalAnswer: AnswerChoice | null;
   needsReview: boolean;
   reviewReason: string | null;
+  correctAnswer: AnswerChoice | null;
+  isCorrect: boolean;
 };
 
 export type TestCodeResolution = {
@@ -162,6 +165,7 @@ export class GradingService {
         correctCount: 0,
         wrongCount: 0,
         reviewCount: details.length,
+        gradedAt: new Date(),
       };
     }
 
@@ -196,6 +200,7 @@ export class GradingService {
       correctCount,
       wrongCount,
       reviewCount,
+      gradedAt: new Date(),
     };
   }
 
@@ -210,6 +215,26 @@ export class GradingService {
         details.find((item) => item.questionNumber === answerKey.questionNumber)
           ?.detectedAnswer ?? null,
     }));
+  }
+
+  buildOverlayMarks(
+    details: PreparedSubmissionDetail[],
+  ): Array<{ questionNumber: number; status: OmrMarkStatus }> {
+    return details.map((detail) => {
+      let status: OmrMarkStatus;
+      if (detail.needsReview) {
+        status = OmrMarkStatus.REVIEW;
+      } else if (detail.isCorrect) {
+        status = OmrMarkStatus.CORRECT;
+      } else {
+        status = OmrMarkStatus.WRONG;
+      }
+
+      return {
+        questionNumber: detail.questionNumber,
+        status,
+      };
+    });
   }
 
   private normalizeDetectedAnswers(
@@ -257,6 +282,10 @@ export class GradingService {
       });
     }
 
+    const answerKeyMap = new Map(
+      (answerKeys ?? []).map((item) => [item.questionNumber, item.correctAnswer]),
+    );
+
     const authoritativeQuestionNumbers =
       answerKeys?.map((item) => item.questionNumber) ??
       [...payloadAnswerMap.keys()].sort((left, right) => left - right);
@@ -268,9 +297,15 @@ export class GradingService {
       );
       const finalAnswer = this.normalizeFinalAnswer(detectedAnswer);
       const needsReview = Boolean(answer?.needsReview) || finalAnswer === null;
+      const correctAnswer = answerKeyMap.get(questionNumber) ?? null;
       const reviewReason =
         answer?.reviewReason ??
         (finalAnswer === null ? 'LOW_CONFIDENCE' : null);
+      const isCorrect =
+        correctAnswer !== null &&
+        !needsReview &&
+        finalAnswer !== null &&
+        finalAnswer === correctAnswer;
 
       return {
         questionNumber,
@@ -278,6 +313,8 @@ export class GradingService {
         finalAnswer,
         needsReview,
         reviewReason,
+        correctAnswer,
+        isCorrect,
       };
     });
   }

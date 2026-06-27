@@ -8,12 +8,20 @@ export type OmrDetectRequest = {
   templateName?: string;
 };
 
+export enum OmrMarkStatus {
+  CORRECT = 'CORRECT',
+  WRONG = 'WRONG',
+  REVIEW = 'REVIEW',
+}
+
+export type OmrQuestionMark = {
+  questionNumber: number;
+  status: OmrMarkStatus;
+};
+
 export type OmrGradeOverlayRequest = {
   resultJsonPath: string;
-  answerKey: Array<{
-    questionNumber: number;
-    correctAnswer: string;
-  }>;
+  marks: OmrQuestionMark[];
 };
 
 export interface OmrTransportClient {

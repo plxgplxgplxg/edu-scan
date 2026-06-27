@@ -93,7 +93,7 @@ export class OmrClientService implements OmrTransportClient, OnModuleInit {
     payload: OmrGradeOverlayRequest,
   ): Promise<OmrGradeOverlayResponse> {
     this.logger.log(
-      `renderGradeOverlay: resultJsonPath=${payload.resultJsonPath} answerKeyCount=${payload.answerKey.length}`,
+      `renderGradeOverlay: resultJsonPath=${payload.resultJsonPath} marksCount=${payload.marks.length}`,
     );
     const response = await this.invokeGrpc(() =>
       this.omrGrpcService.gradeOverlay(payload),

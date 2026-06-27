@@ -117,6 +117,26 @@ export const OmrSwagger = {
       ApiStandardErrorResponses(401, 403, 404, 500),
     );
   },
+  ChamLaiBaiLamOmr() {
+    return applyDecorators(
+      ApiBearerOperation({
+        summary: 'Chấm lại bài làm OMR',
+        roles: [Role.TEACHER],
+        notes:
+          'Tính lại điểm cho bài làm dựa trên đáp án hiện tại của mã đề đã resolve. Cập nhật score, correctCount, wrongCount, reviewCount, gradedAt và correctAnswer/isCorrect của từng chi tiết.',
+      }),
+      ApiParam({
+        name: 'submissionId',
+        description: 'ID bài làm OMR cần chấm lại',
+        format: 'uuid',
+      }),
+      ApiWrappedOkResponse({
+        type: OmrSubmissionDetailViewResponseDto,
+        description: 'Chấm lại bài làm OMR thành công.',
+      }),
+      ApiStandardErrorResponses(401, 403, 404, 500),
+    );
+  },
   TheoDoiTienDoBatchOmr() {
     return applyDecorators(
       ApiBearerOperation({

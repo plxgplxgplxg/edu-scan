@@ -59,4 +59,13 @@ export class OmrController {
   ) {
     return this.omrService.getSubmissionById(submissionId, teacherId);
   }
+
+  @Post('submissions/:submissionId/regrade')
+  @OmrSwagger.ChamLaiBaiLamOmr()
+  async regradeSubmission(
+    @Param('submissionId') submissionId: string,
+    @CurrentUser('id') teacherId: string,
+  ) {
+    return this.omrService.regradeSubmission(submissionId, teacherId);
+  }
 }

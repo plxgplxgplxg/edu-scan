@@ -26,6 +26,11 @@ export type ProcessedSubmissionPayload = {
   testCodeResolutionStatus: TestCodeResolutionStatus;
   status: SubmissionStatus;
   score: number;
+  maxScore: number;
+  correctCount: number;
+  wrongCount: number;
+  reviewCount: number;
+  gradedAt: Date;
   needsReview: boolean;
   details: PreparedSubmissionDetail[];
   processedImageUrl?: string | null;
@@ -127,10 +132,9 @@ export class OmrProcessor {
       resolvedVariant && detectResult.artifacts?.resultJsonPath
         ? await this.omrClientService.renderGradeOverlay({
             resultJsonPath: detectResult.artifacts.resultJsonPath,
-            answerKey: resolvedVariant.answerKeys.map((item) => ({
-              questionNumber: item.questionNumber,
-              correctAnswer: item.correctAnswer,
-            })),
+            marks: this.gradingService.buildOverlayMarks(
+              preparedSubmission.details,
+            ),
           })
         : null;
 
@@ -181,6 +185,11 @@ export class OmrProcessor {
       testCodeResolutionStatus: variantResolution.status,
       status,
       score: summary.score,
+      maxScore: summary.maxScore,
+      correctCount: summary.correctCount,
+      wrongCount: summary.wrongCount,
+      reviewCount: summary.reviewCount,
+      gradedAt: summary.gradedAt,
       needsReview: status === SubmissionStatus.NEEDS_REVIEW,
       details: preparedSubmission.details,
       ...artifactUrls,
