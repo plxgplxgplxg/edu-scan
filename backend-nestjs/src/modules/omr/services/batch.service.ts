@@ -17,6 +17,7 @@ import {
 } from '../dto/response/omr-batch-response.dto';
 import { GradingService, PreparedSubmissionDetail } from './grading.service';
 import {
+  OmrBatchHeader,
   OmrBatchLightweight,
   OmrBatchWithRelations,
   OmrRepository,
@@ -24,6 +25,8 @@ import {
 } from '../repositories/omr.repository';
 import { buildOmrSseChannelId, OmrSseEvent } from '../sse/omr-sse-event';
 import { SseRegistryService } from './sse-registry.service';
+
+const SUBMISSION_PAGE_SIZE = 20;
 
 @Injectable()
 export class BatchService {
@@ -102,6 +105,60 @@ export class BatchService {
     }
 
     return this.toBatchResponseDto(teacherBatch);
+  }
+
+  async getTeacherBatchHeader(batchId: string, teacherId: string) {
+    await this.assertTeacherBatchAccess(batchId, teacherId);
+
+    const batch = await this.omrRepository.findTeacherBatchHeader(
+      batchId,
+      teacherId,
+    );
+
+    if (!batch) {
+      throw new NotFoundException('OMR batch not found');
+    }
+
+    const [matchedCount, unmatchedCount, total] = await Promise.all([
+      this.omrRepository.countBatchSubmissionsByStudentMatched(batchId, true),
+      this.omrRepository.countBatchSubmissionsByStudentMatched(batchId, false),
+      this.omrRepository.countBatchSubmissions(batchId),
+    ]);
+
+    return this.toBatchHeaderResponseDto(batch, matchedCount, unmatchedCount, total);
+  }
+
+  async getTeacherBatchSubmissions(
+    batchId: string,
+    teacherId: string,
+    page: number,
+    limit: number,
+    status?: SubmissionStatus,
+  ) {
+    await this.assertTeacherBatchAccess(batchId, teacherId);
+
+    const safeLimit = Math.min(limit, SUBMISSION_PAGE_SIZE);
+    const { items, total } = await this.omrRepository.findBatchSubmissionsPaginated(
+      batchId,
+      page,
+      safeLimit,
+      status,
+    );
+
+    const exam = await this.omrRepository.findBatchById(batchId);
+
+    return {
+      items: items.map((submission) =>
+        this.toSubmissionResponseDto({
+          ...submission,
+          exam: exam!.exam,
+        } as OmrSubmissionWithRelations),
+      ),
+      total,
+      page,
+      limit: safeLimit,
+      totalPages: total === 0 ? 0 : Math.ceil(total / safeLimit),
+    };
   }
 
   async assertTeacherBatchAccess(batchId: string, teacherId: string) {
@@ -244,6 +301,35 @@ export class BatchService {
       matchedCount: batch.submissions.filter((item) => !!item.studentId).length,
       unmatchedCount: batch.submissions.filter((item) => !item.studentId)
         .length,
+    };
+  }
+
+  private toBatchHeaderResponseDto(
+    batch: OmrBatchHeader,
+    matchedCount: number,
+    unmatchedCount: number,
+    totalSubmissions: number,
+  ): OmrBatchResponseDto {
+    return {
+      id: batch.id,
+      examId: batch.examId,
+      examTitle: batch.exam.title,
+      teacherId: batch.teacherId,
+      status: batch.status,
+      totalFiles: batch.totalFiles,
+      processedFiles: batch.processedFiles,
+      successCount: batch.successCount,
+      failedCount: batch.failedCount,
+      progressPercentage:
+        batch.totalFiles === 0
+          ? 0
+          : Math.round((batch.processedFiles / batch.totalFiles) * 100),
+      completedAt: batch.completedAt,
+      createdAt: batch.createdAt,
+      updatedAt: batch.updatedAt,
+      submissions: [],
+      matchedCount,
+      unmatchedCount,
     };
   }
 

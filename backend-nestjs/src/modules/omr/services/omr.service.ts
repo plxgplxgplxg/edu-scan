@@ -4,7 +4,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { ExamType } from '@prisma/client';
+import { ExamType, SubmissionStatus } from '@prisma/client';
 import { BatchService } from './batch.service';
 import { UploadOmrDto } from '../dto/request/upload-omr.dto';
 import { ImageUploadService } from './image-upload.service';
@@ -71,6 +71,20 @@ export class OmrService {
 
   async getBatchById(batchId: string, teacherId: string) {
     return this.batchService.getTeacherBatchById(batchId, teacherId);
+  }
+
+  async getBatchHeader(batchId: string, teacherId: string) {
+    return this.batchService.getTeacherBatchHeader(batchId, teacherId);
+  }
+
+  async getBatchSubmissions(
+    batchId: string,
+    teacherId: string,
+    page: number,
+    limit: number,
+    status?: SubmissionStatus,
+  ) {
+    return this.batchService.getTeacherBatchSubmissions(batchId, teacherId, page, limit, status);
   }
 
   async getSubmissionById(submissionId: string, teacherId: string) {

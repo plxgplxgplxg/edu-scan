@@ -7,6 +7,7 @@ import {
 import { SubmissionsRepository } from '../repositories/submissions.repository';
 import { GetSubmissionsQueryDto } from '../dtos/get-submissions-query.dto';
 import { UpdateSubmissionOverrideDto } from '../dtos/update-override.dto';
+import { UpdateSubmissionAnswersDto } from '../dtos/update-submission-answers.dto';
 import { QueryMySubmissionsDto } from '../dtos/query-my-submissions.dto';
 import {
   ClassExamSubmissionStatus,
@@ -207,6 +208,98 @@ export class SubmissionsService {
           });
         }
       }
+    });
+
+    return this.submissionsRepository.findOneWithDetails(id);
+  }
+
+  async updateSubmissionAnswers(id: string, dto: UpdateSubmissionAnswersDto) {
+    const submission = await this.submissionsRepository.findOneWithDetails(id);
+
+    if (!submission) {
+      throw new NotFoundException('Submission not found');
+    }
+
+    const detailMap = new Map(
+      submission.details.map((d) => [d.questionNumber, d]),
+    );
+
+    const answerKeysMap = new Map<number, AnswerChoice>();
+    if (submission.resolvedVariant?.answerKeys) {
+      for (const key of submission.resolvedVariant.answerKeys) {
+        answerKeysMap.set(key.questionNumber, key.correctAnswer);
+      }
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const patch of dto.answers) {
+        const detail = detailMap.get(patch.questionNumber);
+        if (!detail) {
+          throw new BadRequestException(
+            `Question number ${patch.questionNumber} does not exist in this submission`,
+          );
+        }
+
+        const finalAnswer = patch.finalAnswer ?? null;
+        const correctAnswer = answerKeysMap.get(patch.questionNumber) ?? null;
+        const isCorrect =
+          finalAnswer !== null &&
+          correctAnswer !== null &&
+          finalAnswer === correctAnswer;
+
+        await tx.submissionDetail.update({
+          where: {
+            submissionId_questionNumber: {
+              submissionId: id,
+              questionNumber: patch.questionNumber,
+            },
+          },
+          data: {
+            finalAnswer,
+            isCorrect,
+            needsReview: finalAnswer === null,
+            reviewReason: finalAnswer === null ? 'MANUAL_BLANK' : null,
+          },
+        });
+      }
+
+      const updatedDetails = await tx.submissionDetail.findMany({
+        where: { submissionId: id },
+      });
+
+      let correctCount = 0;
+      let wrongCount = 0;
+      let reviewCount = 0;
+
+      for (const detail of updatedDetails) {
+        if (detail.needsReview) {
+          reviewCount += 1;
+        } else if (detail.isCorrect) {
+          correctCount += 1;
+        } else {
+          wrongCount += 1;
+        }
+      }
+
+      const totalQuestions = answerKeysMap.size || updatedDetails.length;
+      const score =
+        totalQuestions > 0 && answerKeysMap.size > 0
+          ? (correctCount / answerKeysMap.size) * submission.exam.maxScore
+          : 0;
+
+      const needsReview = updatedDetails.some((d) => d.needsReview);
+
+      await tx.submission.update({
+        where: { id },
+        data: {
+          correctCount,
+          wrongCount,
+          reviewCount,
+          score,
+          reviewedAt: new Date(),
+          status: needsReview ? 'NEEDS_REVIEW' : 'GRADED',
+        },
+      });
     });
 
     return this.submissionsRepository.findOneWithDetails(id);

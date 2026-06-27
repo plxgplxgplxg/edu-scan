@@ -16,6 +16,7 @@ import { SubmissionsSwagger } from '../docs/submissions.swagger';
 import { GetSubmissionsQueryDto } from '../dtos/get-submissions-query.dto';
 import { QueryMySubmissionsDto } from '../dtos/query-my-submissions.dto';
 import { UpdateSubmissionOverrideDto } from '../dtos/update-override.dto';
+import { UpdateSubmissionAnswersDto } from '../dtos/update-submission-answers.dto';
 import { SubmissionsService } from '../services/submissions.service';
 
 type RequestUser = { id: string; role: string };
@@ -66,5 +67,14 @@ export class SubmissionsController {
     @Body() dto: UpdateSubmissionOverrideDto,
   ) {
     return this.submissionsService.manualOverride(id, dto);
+  }
+
+  @Patch(':id/answers')
+  @Roles(Role.ADMIN, Role.TEACHER)
+  updateAnswers(
+    @Param('id') id: string,
+    @Body() dto: UpdateSubmissionAnswersDto,
+  ) {
+    return this.submissionsService.updateSubmissionAnswers(id, dto);
   }
 }

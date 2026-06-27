@@ -4,12 +4,13 @@ import {
   Get,
   Param,
   Post,
+  Query,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { Role } from '@prisma/client';
+import { Role, SubmissionStatus } from '@prisma/client';
 import { CurrentUser } from '../../../common/decorators/auth/current-user.decorator';
 import { Roles } from '../../../common/decorators/auth/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/auth/jwt-auth.guard';
@@ -49,6 +50,31 @@ export class OmrController {
     @CurrentUser('id') teacherId: string,
   ) {
     return this.omrService.getBatchById(batchId, teacherId);
+  }
+
+  @Get('batch/:batchId/header')
+  async getBatchHeader(
+    @Param('batchId') batchId: string,
+    @CurrentUser('id') teacherId: string,
+  ) {
+    return this.omrService.getBatchHeader(batchId, teacherId);
+  }
+
+  @Get('batch/:batchId/submissions')
+  async getBatchSubmissions(
+    @Param('batchId') batchId: string,
+    @CurrentUser('id') teacherId: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+    @Query('status') status?: SubmissionStatus,
+  ) {
+    return this.omrService.getBatchSubmissions(
+      batchId,
+      teacherId,
+      parseInt(page, 10) || 1,
+      parseInt(limit, 10) || 20,
+      status,
+    );
   }
 
   @Get('submissions/:submissionId')

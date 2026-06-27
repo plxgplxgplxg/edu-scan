@@ -58,6 +58,14 @@ export const omrBatchDetailInclude = {
   },
 } satisfies Prisma.OmrBatchInclude;
 
+export const omrBatchHeaderInclude = {
+  exam: {
+    include: {
+      variants: variantInclude,
+    },
+  },
+} satisfies Prisma.OmrBatchInclude;
+
 export const omrBatchListInclude = {
   exam: {
     select: {
@@ -75,6 +83,10 @@ export const omrBatchListInclude = {
 
 export type OmrBatchWithRelations = Prisma.OmrBatchGetPayload<{
   include: typeof omrBatchDetailInclude;
+}>;
+
+export type OmrBatchHeader = Prisma.OmrBatchGetPayload<{
+  include: typeof omrBatchHeaderInclude;
 }>;
 
 export type OmrBatchLightweight = Prisma.OmrBatchGetPayload<{
@@ -212,6 +224,68 @@ export class OmrRepository {
         teacherId,
       },
       include: omrBatchDetailInclude,
+    });
+  }
+
+  async findTeacherBatchHeader(batchId: string, teacherId: string) {
+    return this.prismaService.omrBatch.findFirst({
+      where: {
+        id: batchId,
+        teacherId,
+      },
+      include: omrBatchHeaderInclude,
+    });
+  }
+
+  async findBatchSubmissionsPaginated(
+    batchId: string,
+    page: number,
+    limit: number,
+    status?: SubmissionStatus,
+  ) {
+    const where: Prisma.SubmissionWhereInput = { batchId };
+    if (status) {
+      where.status = status;
+    }
+
+    const [items, total] = await Promise.all([
+      this.prismaService.submission.findMany({
+        where,
+        include: {
+          student: {
+            select: { id: true, name: true, studentCode: true },
+          },
+          resolvedVariant: {
+            include: {
+              answerKeys: {
+                orderBy: { questionNumber: 'asc' },
+              },
+            },
+          },
+          details: {
+            orderBy: { questionNumber: 'asc' },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prismaService.submission.count({ where }),
+    ]);
+
+    return { items, total };
+  }
+
+  async countBatchSubmissions(batchId: string) {
+    return this.prismaService.submission.count({ where: { batchId } });
+  }
+
+  async countBatchSubmissionsByStudentMatched(batchId: string, matched: boolean) {
+    return this.prismaService.submission.count({
+      where: {
+        batchId,
+        studentId: matched ? { not: null } : null,
+      },
     });
   }
 

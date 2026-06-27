@@ -311,6 +311,14 @@ type OmrBatchApi = {
   }>;
 };
 
+type OmrBatchSubmissionsPageApi = {
+  items: OmrBatchApi['submissions'];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
 export type ClassDetailView = {
   id: string;
   name: string;
@@ -728,6 +736,27 @@ export async function getOmrBatchDetail(token: string, batchId: string) {
     .then(mapOmrBatchDetail);
 }
 
+export async function getOmrBatchHeader(token: string, batchId: string) {
+  return requestJson<OmrBatchApi>(`/omr/batch/${encodeURIComponent(batchId)}/header`, { token });
+}
+
+export async function getOmrBatchSubmissions(
+  token: string,
+  batchId: string,
+  page: number,
+  status?: string,
+) {
+  const params = new URLSearchParams({ page: String(page), limit: '20' });
+  if (status) {
+    params.set('status', status);
+  }
+
+  return requestJson<OmrBatchSubmissionsPageApi>(
+    `/omr/batch/${encodeURIComponent(batchId)}/submissions?${params.toString()}`,
+    { token },
+  );
+}
+
 export async function updateSubmissionOverride(
   token: string,
   submissionId: string,
@@ -746,6 +775,24 @@ export async function updateSubmissionOverride(
       method: 'PATCH',
       token,
       body: payload,
+    },
+  );
+}
+
+export async function updateSubmissionAnswers(
+  token: string,
+  submissionId: string,
+  answers: Array<{
+    questionNumber: number;
+    finalAnswer?: 'A' | 'B' | 'C' | 'D' | null;
+  }>,
+) {
+  return requestJson<SubmissionDetailApi>(
+    `/submissions/${encodeURIComponent(submissionId)}/answers`,
+    {
+      method: 'PATCH',
+      token,
+      body: { answers },
     },
   );
 }

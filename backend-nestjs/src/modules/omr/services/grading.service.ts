@@ -241,9 +241,6 @@ export class GradingService {
     answers: OmrAnswerResult[],
     answerKeys: VariantAnswerKey | null,
   ): PreparedSubmissionDetail[] {
-    const answerKeyNumbers =
-      answerKeys?.map((item) => item.questionNumber) ?? [];
-    const answerNumberSet = new Set(answerKeyNumbers);
     const seenQuestionNumbers = new Set<number>();
     const payloadAnswerMap = new Map<
       number,
@@ -271,9 +268,6 @@ export class GradingService {
       }
 
       seenQuestionNumbers.add(answer.questionNumber);
-      if (answerKeys && !answerNumberSet.has(answer.questionNumber)) {
-        continue;
-      }
 
       payloadAnswerMap.set(answer.questionNumber, {
         detectedAnswer: answer.detectedAnswer ?? null,
@@ -292,14 +286,25 @@ export class GradingService {
 
     return authoritativeQuestionNumbers.map((questionNumber) => {
       const answer = payloadAnswerMap.get(questionNumber);
-      const detectedAnswer = this.normalizeDetectedAnswer(
-        answer?.detectedAnswer ?? null,
-      );
-      const finalAnswer = this.normalizeFinalAnswer(detectedAnswer);
-      const needsReview = Boolean(answer?.needsReview) || finalAnswer === null;
       const correctAnswer = answerKeyMap.get(questionNumber) ?? null;
+
+      if (!answer) {
+        return {
+          questionNumber,
+          detectedAnswer: null,
+          finalAnswer: null,
+          needsReview: true,
+          reviewReason: 'MISSING_ANSWER',
+          correctAnswer,
+          isCorrect: false,
+        };
+      }
+
+      const detectedAnswer = this.normalizeDetectedAnswer(answer.detectedAnswer);
+      const finalAnswer = this.normalizeFinalAnswer(detectedAnswer);
+      const needsReview = Boolean(answer.needsReview) || finalAnswer === null;
       const reviewReason =
-        answer?.reviewReason ??
+        answer.reviewReason ??
         (finalAnswer === null ? 'LOW_CONFIDENCE' : null);
       const isCorrect =
         correctAnswer !== null &&
