@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { ArrowLeft, Check, MessageSquare, X } from 'lucide-react-native';
+import { Check, MessageSquare, X } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -9,6 +9,7 @@ import { AppText } from '../../components/AppText';
 import { EmptyState } from '../../components/EmptyState';
 import { FilterChips } from '../../components/FilterChips';
 import { ModalSheet } from '../../components/ModalSheet';
+import { PageHeader } from '../../components/PageHeader';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ErrorState, LoadingState } from '../../components/RequestState';
 import { Screen } from '../../components/Screen';
@@ -19,6 +20,7 @@ import { useAppContent } from '../../hooks/useAppContent';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
+import { primaryHeroGradient } from '../../theme/header';
 import type { RootStackParamList } from '../../navigation/types';
 import type { StatusKey } from '../../types/app';
 
@@ -62,37 +64,20 @@ export function TeacherRemarksScreen() {
     { id: 'APPROVED' as const, label: content.common.tabs.approved, count: (data ?? []).filter(item => item.status === 'APPROVED').length },
     { id: 'REJECTED' as const, label: content.common.tabs.rejected, count: (data ?? []).filter(item => item.status === 'REJECTED').length },
   ];
+  const handleRefresh = () => {
+    reload().catch(() => undefined);
+  };
 
   return (
-    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
-      <View
-        style={[
-          styles.header,
-          {
-            paddingHorizontal: layout.horizontalPadding,
-            paddingTop: layout.sectionGap,
-            maxWidth: layout.contentMaxWidth,
-            alignSelf: 'center',
-            width: '100%',
-          },
-        ]}
-      >
-        <Pressable
-          style={styles.backRow}
-          onPress={() =>
-            navigation.navigate('TeacherTabs', { screen: 'TeacherDashboard' })
-          }
-        >
-          <ArrowLeft size={16} color={palette.mutedForeground} />
-          <AppText variant="label" color={palette.mutedForeground}>
-            {content.common.buttons.backToHome}
-          </AppText>
-        </Pressable>
-        <AppText variant="title" weight="bold">
-          {content.teacher.remarks.title}
-        </AppText>
-        <FilterChips value={filter} items={filterItems} onChange={setFilter} />
-      </View>
+    <Screen refreshing={loading} onRefresh={handleRefresh}>
+      <PageHeader
+        backLabel={content.common.buttons.backToHome}
+        title={content.teacher.remarks.title}
+        subtitle={`${String(items.length)} ${content.common.tabs.pendingReview.toLowerCase()}`}
+        gradient={primaryHeroGradient}
+        onBack={() => navigation.navigate('TeacherTabs', { screen: 'TeacherDashboard' })}
+        leadingVisual={<MessageSquare size={28} color={palette.white} />}
+      />
 
       <View
         style={[
@@ -107,6 +92,7 @@ export function TeacherRemarksScreen() {
           },
         ]}
       >
+        <FilterChips value={filter} items={filterItems} onChange={setFilter} />
         {loading ? <LoadingState label={content.common.labels.loading} /> : null}
         {error ? (
           <ErrorState
@@ -266,14 +252,6 @@ export function TeacherRemarksScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    gap: appTheme.spacing.md,
-  },
-  backRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
   list: {
     gap: appTheme.spacing.md,
   },

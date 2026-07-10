@@ -49,14 +49,15 @@ export function PageHeader({
   actionBadge,
   footer,
   leadingVisual,
+  gradient,
 }: PageHeaderProps) {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
   const layout = useResponsiveLayout();
   const useCompactMetrics = layout.isCompact && (metrics?.length ?? 0) > 2;
-  const extraTopInset = layout.isCompact ? appTheme.spacing.xxxl : appTheme.spacing.huge - appTheme.spacing.sm;
+  const extraTopInset = layout.isCompact ? 32 : 40 - 8;
 
-  const headerGradient = ['#5B5BD6', '#7C5CFC'] as const;
+  const headerGradient = gradient || [appTheme.palette.primary, '#8B5CF6', appTheme.palette.tertiary];
 
   return (
     <GradientBackground
@@ -66,14 +67,9 @@ export function PageHeader({
         {
           paddingTop: insets.top + layout.sectionGap + extraTopInset,
           paddingHorizontal: layout.horizontalPadding,
-          paddingBottom: layout.isCompact ? appTheme.spacing.xl : appTheme.spacing.xxl,
-          marginHorizontal: layout.horizontalPadding,
-          marginTop: -insets.top,
-          borderBottomLeftRadius: layout.heroRadius,
+          paddingBottom: layout.isCompact ? 20 : 24,
+          borderBottomLeftRadius: layout.heroRadius, // Not squircle here because it's a full width block
           borderBottomRightRadius: layout.heroRadius,
-          maxWidth: layout.contentMaxWidth + layout.horizontalPadding * 2,
-          alignSelf: 'center',
-          width: '100%',
         },
       ]}
     >
@@ -102,7 +98,11 @@ export function PageHeader({
         ]}
       />
       {backLabel ? (
-        <Pressable onPress={onBack ?? navigation.goBack} style={styles.backButton}>
+        <Pressable 
+          onPress={onBack ?? navigation.goBack} 
+          style={styles.backButton}
+          hitSlop={8}
+        >
           <ArrowLeft size={16} color={appTheme.palette.white} />
           <AppText variant="label" color={appTheme.palette.white}>
             {backLabel}
@@ -123,7 +123,7 @@ export function PageHeader({
               {
                 width: layout.headerVisualSize,
                 height: layout.headerVisualSize,
-                borderRadius: layout.heroRadius - 6,
+                borderRadius: layout.heroRadius - 4, // squircle
               },
             ]}
           >
@@ -132,24 +132,25 @@ export function PageHeader({
         ) : null}
         <View style={styles.headerCopy}>
           {overline ? (
-            <AppText variant="body" weight="semibold" color="rgba(255,255,255,0.74)">
+            <AppText variant="body" weight="semibold" color="rgba(255,255,255,0.78)">
               {overline}
             </AppText>
           ) : null}
           <AppText
             variant="title"
-            weight="bold"
+            weight="heavy"
             color={appTheme.palette.white}
             numberOfLines={2}
             adjustsFontSizeToFit
             minimumFontScale={0.72}
+            style={{ fontFamily: appTheme.typography.displayFamily }}
           >
             {title}
           </AppText>
           {subtitle ? (
             <AppText
               variant="body"
-              color="rgba(255,255,255,0.68)"
+              color="rgba(255,255,255,0.70)"
               numberOfLines={3}
               adjustsFontSizeToFit
               minimumFontScale={0.82}
@@ -167,7 +168,7 @@ export function PageHeader({
                 {
                   width: layout.avatarSize,
                   height: layout.avatarSize,
-                  borderRadius: layout.heroRadius - 10,
+                  borderRadius: layout.heroRadius - 4, // squircle
                 },
               ]}
             >
@@ -188,7 +189,7 @@ export function PageHeader({
                 {
                   width: layout.avatarSize,
                   height: layout.avatarSize,
-                  borderRadius: layout.heroRadius - 10,
+                  borderRadius: layout.heroRadius - 4,
                 },
               ]}
             >
@@ -202,7 +203,7 @@ export function PageHeader({
                 {
                   width: layout.avatarSize,
                   height: layout.avatarSize,
-                  borderRadius: layout.heroRadius - 10,
+                  borderRadius: layout.heroRadius - 4, // squircle
                 },
               ]}
             >
@@ -219,12 +220,12 @@ export function PageHeader({
           style={[
             styles.metricStrip,
             {
-              paddingHorizontal: layout.isCompact ? appTheme.spacing.md : appTheme.spacing.lg,
-              paddingVertical: layout.isCompact ? appTheme.spacing.md : appTheme.spacing.lg,
-              borderRadius: layout.heroRadius - 6,
+              paddingHorizontal: layout.isCompact ? 12 : 16,
+              paddingVertical: layout.isCompact ? 12 : 16,
+              borderRadius: layout.heroRadius - 4, // squircle
               flexDirection: useCompactMetrics ? 'column' : 'row',
               alignItems: useCompactMetrics ? 'stretch' : 'center',
-              gap: useCompactMetrics ? appTheme.spacing.md : 0,
+              gap: useCompactMetrics ? 12 : 0,
             },
           ]}
         >
@@ -233,19 +234,21 @@ export function PageHeader({
               <View style={[styles.metricItem, useCompactMetrics ? styles.metricItemStack : null]}>
                 <AppText
                   variant="hero"
-                  weight="bold"
+                  weight="heavy"
                   color={appTheme.palette.white}
                   style={[
                     styles.metricValue,
                     {
-                      fontSize: 26 * layout.metricScale,
-                      lineHeight: 28 * layout.metricScale,
+                      fontSize: 32 * layout.metricScale,
+                      lineHeight: 38 * layout.metricScale,
+                      fontFamily: appTheme.typography.displayFamily,
+                      fontVariant: ['tabular-nums'],
                     },
                   ]}
                 >
                   {metric.value}
                 </AppText>
-                <AppText variant="body" weight="medium" color="rgba(255,255,255,0.68)">
+                <AppText variant="body" color="rgba(255,255,255,0.70)">
                   {metric.label}
                 </AppText>
               </View>
@@ -268,20 +271,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: appTheme.spacing.lg,
+    marginBottom: 16,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: appTheme.spacing.md,
+    gap: 12,
   },
   headerRowStack: {
     flexWrap: 'wrap',
   },
   leadingVisual: {
-    backgroundColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
+    borderColor: 'rgba(255,255,255,0.55)', // glassBorder
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -291,7 +294,7 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: 'row',
-    gap: appTheme.spacing.sm,
+    gap: 8,
     alignItems: 'center',
     marginLeft: 'auto',
   },
@@ -303,20 +306,22 @@ const styles = StyleSheet.create({
   circleButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: 'rgba(255,255,255,0.62)', // glassFill
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.55)', // glassBorder
   },
   avatar: {
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.22)',
+    borderWidth: 2,
+    borderColor: appTheme.palette.success, // status ring demo (would be dynamic)
   },
   metricStrip: {
-    marginTop: appTheme.spacing.lg,
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    marginTop: 16,
+    backgroundColor: 'rgba(255,255,255,0.62)', // glassFill
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
+    borderColor: 'rgba(255,255,255,0.55)', // glassBorder
   },
   metricItem: {
     flex: 1,
@@ -331,29 +336,32 @@ const styles = StyleSheet.create({
   metricDivider: {
     width: StyleSheet.hairlineWidth,
     alignSelf: 'stretch',
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.22)',
   },
   badgeBubble: {
     position: 'absolute',
     top: -6,
     right: -4,
-    minWidth: 26,
-    height: 26,
+    minWidth: 24,
+    height: 24,
     paddingHorizontal: 6,
-    borderRadius: 13,
-    backgroundColor: '#FF6A69',
+    borderRadius: 12,
+    backgroundColor: appTheme.palette.destructive,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.9)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   footer: {
-    marginTop: appTheme.spacing.lg,
+    marginTop: 16,
   },
   bubbleLeft: {
     position: 'absolute',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    // Optional: add blur using react-native effect if available
   },
   bubbleRight: {
     position: 'absolute',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.10)',
   },
 });

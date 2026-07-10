@@ -16,6 +16,7 @@ import { useAppContent } from '../../hooks/useAppContent';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
+import { primaryHeroGradient } from '../../theme/header';
 import type { RootStackParamList } from '../../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -71,7 +72,7 @@ export function StudentProgressScreen() {
         backLabel={content.common.buttons.backToHome}
         title={content.student.progress.title}
         subtitle={content.student.progress.subtitle}
-        gradient={['#4F46E5', '#7C5CFC']}
+        gradient={primaryHeroGradient}
         onBack={() =>
           navigation.navigate('StudentTabs', { screen: 'StudentDashboard' })
         }

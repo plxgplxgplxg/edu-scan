@@ -65,7 +65,7 @@ export function Screen({
 
   const content = scrollable ? (
     <ScrollView
-      bounces={false}
+      bounces
       showsVerticalScrollIndicator={false}
       contentInsetAdjustmentBehavior="never"
       keyboardShouldPersistTaps="handled"

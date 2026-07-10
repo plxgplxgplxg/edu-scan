@@ -28,6 +28,7 @@ import { useAppContent } from '../../hooks/useAppContent';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
+import { primaryHeroGradient } from '../../theme/header';
 import { formatVietnameseDate, isExpired } from '../../utils/format';
 import type { RootStackParamList } from '../../navigation/types';
 import { useAssignmentSubmission } from '../../features/assignments/application/useAssignmentSubmission';
@@ -86,14 +87,17 @@ export function StudentAssignmentsScreen() {
     accessToken,
     onSubmitted: reload,
   });
+  const handleRefresh = () => {
+    reload().catch(() => undefined);
+  };
 
   return (
-    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
+    <Screen refreshing={loading} onRefresh={handleRefresh}>
       <PageHeader
         backLabel={content.common.buttons.backToHome}
         title={content.student.assignments.title}
         subtitle={content.student.assignments.subtitle}
-        gradient={['#5B5BD6', '#7C5CFC']}
+        gradient={primaryHeroGradient}
         onBack={() =>
           navigation.navigate('StudentTabs', { screen: 'StudentDashboard' })
         }
@@ -208,7 +212,7 @@ export function StudentAssignmentsScreen() {
           label="Chọn tệp"
           variant="outline"
           onPress={() => {
-            void pickFile();
+            pickFile().catch(() => undefined);
           }}
         />
         <PrimaryButton
@@ -254,8 +258,7 @@ const styles = StyleSheet.create({
     gap: appTheme.spacing.md,
   },
   overdueCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: palette.destructive,
+    backgroundColor: palette.destructiveSoft,
   },
   rowBetween: {
     flexDirection: 'row',
@@ -280,7 +283,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   expiredState: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: palette.destructiveSoft,
     borderWidth: 0,
   },
   sheetTitle: {

@@ -26,7 +26,7 @@ export function TextInputField({
   const layout = useResponsiveLayout();
 
   return (
-    <View style={{ gap: appTheme.spacing.sm }}>
+    <View style={{ gap: 8 }}>
       <AppText variant="label" weight="semibold" style={{ color: appTheme.palette.foreground }}>
         {label}
       </AppText>
@@ -34,22 +34,22 @@ export function TextInputField({
         style={[
           {
             minHeight: layout.controlMinHeight,
-            paddingHorizontal: layout.isCompact ? appTheme.spacing.md : appTheme.spacing.lg,
-            borderRadius: layout.heroRadius - 6,
+            paddingHorizontal: layout.isCompact ? 14 : 16,
+            borderRadius: layout.heroRadius - 4, // squircle
             backgroundColor: appTheme.palette.inputBackground,
             borderWidth: 1.5,
-            borderColor: 'rgba(97,91,227,0.04)',
+            borderColor: 'transparent',
             flexDirection: 'row',
             alignItems: 'center',
-            gap: appTheme.spacing.sm,
+            gap: 8,
           },
           focused
             ? {
-                borderColor: 'rgba(97,91,227,0.35)',
-                backgroundColor: '#FBFBFF',
+                borderColor: appTheme.palette.primary,
+                // Optional: apply a slight shadow glow here in the future
               }
             : null,
-          error ? { borderColor: '#FFBCC3' } : null,
+          error ? { borderColor: appTheme.palette.destructive } : null,
         ]}
       >
         <TextInput
@@ -59,9 +59,9 @@ export function TextInputField({
             {
               flex: 1,
               color: appTheme.palette.foreground,
-              fontSize: appTheme.typography.sizes.xl * (layout.isCompact ? 0.92 : 1),
+              fontSize: 16, // Fixed to 16px for accessibility as per design doc
               fontFamily: appTheme.typography.family,
-              paddingVertical: appTheme.spacing.md,
+              paddingVertical: 14,
             },
             style,
           ]}
@@ -75,12 +75,15 @@ export function TextInputField({
           }}
           {...rest}
         />
-        {trailing ? <View>{trailing}</View> : null}
+        {trailing ? <View hitSlop={8}>{trailing}</View> : null}
       </View>
       {error ? (
-        <AppText variant="label" color={appTheme.palette.destructive}>
-          {error}
-        </AppText>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          {/* Note: In a real app we'd add the Alert icon here per the doc */}
+          <AppText variant="label" color={appTheme.palette.destructive}>
+            {error}
+          </AppText>
+        </View>
       ) : null}
     </View>
   );

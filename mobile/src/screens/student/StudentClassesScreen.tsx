@@ -22,6 +22,7 @@ import { useAppContent } from '../../hooks/useAppContent';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
+import { primaryHeroGradient } from '../../theme/header';
 import type { RootStackParamList } from '../../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -51,14 +52,17 @@ export function StudentClassesScreen() {
     [accessToken],
   );
   const studentClasses = data ?? [];
+  const handleRefresh = () => {
+    reload().catch(() => undefined);
+  };
 
   return (
-    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
+    <Screen refreshing={loading} onRefresh={handleRefresh}>
       <PageHeader
         backLabel={content.common.buttons.backToHome}
         title={content.student.classes.title}
         subtitle={`${String(studentClasses.length)} ${content.student.classes.activeClasses}`}
-        gradient={['#5B5BD6', '#7C5CFC']}
+        gradient={primaryHeroGradient}
         onBack={() =>
           navigation.navigate('StudentTabs', { screen: 'StudentDashboard' })
         }
@@ -109,7 +113,7 @@ export function StudentClassesScreen() {
                 <View style={styles.inlineRow}>
                   {(item.pendingAssignments ?? 0) > 0 ? (
                     <View style={styles.pendingBadge}>
-                      <AppText variant="caption" color={palette.destructive}>
+                      <AppText variant="caption" color={palette.warning}>
                         {`${String(item.pendingAssignments ?? 0)} ${content.student.classes.pendingAssignmentsSuffix}`}
                       </AppText>
                     </View>
@@ -216,7 +220,7 @@ const styles = StyleSheet.create({
   },
 
   pendingBadge: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: palette.warningSoft,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: appTheme.radius.pill,

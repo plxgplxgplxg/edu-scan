@@ -20,6 +20,7 @@ import { useAppContent } from '../../hooks/useAppContent';
 import { useAuth } from '../../store/auth-store';
 import { appTheme } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
+import { primaryHeroGradient } from '../../theme/header';
 import type { RootStackParamList } from '../../navigation/types';
 import { getInitials } from '../../utils/string';
 import { listClasses, listExams, listTeacherRemarks } from '../../api/edu-scan';
@@ -29,23 +30,23 @@ import { useNotifications } from '../../features/notifications/application/notif
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const teacherDashboardModules = [
-  { id: 'classes', gradient: ['#5B5BD6', '#7C5CFC'] },
-  { id: 'omrExams', gradient: ['#3B82F6', '#06B6D4'] },
-  { id: 'classExams', gradient: ['#0EA5E9', '#14B8A6'] },
-  { id: 'omr', gradient: ['#8B5CF6', '#A855F7'] },
-  { id: 'remarks', gradient: ['#F59E0B', '#F97316'] },
-  { id: 'questions', gradient: ['#10B981', '#14B8A6'] },
-  { id: 'stats', gradient: ['#EC4899', '#F43F5E'] },
+  { id: 'classes', gradient: ['#6552F5', '#8B5CF6'], isLarge: true },
+  { id: 'omrExams', gradient: ['#2E9BFF', '#00D4B4'], isLarge: false },
+  { id: 'classExams', gradient: ['#0EA5E9', '#14B8A6'], isLarge: false },
+  { id: 'omr', gradient: ['#8B5CF6', '#C084FC'], isLarge: false },
+  { id: 'remarks', gradient: ['#FF9500', '#FF5FA2'], isLarge: false },
+  { id: 'questions', gradient: ['#12B886', '#00D4B4'], isLarge: false },
+  { id: 'stats', gradient: ['#FF5FA2', '#FF3B5C'], isLarge: false },
 ] as const;
 
 const moduleIcons = {
-  classes: <BookOpen size={28} color={appTheme.palette.white} />,
-  omrExams: <FileText size={28} color={appTheme.palette.white} />,
-  classExams: <FileText size={28} color={appTheme.palette.white} />,
-  omr: <ScanLine size={28} color={appTheme.palette.white} />,
-  remarks: <MessageSquare size={28} color={appTheme.palette.white} />,
-  questions: <HelpCircle size={28} color={appTheme.palette.white} />,
-  stats: <BarChart2 size={28} color={appTheme.palette.white} />,
+  classes: <BookOpen size={24} color={appTheme.palette.white} />,
+  omrExams: <FileText size={24} color={appTheme.palette.white} />,
+  classExams: <FileText size={24} color={appTheme.palette.white} />,
+  omr: <ScanLine size={24} color={appTheme.palette.white} />,
+  remarks: <MessageSquare size={24} color={appTheme.palette.white} />,
+  questions: <HelpCircle size={24} color={appTheme.palette.white} />,
+  stats: <BarChart2 size={24} color={appTheme.palette.white} />,
 };
 
 export function TeacherDashboardScreen() {
@@ -91,7 +92,7 @@ export function TeacherDashboardScreen() {
         overline={content.teacher.dashboard.greeting}
         title={profileName}
         subtitle={`${content.roles.TEACHER} • ${content.teacher.dashboard.subtitle}`}
-        gradient={['#4F46E5', '#6D28D9', '#7C5CFC']}
+        gradient={primaryHeroGradient}
         showNotificationButton
         actionBadge={unreadCount || undefined}
         onNotificationPress={() => navigation.navigate('SharedNotifications')}
@@ -124,6 +125,7 @@ export function TeacherDashboardScreen() {
             <DashboardModuleCard
               key={module.id}
               icon={moduleIcons[module.id as keyof typeof moduleIcons]}
+              isLarge={module.isLarge}
               title={
                 module.id === 'omrExams'
                   ? 'Đề OMR'

@@ -51,8 +51,8 @@ export function ModalSheet({ visible, onClose, children, scrollable = true }: Mo
               maxWidth: layout.contentMaxWidth + layout.horizontalPadding * 2,
               borderTopLeftRadius: layout.heroRadius,
               borderTopRightRadius: layout.heroRadius,
-              backgroundColor: appTheme.palette.card,
-              paddingHorizontal: layout.isCompact ? appTheme.spacing.xl : appTheme.spacing.xxl,
+              backgroundColor: appTheme.palette.surface1, // updated from card to surface1
+              paddingHorizontal: layout.isCompact ? 20 : 24,
               paddingTop: layout.sectionGap,
               maxHeight: layout.isCompact ? '92%' : '88%',
               height: scrollable ? undefined : (layout.isCompact ? '92%' : '88%'),
@@ -63,11 +63,11 @@ export function ModalSheet({ visible, onClose, children, scrollable = true }: Mo
             <View
               style={{
                 alignSelf: 'center',
-                width: 42,
+                width: 36, // updated from 42
                 height: 4,
                 borderRadius: 999,
-                backgroundColor: '#D9DCF0',
-                marginBottom: appTheme.spacing.xl,
+                backgroundColor: appTheme.palette.muted, // updated to muted
+                marginBottom: 20, // updated to 20
               }}
             />
             {scrollable ? (
@@ -77,8 +77,8 @@ export function ModalSheet({ visible, onClose, children, scrollable = true }: Mo
                 keyboardDismissMode="on-drag"
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{
-                  paddingBottom: insets.bottom + appTheme.spacing.xxl,
-                  gap: appTheme.spacing.md,
+                  paddingBottom: insets.bottom + 24,
+                  gap: 12,
                 }}
               >
                 {children}
@@ -92,13 +92,14 @@ export function ModalSheet({ visible, onClose, children, scrollable = true }: Mo
     </Modal>
   );
 }
-const styles = {
+
+const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: appTheme.palette.overlay,
     justifyContent: 'flex-end',
-  } as const,
+  },
   virtualizedContent: {
     flex: 1,
-  } as const,
-};
+  },
+});

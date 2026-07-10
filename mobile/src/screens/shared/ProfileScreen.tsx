@@ -1,10 +1,13 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, View } from 'react-native';
 import {
   Bell,
+  ChevronRight,
   Globe,
   LogOut,
+  Moon,
   Shield,
+  TrendingUp,
   User,
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -38,6 +41,7 @@ interface ProfileMenuItem {
   subtitle: string;
   icon: React.ReactNode;
   onPress?: () => void;
+  rightElement?: React.ReactNode;
 }
 
 export function ProfileScreen() {
@@ -45,6 +49,8 @@ export function ProfileScreen() {
   const { accessToken, content, email, language, logout, profileName, role, setLanguage } = useAuth();
   const layout = useResponsiveLayout();
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false); // Thêm state demo cho Dark Mode toggle
+
   const { data, loading, error, reload } = useAsyncResource(
     async () => {
       if (!accessToken || !role) {
@@ -85,9 +91,9 @@ export function ProfileScreen() {
   const roleGradients = useMemo(
     () =>
       ({
-        TEACHER: ['#5B5BD6', '#7C5CFC'],
-        STUDENT: ['#3B82F6', '#60A5FA'],
-        ADMIN: ['#10B981', '#34D399'],
+        TEACHER: [appTheme.palette.primary, appTheme.palette.tertiary],
+        STUDENT: [appTheme.palette.info, '#5CB6FF'],
+        ADMIN: [appTheme.palette.success, appTheme.palette.quaternary],
       })[role ?? 'TEACHER'],
     [role],
   );
@@ -98,6 +104,7 @@ export function ProfileScreen() {
       title: content.shared.profile.personalInfo,
       subtitle: content.shared.profile.personalInfoSubtitle,
       icon: <User size={18} color={palette.primary} />,
+      rightElement: <ChevronRight size={18} color={palette.mutedForeground} />,
     },
     {
       key: 'notifications',
@@ -105,6 +112,7 @@ export function ProfileScreen() {
       subtitle: content.shared.profile.notificationSubtitle,
       icon: <Bell size={18} color={palette.warning} />,
       onPress: () => navigation.navigate('SharedNotifications'),
+      rightElement: <ChevronRight size={18} color={palette.mutedForeground} />,
     },
     {
       key: 'language',
@@ -112,22 +120,39 @@ export function ProfileScreen() {
       subtitle: content.language[language],
       icon: <Globe size={18} color={palette.info} />,
       onPress: () => setShowLanguagePicker(true),
+      rightElement: <ChevronRight size={18} color={palette.mutedForeground} />,
+    },
+    {
+      key: 'darkmode',
+      title: 'Giao diện tối',
+      subtitle: isDarkMode ? 'Đang bật' : 'Đang tắt',
+      icon: <Moon size={18} color={palette.foregroundSoft} />,
+      onPress: () => setIsDarkMode(!isDarkMode),
+      rightElement: (
+        <Switch
+          value={isDarkMode}
+          onValueChange={setIsDarkMode}
+          trackColor={{ false: palette.muted, true: palette.primary }}
+        />
+      ),
     },
     {
       key: 'security',
       title: content.shared.profile.security,
       subtitle: content.shared.profile.securitySubtitle,
       icon: <Shield size={18} color={palette.success} />,
+      rightElement: <ChevronRight size={18} color={palette.mutedForeground} />,
     },
   ];
 
   if (role === 'STUDENT') {
-    menuItems.splice(2, 0, {
+    menuItems.splice(3, 0, {
       key: 'progress',
       title: content.student.progress.title,
       subtitle: content.student.progress.subtitle,
-      icon: <Shield size={18} color={palette.success} />,
+      icon: <TrendingUp size={18} color={palette.tertiary} />,
       onPress: () => navigation.navigate('StudentProgress'),
+      rightElement: <ChevronRight size={18} color={palette.mutedForeground} />,
     });
   }
 
@@ -211,13 +236,14 @@ export function ProfileScreen() {
             <SurfaceCard style={styles.menuCard}>
               <View style={styles.menuIcon}>{item.icon}</View>
               <View style={styles.flex}>
-                <AppText variant="body" weight="medium">
+                <AppText variant="bodyStrong" color={palette.foreground}>
                   {item.title}
                 </AppText>
-                <AppText variant="caption" color={palette.mutedForeground}>
+                <AppText variant="caption" color={palette.foregroundSoft}>
                   {item.subtitle}
                 </AppText>
               </View>
+              {item.rightElement}
             </SurfaceCard>
           </Pressable>
         ))}
@@ -227,10 +253,10 @@ export function ProfileScreen() {
               <LogOut size={18} color={palette.destructive} />
             </View>
             <View style={styles.flex}>
-              <AppText variant="body" weight="medium" color={palette.destructive}>
+              <AppText variant="bodyStrong" color={palette.destructive}>
                 {content.common.buttons.logout}
               </AppText>
-              <AppText variant="caption" color="#F87171">
+              <AppText variant="caption" color={palette.destructive} style={{ opacity: 0.75 }}>
                 {content.shared.profile.logoutSubtitle}
               </AppText>
             </View>
@@ -275,7 +301,12 @@ function MetricBlock({
 }) {
   return (
     <View style={styles.metricBlock}>
-      <AppText variant="headline" weight="bold" color={light ? palette.white : palette.foreground}>
+      <AppText 
+        variant="headline" 
+        weight="bold" 
+        color={light ? palette.white : palette.foreground}
+        style={{ fontFamily: appTheme.typography.displayFamily }}
+      >
         {value}
       </AppText>
       <AppText variant="label" color={light ? 'rgba(255,255,255,0.7)' : palette.mutedForeground}>
@@ -289,26 +320,28 @@ const styles = StyleSheet.create({
   initialsCard: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: appTheme.palette.glassFill,
   },
   headerFooter: {
     gap: appTheme.spacing.lg,
   },
   rolePill: {
     alignSelf: 'flex-start',
-    paddingHorizontal: appTheme.spacing.lg,
+    paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: appTheme.radius.pill,
-    backgroundColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: appTheme.palette.glassFill,
+    borderWidth: 1,
+    borderColor: appTheme.palette.glassBorder,
   },
   metricsCard: {
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: appTheme.palette.glassFill,
     borderRadius: appTheme.radius.lg,
     padding: appTheme.spacing.lg,
     flexDirection: 'row',
     justifyContent: 'space-around',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: appTheme.palette.glassBorder,
   },
   metricsCardStack: {
     flexWrap: 'wrap',
@@ -322,11 +355,13 @@ const styles = StyleSheet.create({
   },
   menu: {
     gap: appTheme.spacing.lg,
+    paddingBottom: 40,
   },
   menuCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: appTheme.spacing.md,
+    gap: 12,
+    minHeight: 76,
   },
   menuIcon: {
     width: 40,
@@ -339,11 +374,12 @@ const styles = StyleSheet.create({
   logoutCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: appTheme.spacing.md,
-    backgroundColor: '#FFF1F2',
+    gap: 12,
+    backgroundColor: palette.destructiveSoft,
+    minHeight: 76,
   },
   logoutIcon: {
-    backgroundColor: '#FFE5E7',
+    backgroundColor: 'rgba(255,59,92,0.12)', // destructive darker
   },
   flex: {
     flex: 1,

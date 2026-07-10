@@ -45,6 +45,7 @@ import {
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
+import { primaryHeroGradient } from '../../theme/header';
 import { formatVietnameseDate, percentage } from '../../utils/format';
 import type { RootStackParamList } from '../../navigation/types';
 
@@ -259,7 +260,7 @@ export function TeacherClassDetailScreen() {
         backLabel={content.common.buttons.back}
         title={currentClass.name}
         subtitle={`${currentClass.subject} • ${currentClass.schoolYear}`}
-        gradient={['#5B5BD6', '#7C5CFC']}
+        gradient={primaryHeroGradient}
         onBack={() => navigation.goBack()}
         leadingVisual={<BookOpen size={30} color={palette.white} />}
         footer={(

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { ChevronRight } from 'lucide-react-native';
 
 import { appTheme } from '../theme/tokens';
 import { useResponsiveLayout } from '../theme/responsive';
@@ -13,6 +14,7 @@ interface DashboardModuleCardProps {
   subtitle: string;
   colors: readonly string[];
   onPress: () => void;
+  isLarge?: boolean;
 }
 
 export function DashboardModuleCard({
@@ -21,25 +23,30 @@ export function DashboardModuleCard({
   subtitle,
   colors,
   onPress,
+  isLarge,
 }: DashboardModuleCardProps) {
   const layout = useResponsiveLayout();
-  const cardWidth =
-    layout.dashboardColumns === 1
-      ? '100%'
-      : (layout.contentWidth - layout.gridGap * (layout.dashboardColumns - 1)) / layout.dashboardColumns;
-  const compactCard = layout.isCompact || layout.dashboardColumns > 1;
+  // Bento grid calculation
+  const cardWidth = isLarge || layout.dashboardColumns === 1
+    ? '100%'
+    : (layout.contentWidth - layout.gridGap * (layout.dashboardColumns - 1)) / layout.dashboardColumns;
 
   return (
     <Pressable style={[styles.container, { width: cardWidth }]} onPress={onPress}>
       <SurfaceCard
         style={[
           styles.card,
-          {
-            minHeight: layout.dashboardColumns === 1 ? 138 : layout.isCompact ? 126 : 132,
-            gap: compactCard ? 10 : layout.sectionGap,
-            borderRadius: layout.heroRadius - 6,
-            paddingVertical: compactCard ? 14 : 18,
-            paddingHorizontal: compactCard ? 12 : 18,
+          isLarge ? {
+            height: 96,
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 20,
+            gap: 16,
+          } : {
+            minHeight: layout.isCompact ? 122 : 128,
+            alignItems: 'flex-start',
+            paddingVertical: 18,
+            paddingHorizontal: 16,
           },
         ]}
       >
@@ -48,32 +55,47 @@ export function DashboardModuleCard({
           style={[
             styles.iconWrap,
             {
-              width: compactCard ? Math.max(40, layout.moduleIconSize - 8) : layout.moduleIconSize,
-              height: compactCard ? Math.max(40, layout.moduleIconSize - 8) : layout.moduleIconSize,
-              borderRadius: layout.heroRadius - 6,
+              width: 48,
+              height: 48,
+              borderRadius: Math.max(layout.heroRadius - 10, 8),
+              ...appTheme.shadows.glow,
+              // Update shadowColor dynamically based on gradient colors to simulate glow
+              shadowColor: colors[0],
             },
           ]}
         >
           {icon}
         </GradientBackground>
-        <View style={styles.body}>
+        
+        <View
+          style={[
+            styles.body,
+            isLarge
+              ? { flex: 1, alignItems: 'flex-start', gap: 4 }
+              : { marginTop: 12, alignItems: 'flex-start' },
+          ]}
+        >
           <AppText
-            variant="body"
-            weight="medium"
-            style={[styles.center, styles.title]}
-            numberOfLines={2}
+            variant="bodyStrong"
+            numberOfLines={isLarge ? 1 : 2}
+            style={isLarge ? undefined : styles.title}
           >
             {title}
           </AppText>
           <AppText
             variant="caption"
             color={appTheme.palette.mutedForeground}
-            style={[styles.center, styles.subtitle]}
             numberOfLines={1}
           >
             {subtitle}
           </AppText>
         </View>
+        
+        {isLarge && (
+          <View style={styles.chevronWrap}>
+            <ChevronRight size={18} color={appTheme.palette.mutedForeground} />
+          </View>
+        )}
       </SurfaceCard>
     </Pressable>
   );
@@ -82,25 +104,21 @@ export function DashboardModuleCard({
 const styles = StyleSheet.create({
   container: {},
   card: {
-    alignItems: 'center',
     justifyContent: 'center',
+    width: '100%',
   },
   iconWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    ...appTheme.shadows.card,
   },
   body: {
     gap: 2,
-    alignItems: 'center',
-  },
-  center: {
-    textAlign: 'center',
   },
   title: {
-    minHeight: 48,
+    minHeight: 48, // ensure height aligns nicely in grid
   },
-  subtitle: {
-    minHeight: 18,
+  chevronWrap: {
+    marginLeft: 'auto',
+    opacity: 0.72,
   },
 });

@@ -25,6 +25,7 @@ import { useAppContent } from '../../hooks/useAppContent';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
+import { primaryHeroGradient } from '../../theme/header';
 import { formatVietnameseDate, percentage } from '../../utils/format';
 import type { RootStackParamList } from '../../navigation/types';
 
@@ -61,17 +62,21 @@ export function TeacherAssignmentsScreen() {
       ),
     [search, teacherAssignments],
   );
+  const handleRefresh = () => {
+    reload().catch(() => undefined);
+  };
 
   return (
-    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
+    <Screen refreshing={loading} onRefresh={handleRefresh}>
       <PageHeader
         backLabel={content.common.buttons.backToHome}
         title={content.teacher.assignments.title}
         subtitle={`${String(items.length)} ${content.common.tabs.assignments.toLowerCase()}`}
-        gradient={['#5B5BD6', '#7C5CFC']}
+        gradient={primaryHeroGradient}
         onBack={() =>
           navigation.navigate('TeacherTabs', { screen: 'TeacherDashboard' })
         }
+        leadingVisual={<ClipboardList size={28} color={palette.white} />}
       />
 
       <View
@@ -109,8 +114,8 @@ export function TeacherAssignmentsScreen() {
 
           return (
             <SurfaceCard key={item.id} style={styles.card}>
-              <View style={styles.flex}>
-                <AppText variant="body" weight="medium">
+                <View style={styles.flex}>
+                <AppText variant="bodyStrong">
                   {item.title}
                 </AppText>
                 <AppText variant="caption" color={palette.mutedForeground}>

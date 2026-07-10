@@ -4,19 +4,24 @@ import { View, type ViewProps } from 'react-native';
 import { appTheme } from '../theme/tokens';
 import { useResponsiveLayout } from '../theme/responsive';
 
-export function SurfaceCard({ style, ...rest }: ViewProps) {
+interface SurfaceCardProps extends ViewProps {
+  level?: 1 | 2;
+}
+
+export function SurfaceCard({ style, level = 1, ...rest }: SurfaceCardProps) {
   const layout = useResponsiveLayout();
 
   return (
     <View
       style={[
         {
-          backgroundColor: appTheme.palette.card,
-          borderRadius: layout.heroRadius - 6,
+          backgroundColor: level === 1 ? appTheme.palette.surface1 : appTheme.palette.surface2,
+          borderRadius: layout.heroRadius - 4, // squircle radius
           borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.72)',
-          padding: layout.isCompact ? appTheme.spacing.lg : appTheme.spacing.xl,
-          ...appTheme.shadows.card,
+          borderColor: appTheme.palette.border,
+          padding: layout.isCompact ? 16 : 20,
+          // Only level 1 gets the shadow by default, level 2 is usually nested
+          ...(level === 1 ? appTheme.shadows.card : {}),
         },
         style,
       ]}

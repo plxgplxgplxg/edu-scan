@@ -18,6 +18,7 @@ import { useAppContent } from '../../hooks/useAppContent';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
+import { adminHeroGradient } from '../../theme/header';
 import type { RootStackParamList } from '../../navigation/types';
 import { listClasses, listUsers } from '../../api/edu-scan';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
@@ -25,17 +26,17 @@ import { useAsyncResource } from '../../hooks/useAsyncResource';
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const adminDashboardModules = [
-  { id: 'users', gradient: ['#5B5BD6', '#7C5CFC'] },
-  { id: 'classes', gradient: ['#3B82F6', '#06B6D4'] },
-  { id: 'stats', gradient: ['#10B981', '#14B8A6'] },
-  { id: 'settings', gradient: ['#F59E0B', '#F97316'] },
+  { id: 'users', gradient: ['#6552F5', '#8B5CF6'], isLarge: true },
+  { id: 'classes', gradient: ['#2E9BFF', '#00D4B4'], isLarge: false },
+  { id: 'stats', gradient: ['#12B886', '#00D4B4'], isLarge: false },
+  { id: 'settings', gradient: ['#FF9500', '#FF5FA2'], isLarge: false },
 ] as const;
 
 const moduleIcons = {
-  users: <Users size={28} color={palette.white} />,
-  classes: <BookOpen size={28} color={palette.white} />,
-  stats: <BarChart2 size={28} color={palette.white} />,
-  settings: <Settings size={28} color={palette.white} />,
+  users: <Users size={24} color={palette.white} />,
+  classes: <BookOpen size={24} color={palette.white} />,
+  stats: <BarChart2 size={24} color={palette.white} />,
+  settings: <Settings size={24} color={palette.white} />,
 };
 
 export function AdminDashboardScreen() {
@@ -79,7 +80,7 @@ export function AdminDashboardScreen() {
         overline={content.admin.dashboard.title}
         title={content.meta.appName}
         subtitle={content.admin.dashboard.subtitle}
-        gradient={['#4F46E5', '#6D28D9', '#7C5CFC']}
+        gradient={adminHeroGradient}
         showNotificationButton
         onNotificationPress={() => navigation.navigate('SharedNotifications')}
         metrics={[
@@ -115,6 +116,7 @@ export function AdminDashboardScreen() {
             <DashboardModuleCard
               key={module.id}
               icon={moduleIcons[module.id as keyof typeof moduleIcons]}
+              isLarge={module.isLarge}
               title={content.admin.dashboard.modules[module.id as keyof typeof content.admin.dashboard.modules]}
               subtitle={
                 module.id === 'users'

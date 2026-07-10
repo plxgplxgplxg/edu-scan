@@ -32,6 +32,7 @@ import { useAppContent } from '../../hooks/useAppContent';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
+import { primaryHeroGradient } from '../../theme/header';
 import { formatVietnameseDate, isExpired } from '../../utils/format';
 import type { RootStackParamList } from '../../navigation/types';
 import { useAssignmentSubmission } from '../../features/assignments/application/useAssignmentSubmission';
@@ -88,10 +89,13 @@ export function StudentClassDetailScreen() {
     accessToken,
     onSubmitted: reload,
   });
+  const handleRefresh = () => {
+    reload().catch(() => undefined);
+  };
 
   if (!data && loading) {
     return (
-      <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
+      <Screen refreshing={loading} onRefresh={handleRefresh}>
         <LoadingState label={content.common.labels.loading} />
       </Screen>
     );
@@ -99,7 +103,7 @@ export function StudentClassDetailScreen() {
 
   if (!data && error) {
     return (
-      <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
+      <Screen refreshing={loading} onRefresh={handleRefresh}>
         <ErrorState
           message={error}
           retryLabel={content.common.buttons.retry}
@@ -124,12 +128,12 @@ export function StudentClassDetailScreen() {
   const { currentClass } = data;
 
   return (
-    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
+    <Screen refreshing={loading} onRefresh={handleRefresh}>
       <PageHeader
         backLabel={content.student.classes.title}
         title={currentClass.name}
         subtitle={`${currentClass.subject} • ${content.common.labels.teacher}: ${currentClass.teacherName ?? ''}`}
-        gradient={['#5B5BD6', '#7C5CFC']}
+        gradient={primaryHeroGradient}
         onBack={() => navigation.navigate('StudentTabs', { screen: 'StudentClasses' })}
         leadingVisual={<BookOpen size={32} color={palette.white} />}
       />
@@ -279,7 +283,7 @@ export function StudentClassDetailScreen() {
           label="Chọn tệp"
           variant="outline"
           onPress={() => {
-            void pickFile();
+            pickFile().catch(() => undefined);
           }}
         />
         <PrimaryButton
@@ -323,8 +327,6 @@ const styles = StyleSheet.create({
   },
   assignmentCard: {
     gap: appTheme.spacing.md,
-    borderLeftWidth: 5,
-    borderLeftColor: 'rgba(97,91,227,0.92)',
   },
   assignmentHead: {
     flexDirection: 'row',
@@ -349,7 +351,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   expiredState: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: palette.destructiveSoft,
     borderWidth: 0,
   },
   infoCard: {

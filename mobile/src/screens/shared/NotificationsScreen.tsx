@@ -19,6 +19,7 @@ import { SurfaceCard } from '../../components/SurfaceCard';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
+import { primaryHeroGradient } from '../../theme/header';
 import type { RootStackParamList } from '../../navigation/types';
 import { useNotifications } from '../../features/notifications/application/notifications-provider';
 
@@ -30,9 +31,12 @@ export function NotificationsScreen() {
   const layout = useResponsiveLayout();
   const { notifications, unreadCount, loading, error, reload, markAsRead } =
     useNotifications();
+  const handleRefresh = () => {
+    reload().catch(() => undefined);
+  };
 
   return (
-    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
+    <Screen refreshing={loading} onRefresh={handleRefresh}>
       <PageHeader
         backLabel={content.common.buttons.backToHome}
         title={content.shared.notifications.title}
@@ -41,7 +45,7 @@ export function NotificationsScreen() {
             ? `${String(unreadCount)} ${content.shared.notifications.unread}`
             : undefined
         }
-        gradient={['#4F46E5', '#6D28D9', '#7C5CFC']}
+        gradient={primaryHeroGradient}
         showNotificationButton
         actionBadge={unreadCount}
         onBack={() => {
@@ -82,7 +86,7 @@ export function NotificationsScreen() {
           <Pressable
             key={item.id}
             onPress={() => {
-              void markAsRead(item.id);
+              markAsRead(item.id).catch(() => undefined);
             }}
           >
             <SurfaceCard style={[styles.card, !item.read ? styles.unreadCard : null]}>
@@ -148,8 +152,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   unreadCard: {
-    backgroundColor: '#F6F7FF',
-    borderColor: '#E8EAFF',
+    backgroundColor: palette.primaryMuted,
+    borderColor: palette.border,
   },
   iconWrap: {
     backgroundColor: palette.secondary,

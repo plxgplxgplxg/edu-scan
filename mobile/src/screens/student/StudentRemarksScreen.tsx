@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { ArrowLeft, Check, Plus } from 'lucide-react-native';
+import { Check, MessageSquare, Plus } from 'lucide-react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -14,6 +14,7 @@ import {
 } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
 import { ModalSheet } from '../../components/ModalSheet';
+import { PageHeader } from '../../components/PageHeader';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ErrorState, LoadingState } from '../../components/RequestState';
 import { Screen } from '../../components/Screen';
@@ -26,6 +27,7 @@ import type { RootStackParamList } from '../../navigation/types';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
+import { primaryHeroGradient } from '../../theme/header';
 import { formatVietnameseDate } from '../../utils/format';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -101,41 +103,25 @@ export function StudentRemarksScreen() {
         || (route.params?.questionNumber ? String(route.params.questionNumber) : ''),
     }));
   }, [route.params?.questionNumber, route.params?.resultId, showCreate]);
+  const handleRefresh = () => {
+    reload().catch(() => undefined);
+  };
 
   return (
-    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
-      <View
-        style={[
-          styles.header,
-          {
-            paddingHorizontal: layout.horizontalPadding,
-            paddingTop: layout.sectionGap,
-            maxWidth: layout.contentMaxWidth,
-            alignSelf: 'center',
-            width: '100%',
-          },
-        ]}
-      >
-        <Pressable
-          style={styles.backRow}
-          onPress={() =>
-            navigation.navigate('StudentTabs', { screen: 'StudentDashboard' })
-          }
-        >
-          <ArrowLeft size={16} color={palette.mutedForeground} />
-          <AppText variant="label" color={palette.mutedForeground}>
-            {content.common.buttons.backToHome}
-          </AppText>
-        </Pressable>
-        <View style={styles.titleRow}>
-          <AppText variant="title" weight="bold">
-            {content.student.remarks.title}
-          </AppText>
-          <Pressable style={styles.iconButton} onPress={() => setShowCreate(true)}>
-            <Plus size={20} color={palette.white} />
+    <Screen refreshing={loading} onRefresh={handleRefresh}>
+      <PageHeader
+        backLabel={content.common.buttons.backToHome}
+        title={content.student.remarks.title}
+        subtitle={`${String(studentRemarks.length)} ${content.student.remarks.reasonTitle.toLowerCase()}`}
+        gradient={primaryHeroGradient}
+        onBack={() => navigation.navigate('StudentTabs', { screen: 'StudentDashboard' })}
+        leadingVisual={<MessageSquare size={28} color={palette.white} />}
+        actionIcon={
+          <Pressable onPress={() => setShowCreate(true)} hitSlop={8}>
+            <Plus size={18} color={palette.white} />
           </Pressable>
-        </View>
-      </View>
+        }
+      />
 
       <View
         style={[
@@ -339,27 +325,6 @@ export function StudentRemarksScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    gap: appTheme.spacing.md,
-  },
-  backRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: appTheme.spacing.md,
-  },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: appTheme.radius.md,
-    backgroundColor: palette.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   list: {
     gap: appTheme.spacing.md,
   },

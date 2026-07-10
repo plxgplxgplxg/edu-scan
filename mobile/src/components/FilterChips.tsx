@@ -22,6 +22,8 @@ export function FilterChips<T extends string>({
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      snapToInterval={100} // nhẹ snapToInterval, real app needs exact calculation based on chip width
+      decelerationRate="fast"
       contentContainerStyle={[
         styles.container,
         {
@@ -36,19 +38,26 @@ export function FilterChips<T extends string>({
           <Pressable
             key={item.id}
             onPress={() => onChange(item.id)}
-            style={[
+            style={({ pressed }) => [
               styles.chip,
               {
-                minHeight: layout.controlMinHeight - 10,
-                paddingHorizontal: layout.isCompact ? appTheme.spacing.md : appTheme.spacing.lg,
-                borderRadius: layout.heroRadius - 6,
+                minHeight: layout.controlMinHeight - 8,
+                paddingHorizontal: layout.isCompact ? 14 : 16,
+                borderRadius: appTheme.radius.pill,
+                backgroundColor: appTheme.palette.surface1,
+                borderColor: appTheme.palette.border,
               },
-              active ? styles.activeChip : null,
+              active ? {
+                backgroundColor: appTheme.palette.primary,
+                borderColor: 'transparent',
+                ...appTheme.shadows.glow,
+              } : null,
+              pressed ? { opacity: 0.8 } : null,
             ]}
           >
             <AppText
               variant="label"
-              color={active ? appTheme.palette.white : appTheme.palette.mutedForeground}
+              color={active ? appTheme.palette.white : appTheme.palette.foregroundSoft}
             >
               {item.label}
             </AppText>
@@ -71,31 +80,24 @@ export function FilterChips<T extends string>({
 
 const styles = StyleSheet.create({
   container: {
-    gap: appTheme.spacing.sm,
+    gap: 8,
   },
   chip: {
-    backgroundColor: appTheme.palette.card,
     borderWidth: 1,
-    borderColor: appTheme.palette.border,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    ...appTheme.shadows.card,
-  },
-  activeChip: {
-    backgroundColor: appTheme.palette.primary,
-    borderColor: 'transparent',
   },
   badge: {
-    minWidth: 22,
-    height: 22,
+    minWidth: 20,
+    height: 20,
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EEF0FF',
+    backgroundColor: appTheme.palette.primaryMuted,
     paddingHorizontal: 4,
   },
   badgeActive: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.22)',
   },
 });

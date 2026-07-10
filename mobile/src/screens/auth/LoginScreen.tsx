@@ -35,15 +35,6 @@ export function LoginScreen() {
   const heroBubbleSize = clamp(layout.width * 0.42, 136, 196);
   const topHeroMinHeight = clamp(height * 0.24, 160, 236);
 
-  const demoRoleLabels = useMemo(
-    () =>
-      demoAccounts.map(account => ({
-        ...account,
-        label: content.roles[account.role],
-      })),
-    [content.roles],
-  );
-
   const onSubmit = async () => {
     setError(undefined);
 
@@ -76,7 +67,7 @@ export function LoginScreen() {
       contentContainerStyle={styles.screenContent}
     >
       <GradientBackground
-        colors={['#5B5BD6', '#7C5CFC']}
+        colors={[appTheme.palette.primary, '#8B5CF6', appTheme.palette.tertiary]}
         style={StyleSheet.absoluteFill}
       />
       <View
@@ -110,7 +101,7 @@ export function LoginScreen() {
               minHeight: topHeroMinHeight,
               paddingHorizontal: layout.horizontalPadding,
               paddingTop: insets.top + appTheme.spacing.sm,
-              gap: layout.sectionGap,
+              gap: 14, // design: gap 14
             },
           ]}
         >
@@ -120,16 +111,21 @@ export function LoginScreen() {
               {
                 width: heroSize,
                 height: heroSize,
-                borderRadius: clamp(heroSize * 0.3, 28, 42),
+                borderRadius: 30, // design: squircle radius 30
               },
             ]}
           >
-            <ScanLine size={40} color={appTheme.palette.white} />
+            <ScanLine size={42} color={appTheme.palette.white} />
           </View>
-          <AppText variant="hero" weight="bold" color={appTheme.palette.white}>
+          <AppText 
+            variant="hero" 
+            weight="bold" 
+            color={appTheme.palette.white}
+            style={{ fontFamily: appTheme.typography.displayFamily }}
+          >
             {content.meta.appName}
           </AppText>
-          <AppText variant="body" color="rgba(255,255,255,0.75)" style={styles.center}>
+          <AppText variant="body" color="rgba(255,255,255,0.80)" style={styles.center}>
             {content.meta.slogan}
           </AppText>
         </View>
@@ -140,8 +136,8 @@ export function LoginScreen() {
             {
               borderTopLeftRadius: layout.heroRadius,
               borderTopRightRadius: layout.heroRadius,
-              paddingBottom: layout.sectionGap + appTheme.spacing.xl,
-              paddingTop: appTheme.spacing.lg,
+              paddingBottom: layout.sectionGap + 20,
+              paddingTop: 16,
             },
           ]}
         >
@@ -172,7 +168,7 @@ export function LoginScreen() {
               onSubmitEditing={onSubmit}
               error={error}
               trailing={
-                <Pressable onPress={() => setShowPassword(current => !current)}>
+                <Pressable onPress={() => setShowPassword(current => !current)} hitSlop={8}>
                   {showPassword ? (
                     <EyeOff size={18} color={appTheme.palette.mutedForeground} />
                   ) : (
@@ -181,6 +177,13 @@ export function LoginScreen() {
                 </Pressable>
               }
             />
+            <AppText 
+              variant="label" 
+              color={appTheme.palette.primary} 
+              style={{ alignSelf: 'flex-end', marginTop: -4 }}
+            >
+              Quên mật khẩu?
+            </AppText>
             <PrimaryButton
               label={loading ? content.common.buttons.loggingIn : content.common.buttons.login}
               icon={!loading ? <ArrowRight size={18} color={appTheme.palette.white} /> : undefined}
@@ -188,8 +191,6 @@ export function LoginScreen() {
               onPress={onSubmit}
             />
           </View>
-
-          
         </SurfaceCard>
       </KeyboardAvoidingView>
     </Screen>
@@ -208,22 +209,13 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: appTheme.spacing.md,
   },
   logoWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: appTheme.palette.glassFill, // design: glassFill
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.28)',
-  },
-  versionPill: {
-    paddingHorizontal: appTheme.spacing.lg,
-    paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: appTheme.palette.glassBorder, // design: glassBorder
   },
   center: {
     textAlign: 'center',
@@ -231,38 +223,19 @@ const styles = StyleSheet.create({
   sheet: {
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
-    gap: appTheme.spacing.sm,
+    gap: 8,
   },
   handle: {
     alignSelf: 'center',
-    width: 40,
+    width: 36, // design: 36x4
     height: 4,
     borderRadius: 999,
     backgroundColor: appTheme.palette.muted,
-    marginBottom: appTheme.spacing.md,
+    marginBottom: 12, // design: marginBottom 12
   },
   form: {
-    gap: appTheme.spacing.lg,
-    marginTop: appTheme.spacing.lg,
-  },
-  demoBlock: {
-    marginTop: appTheme.spacing.lg,
-    gap: appTheme.spacing.md,
-  },
-  demoRow: {
-    flexDirection: 'row',
-    gap: appTheme.spacing.sm,
-  },
-  demoRowStack: {
-    flexWrap: 'wrap',
-  },
-  demoCard: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 52,
-    borderRadius: appTheme.radius.lg,
-    backgroundColor: appTheme.palette.inputBackground,
+    gap: 16,
+    marginTop: 16,
   },
   heroBubbleLeft: {
     position: 'absolute',

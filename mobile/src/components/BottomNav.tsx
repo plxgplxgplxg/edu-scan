@@ -99,60 +99,63 @@ export function BottomNav({
       active: currentScreen === 'SharedProfile',
     },
   ];
+  const activeIndex = Math.max(tabs.findIndex(tab => tab.active), 0);
 
   return (
-    <View pointerEvents="box-none" style={styles.outer}>
+    <View 
+      pointerEvents="box-none" 
+      style={[
+        styles.outer, 
+        { 
+          left: layout.horizontalPadding, 
+          right: layout.horizontalPadding, 
+          bottom: Math.max(insets.bottom, 0) + 12 
+        }
+      ]}
+    >
       <View
         style={[
-          styles.wrapper,
+          styles.inner,
           {
-            paddingBottom: 0,
-            paddingHorizontal: 0,
+            minHeight: layout.navHeight,
+            borderRadius: appTheme.radius.pill,
+            backgroundColor: appTheme.palette.glassFill,
+            borderColor: appTheme.palette.glassBorder,
           },
         ]}
       >
-        <View
-          style={[
-            styles.inner,
-            {
-              minHeight: layout.navHeight,
-              borderTopLeftRadius: layout.heroRadius + 2,
-              borderTopRightRadius: layout.heroRadius + 2,
-              maxWidth: '100%',
-              paddingBottom: Math.max(insets.bottom, layout.bottomOffset) + appTheme.spacing.sm,
-            },
-          ]}
-        >
-          {tabs.map(tab => (
-            <Pressable key={tab.key} onPress={() => navigation.navigate(tab.route as never)} style={styles.tab}>
-              <View
-                style={[
-                  styles.iconWrap,
-                  {
-                    width: layout.isCompact ? 34 : 40,
-                    height: layout.isCompact ? 28 : 30,
-                    borderRadius: layout.heroRadius - 10,
-                  },
-                ]}
-              >
-                <tab.icon
-                  size={layout.navIconSize}
-                  strokeWidth={tab.active ? 2.4 : 2.1}
-                  color={tab.active ? appTheme.palette.primary : appTheme.palette.mutedForeground}
-                />
-              </View>
-              <AppText
-                variant="caption"
-                weight={tab.active ? 'semibold' : 'medium'}
+        {tabs.map((tab, index) => (
+          <Pressable
+            key={tab.key}
+            onPress={() => navigation.navigate(tab.route as never)}
+            style={[
+              styles.tab,
+              tab.active ? styles.tabActive : null,
+              index === activeIndex ? styles.tabActiveLeading : null,
+            ]}
+          >
+            <View
+              style={[
+                styles.iconWrap,
+                tab.active ? { backgroundColor: appTheme.palette.primaryMuted } : null,
+              ]}
+            >
+              <tab.icon
+                size={layout.navIconSize}
+                strokeWidth={tab.active ? 2.4 : 2.0}
                 color={tab.active ? appTheme.palette.primary : appTheme.palette.mutedForeground}
-                numberOfLines={1}
-              >
-                {tab.label}
-              </AppText>
-              {tab.active ? <View style={styles.dot} /> : null}
-            </Pressable>
-          ))}
-        </View>
+              />
+            </View>
+            <AppText
+              variant="caption"
+              weight={tab.active ? 'semibold' : 'medium'}
+              color={tab.active ? appTheme.palette.primary : appTheme.palette.mutedForeground}
+              numberOfLines={1}
+            >
+              {tab.label}
+            </AppText>
+          </Pressable>
+        ))}
       </View>
     </View>
   );
@@ -161,41 +164,35 @@ export function BottomNav({
 const styles = StyleSheet.create({
   outer: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  wrapper: {
-    alignItems: 'center',
   },
   inner: {
-    width: '100%',
-    backgroundColor: 'rgba(255,255,255,0.96)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.92)',
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingTop: appTheme.spacing.md,
-    paddingHorizontal: appTheme.spacing.md,
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+    borderWidth: 1,
     ...appTheme.shadows.floating,
   },
   tab: {
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 3,
     flex: 1,
-    paddingTop: 2,
+    minHeight: 52,
+    borderRadius: appTheme.radius.pill,
+  },
+  tabActive: {
+    backgroundColor: 'rgba(101,82,245,0.08)',
+  },
+  tabActiveLeading: {
+    marginLeft: 0,
   },
   iconWrap: {
-    width: 40,
-    height: 32,
-    borderRadius: appTheme.radius.md,
+    width: 36,
+    height: 36,
+    borderRadius: 18, // squircle radius will be rounded, but 18 is perfect for 36
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: appTheme.palette.primary,
   },
 });

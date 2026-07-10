@@ -19,6 +19,7 @@ import { useAppContent } from '../../hooks/useAppContent';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
+import { primaryHeroGradient } from '../../theme/header';
 import type { RootStackParamList } from '../../navigation/types';
 import { getInitials } from '../../utils/string';
 import {
@@ -33,19 +34,19 @@ import { useNotifications } from '../../features/notifications/application/notif
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const studentDashboardModules = [
-  { id: 'classes', gradient: ['#5B5BD6', '#7C5CFC'] },
-  { id: 'results', gradient: ['#3B82F6', '#06B6D4'] },
-  { id: 'assignments', gradient: ['#10B981', '#14B8A6'] },
-  { id: 'remarks', gradient: ['#F59E0B', '#F97316'] },
-  { id: 'progress', gradient: ['#EC4899', '#F43F5E'] },
+  { id: 'assignments', gradient: ['#12B886', '#00D4B4'], isLarge: true },
+  { id: 'classes', gradient: ['#6552F5', '#8B5CF6'], isLarge: false },
+  { id: 'results', gradient: ['#2E9BFF', '#00D4B4'], isLarge: false },
+  { id: 'remarks', gradient: ['#FF9500', '#FF5FA2'], isLarge: false },
+  { id: 'progress', gradient: ['#FF5FA2', '#FF3B5C'], isLarge: false },
 ] as const;
 
 const moduleIcons = {
-  classes: <BookOpen size={28} color={palette.white} />,
-  results: <GraduationCap size={28} color={palette.white} />,
-  assignments: <ClipboardList size={28} color={palette.white} />,
-  remarks: <MessageSquare size={28} color={palette.white} />,
-  progress: <TrendingUp size={28} color={palette.white} />,
+  classes: <BookOpen size={24} color={palette.white} />,
+  results: <GraduationCap size={24} color={palette.white} />,
+  assignments: <ClipboardList size={24} color={palette.white} />,
+  remarks: <MessageSquare size={24} color={palette.white} />,
+  progress: <TrendingUp size={24} color={palette.white} />,
 };
 
 export function StudentDashboardScreen() {
@@ -98,7 +99,7 @@ export function StudentDashboardScreen() {
         overline={content.student.dashboard.greeting}
         title={profileName}
         subtitle={`${content.roles.STUDENT} • ${content.student.dashboard.subtitle}`}
-        gradient={['#4F46E5', '#6D28D9', '#7C5CFC']}
+        gradient={primaryHeroGradient}
         showNotificationButton
         actionBadge={unreadCount || undefined}
         onNotificationPress={() => navigation.navigate('SharedNotifications')}
@@ -131,6 +132,7 @@ export function StudentDashboardScreen() {
             <DashboardModuleCard
               key={module.id}
               icon={moduleIcons[module.id as keyof typeof moduleIcons]}
+              isLarge={module.isLarge}
               title={content.student.dashboard.modules[module.id as keyof typeof content.student.dashboard.modules]}
               subtitle={
                 module.id === 'classes'

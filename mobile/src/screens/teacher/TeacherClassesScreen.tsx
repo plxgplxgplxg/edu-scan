@@ -24,6 +24,7 @@ import { useAppContent } from '../../hooks/useAppContent';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
+import { primaryHeroGradient } from '../../theme/header';
 import type { RootStackParamList } from '../../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -67,17 +68,21 @@ export function TeacherClassesScreen() {
       }),
     [data, search],
   );
+  const handleRefresh = () => {
+    reload().catch(() => undefined);
+  };
 
   return (
-    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
+    <Screen refreshing={loading} onRefresh={handleRefresh}>
       <PageHeader
         backLabel={content.common.buttons.backToHome}
         title={content.teacher.classes.title}
         subtitle={`${String(filteredItems.length)} lớp`}
-        gradient={['#5B5BD6', '#7C5CFC']}
+        gradient={primaryHeroGradient}
         onBack={() =>
           navigation.navigate(role === 'ADMIN' ? 'AdminDashboard' : 'TeacherDashboard')
         }
+        leadingVisual={<Users size={28} color={palette.white} />}
       />
 
       <View
@@ -128,8 +133,11 @@ export function TeacherClassesScreen() {
               <SurfaceCard style={styles.classCard}>
                 <View style={styles.classHeader}>
                   <View style={styles.classContent}>
-                    <AppText variant="body" weight="medium">
+                    <AppText variant="bodyStrong">
                       {item.name}
+                    </AppText>
+                    <AppText variant="caption" color={palette.foregroundSoft}>
+                      {item.subject}
                     </AppText>
                     <View style={styles.classMeta}>
                       <View style={styles.inlineMeta}>
@@ -229,7 +237,7 @@ const styles = StyleSheet.create({
     gap: appTheme.spacing.lg,
   },
   classCard: {
-    padding: appTheme.spacing.xl,
+    minHeight: 116,
   },
   classHeader: {
     flexDirection: 'row',

@@ -1,11 +1,12 @@
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { AlertTriangle, ArrowLeft, CheckCircle, XCircle } from 'lucide-react-native';
+import { AlertTriangle, CheckCircle, XCircle } from 'lucide-react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { getSubmissionDetail, mapResultDetail, mapResultSummary } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
+import { PageHeader } from '../../components/PageHeader';
 import { ErrorState, LoadingState } from '../../components/RequestState';
 import { Screen } from '../../components/Screen';
 import { SurfaceCard } from '../../components/SurfaceCard';
@@ -14,6 +15,7 @@ import { useAppContent } from '../../hooks/useAppContent';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
+import { primaryHeroGradient } from '../../theme/header';
 import type { RootStackParamList } from '../../navigation/types';
 import { formatVietnameseDate } from '../../utils/format';
 
@@ -58,7 +60,7 @@ export function StudentResultDetailScreen() {
 
   if (!data && loading) {
     return (
-      <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
+      <Screen refreshing={loading} onRefresh={() => { reload().catch(() => undefined); }}>
         <LoadingState label={content.common.labels.loading} />
       </Screen>
     );
@@ -66,7 +68,7 @@ export function StudentResultDetailScreen() {
 
   if (!data && error) {
     return (
-      <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
+      <Screen refreshing={loading} onRefresh={() => { reload().catch(() => undefined); }}>
         <ErrorState
           message={error}
           retryLabel={content.common.buttons.retry}
@@ -93,56 +95,37 @@ export function StudentResultDetailScreen() {
   const reviewCount = resultDetails.filter(item => item.needsReview).length;
 
   return (
-    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
-      <View
-        style={[
-          styles.hero,
-          {
-            paddingHorizontal: layout.horizontalPadding,
-            paddingTop: layout.sectionGap,
-            paddingBottom: layout.sectionGap + appTheme.spacing.xl,
-            borderBottomLeftRadius: layout.heroRadius,
-            borderBottomRightRadius: layout.heroRadius,
-          },
+    <Screen refreshing={loading} onRefresh={() => { reload().catch(() => undefined); }}>
+      <PageHeader
+        backLabel={content.common.buttons.back}
+        title={selectedResult.examTitle}
+        subtitle={`${content.student.results.resultCodePrefix}: ${selectedResult.id} • ${formatVietnameseDate(selectedResult.createdAt)}`}
+        gradient={primaryHeroGradient}
+        onBack={() => navigation.goBack()}
+        metrics={[
+          { label: content.student.results.average, value: String(selectedResult.score) },
+          { label: content.common.labels.total, value: String(selectedResult.maxScore) },
+          { label: content.common.statuses.NEEDS_REVIEW, value: String(reviewCount) },
         ]}
-      >
-        <Pressable style={styles.backRow} onPress={() => navigation.goBack()}>
-          <ArrowLeft size={18} color={palette.white} />
-          <AppText variant="label" color={palette.white}>
-            {content.common.buttons.back}
-          </AppText>
-        </Pressable>
-        <AppText variant="headline" weight="bold" color={palette.white}>
-          {selectedResult.examTitle}
-        </AppText>
-        <AppText variant="label" color="rgba(255,255,255,0.72)">
-          {`${content.student.results.resultCodePrefix}: ${selectedResult.id} • ${formatVietnameseDate(selectedResult.createdAt)}`}
-        </AppText>
-        <View style={styles.scoreRow}>
-          <AppText variant="hero" weight="heavy" color={palette.white}>
-            {String(selectedResult.score)}
-          </AppText>
-          <AppText variant="title" color="rgba(255,255,255,0.65)">
-            {`/${String(selectedResult.maxScore)}`}
-          </AppText>
-        </View>
-        <View style={styles.summaryRow}>
-          <View style={styles.summaryBadge}>
-            <CheckCircle size={13} color="#A7F3D0" />
-            <AppText variant="caption" color={palette.white}>
-              {`${String(correctCount)}/${String(resultDetails.length)} ${content.student.results.totalExams.toLowerCase()}`}
-            </AppText>
-          </View>
-          {reviewCount ? (
-            <View style={[styles.summaryBadge, styles.warningBadge]}>
-              <AlertTriangle size={13} color="#FDE68A" />
-              <AppText variant="caption" color="#FEF3C7">
-                {`${String(reviewCount)} ${content.common.statuses.NEEDS_REVIEW.toLowerCase()}`}
+        footer={
+          <View style={styles.summaryRow}>
+            <View style={styles.summaryBadge}>
+              <CheckCircle size={13} color="#A7F3D0" />
+              <AppText variant="caption" color={palette.white}>
+                {`${String(correctCount)}/${String(resultDetails.length)} ${content.student.results.totalExams.toLowerCase()}`}
               </AppText>
             </View>
-          ) : null}
-        </View>
-      </View>
+            {reviewCount ? (
+              <View style={[styles.summaryBadge, styles.warningBadge]}>
+                <AlertTriangle size={13} color="#FDE68A" />
+                <AppText variant="caption" color="#FEF3C7">
+                  {`${String(reviewCount)} ${content.common.statuses.NEEDS_REVIEW.toLowerCase()}`}
+                </AppText>
+              </View>
+            ) : null}
+          </View>
+        }
+      />
 
       <View
         style={[
@@ -219,26 +202,9 @@ export function StudentResultDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  hero: {
-    backgroundColor: palette.primary,
-    gap: appTheme.spacing.sm,
-  },
-  backRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: appTheme.spacing.sm,
-  },
-  scoreRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 6,
-    marginTop: appTheme.spacing.md,
-  },
   summaryRow: {
     flexDirection: 'row',
     gap: appTheme.spacing.sm,
-    marginTop: appTheme.spacing.md,
     flexWrap: 'wrap',
   },
   summaryBadge: {
@@ -262,8 +228,7 @@ const styles = StyleSheet.create({
     gap: appTheme.spacing.md,
   },
   warningBorder: {
-    borderLeftWidth: 4,
-    borderLeftColor: palette.warning,
+    backgroundColor: palette.warningSoft,
   },
   indexBox: {
     width: 34,
@@ -273,10 +238,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   correctBox: {
-    backgroundColor: '#DCFCE7',
+    backgroundColor: palette.successSoft,
   },
   wrongBox: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: palette.destructiveSoft,
   },
   flex: {
     flex: 1,
@@ -292,6 +257,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: appTheme.radius.sm,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: palette.warningSoft,
   },
 });

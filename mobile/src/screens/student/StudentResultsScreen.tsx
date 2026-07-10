@@ -16,6 +16,7 @@ import { useAppContent } from '../../hooks/useAppContent';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
+import { primaryHeroGradient } from '../../theme/header';
 import { formatVietnameseDate } from '../../utils/format';
 import type { RootStackParamList } from '../../navigation/types';
 
@@ -42,45 +43,25 @@ export function StudentResultsScreen() {
   const avg =
     graded.reduce((sum, item) => sum + item.score, 0) / Math.max(graded.length, 1);
   const maxScore = graded.length ? Math.max(...graded.map(item => item.score)) : 0;
+  const handleRefresh = () => {
+    reload().catch(() => undefined);
+  };
 
   return (
-    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
+    <Screen refreshing={loading} onRefresh={handleRefresh}>
       <PageHeader
         backLabel={content.common.buttons.backToHome}
         title={content.student.results.title}
         subtitle={content.student.results.totalExams}
-        gradient={['#4F46E5', '#7C5CFC']}
+        gradient={primaryHeroGradient}
         onBack={() =>
           navigation.navigate('StudentTabs', { screen: 'StudentDashboard' })
         }
-        footer={(
-          <View style={[styles.summaryMetrics, layout.isCompact ? styles.summaryMetricsStack : null]}>
-            <View style={styles.metricItem}>
-              <AppText variant="headline" weight="bold" color={palette.white}>
-                {String(studentResults.length)}
-              </AppText>
-              <AppText variant="label" color="rgba(255,255,255,0.72)">
-                {content.student.results.totalExams}
-              </AppText>
-            </View>
-            <View style={styles.metricItem}>
-              <AppText variant="headline" weight="bold" color={palette.white}>
-                {avg.toFixed(1)}
-              </AppText>
-              <AppText variant="label" color="rgba(255,255,255,0.72)">
-                {content.student.results.average}
-              </AppText>
-            </View>
-            <View style={styles.metricItem}>
-              <AppText variant="headline" weight="bold" color={palette.white}>
-                {maxScore.toFixed(1)}
-              </AppText>
-              <AppText variant="label" color="rgba(255,255,255,0.72)">
-                {content.student.results.highest}
-              </AppText>
-            </View>
-          </View>
-        )}
+        metrics={[
+          { label: content.student.results.totalExams, value: String(studentResults.length) },
+          { label: content.student.results.average, value: avg.toFixed(1) },
+          { label: content.student.results.highest, value: maxScore.toFixed(1) },
+        ]}
       />
 
       <View
@@ -132,19 +113,6 @@ export function StudentResultsScreen() {
 }
 
 const styles = StyleSheet.create({
-  summaryMetrics: {
-    flexDirection: 'row',
-    gap: appTheme.spacing.md,
-  },
-  summaryMetricsStack: {
-    flexWrap: 'wrap',
-  },
-  metricItem: {
-    alignItems: 'center',
-    gap: 2,
-    flex: 1,
-    minWidth: 84,
-  },
   list: {
     gap: appTheme.spacing.lg,
   },
