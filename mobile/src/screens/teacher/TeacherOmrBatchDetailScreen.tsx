@@ -543,9 +543,11 @@ export function TeacherOmrBatchDetailScreen() {
   };
 
   return (
-    <Screen refreshing={headerLoading || submissionsLoading} onRefresh={() => { void reloadAll(); }}>
+    <Screen scrollable={false}>
       <FlatList
         data={submissions}
+        refreshing={headerLoading || submissionsLoading}
+        onRefresh={() => { void reloadAll(); }}
         keyExtractor={(item) => item.id}
         renderItem={renderSubmissionItem}
         onEndReached={handleLoadMore}

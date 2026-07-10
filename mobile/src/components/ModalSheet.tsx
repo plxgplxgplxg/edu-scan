@@ -1,11 +1,11 @@
 import React from 'react';
 import {
   KeyboardAvoidingView,
-  Keyboard,
   Modal,
   Platform,
   Pressable,
   ScrollView,
+  StyleSheet,
   View,
 } from 'react-native';
 
@@ -32,17 +32,19 @@ export function ModalSheet({ visible, onClose, children, scrollable = true }: Mo
       animationType="slide"
       onRequestClose={onClose}
     >
-      <Pressable style={styles.overlay} onPress={onClose}>
+      <View style={styles.overlay}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Đóng chi tiết"
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+        />
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
           style={{ width: '100%', flex: 1, justifyContent: 'flex-end' }}
         >
-          <Pressable
-            onPress={(event) => {
-              event.stopPropagation();
-              Keyboard.dismiss();
-            }}
+          <View
             style={{
               alignSelf: 'center',
               width: '100%',
@@ -84,9 +86,9 @@ export function ModalSheet({ visible, onClose, children, scrollable = true }: Mo
             ) : (
               <View style={styles.virtualizedContent}>{children}</View>
             )}
-          </Pressable>
+          </View>
         </KeyboardAvoidingView>
-      </Pressable>
+      </View>
     </Modal>
   );
 }

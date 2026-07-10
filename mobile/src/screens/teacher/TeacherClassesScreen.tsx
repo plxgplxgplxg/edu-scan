@@ -119,6 +119,15 @@ export function TeacherClassesScreen() {
           />
         ) : null}
 
+        {filteredItems.map(item => {
+          return (
+            <Pressable
+              key={item.id}
+              onPress={() => navigation.navigate('TeacherClassDetail', { classId: item.id })}
+            >
+              <SurfaceCard style={styles.classCard}>
+                <View style={styles.classHeader}>
+                  <View style={styles.classContent}>
                     <AppText variant="body" weight="medium">
                       {item.name}
                     </AppText>
@@ -142,7 +151,6 @@ export function TeacherClassesScreen() {
             </Pressable>
           );
         })}
-
         {!filteredItems.length ? (
           <EmptyState
             title={content.common.messages.emptyClasses}
