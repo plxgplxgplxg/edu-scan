@@ -140,7 +140,7 @@ export function TeacherOmrScreen() {
   }, [omrBatches, reload]);
 
   return (
-    <Screen>
+    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
       <View
         style={[
           styles.header,
@@ -185,7 +185,7 @@ export function TeacherOmrScreen() {
         {error ? (
           <ErrorState
             message={error}
-            retryLabel={content.common.buttons.confirm}
+            retryLabel={content.common.buttons.retry}
             onRetry={reload}
           />
         ) : null}

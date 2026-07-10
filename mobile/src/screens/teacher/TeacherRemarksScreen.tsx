@@ -64,7 +64,7 @@ export function TeacherRemarksScreen() {
   ];
 
   return (
-    <Screen>
+    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
       <View
         style={[
           styles.header,
@@ -111,7 +111,7 @@ export function TeacherRemarksScreen() {
         {error ? (
           <ErrorState
             message={error}
-            retryLabel={content.common.buttons.confirm}
+            retryLabel={content.common.buttons.retry}
             onRetry={reload}
           />
         ) : null}

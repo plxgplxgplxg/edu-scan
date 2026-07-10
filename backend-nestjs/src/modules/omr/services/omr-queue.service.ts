@@ -49,7 +49,6 @@ export class OmrQueueService {
           type: 'exponential',
           delay: 1000,
         },
-        removeOnComplete: true,
       });
 
       this.sseRegistryService.emit(buildOmrSseChannelId(input.batchId), {

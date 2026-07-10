@@ -27,6 +27,27 @@ import {
   imports: [
     BullModule.registerQueue({
       name: OMR_QUEUE_NAME,
+      // Bull's defaults poll Redis every 5 seconds even while this queue is
+      // empty. OMR is event-driven: BRPOPLPUSH wakes the worker as soon as a
+      // job is added, so a longer blocking wait does not add latency.
+      settings: {
+        // One blocking read/minute while idle instead of one/5 seconds.
+        drainDelay: 60,
+        // There are no scheduled OMR jobs. This is only a safety net for a
+        // delayed retry if the process restarts before Bull installs its timer.
+        guardInterval: 60_000,
+        // Recover a job left active by a crashed worker without continuously
+        // scanning an otherwise idle queue.
+        stalledInterval: 15 * 60_000,
+        // OMR work includes uploads and gRPC processing. A longer lock and
+        // renewal interval prevent false stalls and reduce lock-renew commands.
+        lockDuration: 5 * 60_000,
+        lockRenewTime: 60_000,
+      },
+      defaultJobOptions: {
+        removeOnComplete: true,
+        removeOnFail: true,
+      },
     }),
     ClientsModule.registerAsync([
       {

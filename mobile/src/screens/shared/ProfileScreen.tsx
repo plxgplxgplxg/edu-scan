@@ -132,7 +132,7 @@ export function ProfileScreen() {
   }
 
   return (
-    <Screen>
+    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
       <PageHeader
         title={profileName}
         subtitle={email}
@@ -202,7 +202,7 @@ export function ProfileScreen() {
         {error ? (
           <ErrorState
             message={error}
-            retryLabel={content.common.buttons.confirm}
+            retryLabel={content.common.buttons.retry}
             onRetry={reload}
           />
         ) : null}

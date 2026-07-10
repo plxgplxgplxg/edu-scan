@@ -34,7 +34,7 @@ export function TeacherClassExamsScreen() {
 
   const items = useMemo(() => (data?.exams ?? []).filter((item) => item.title.toLowerCase().includes(search.toLowerCase())), [data?.exams, search]);
 
-  return <Screen>
+  return <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
     <View style={styles.wrap}>
       <Pressable style={styles.backRow} onPress={() => navigation.goBack()}><ArrowLeft size={16} color={palette.mutedForeground} /><AppText variant="label">Quay lại</AppText></Pressable>
       <View style={styles.row}><AppText variant="title" weight="bold">Đề lớp học</AppText><Pressable style={styles.add} onPress={() => setShowCreate(true)}><Plus size={18} color={palette.white} /></Pressable></View>

@@ -62,7 +62,7 @@ export function TeacherExamsScreen() {
   }, [data?.classes, classSearch]);
 
   return (
-    <Screen>
+    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
       <View style={[styles.header, { paddingHorizontal: layout.horizontalPadding, paddingTop: layout.sectionGap, maxWidth: layout.contentMaxWidth, alignSelf: 'center', width: '100%' }]}>
         <Pressable style={styles.backRow} onPress={() => navigation.navigate('TeacherTabs', { screen: 'TeacherDashboard' })}>
           <ArrowLeft size={16} color={palette.mutedForeground} />
@@ -79,7 +79,7 @@ export function TeacherExamsScreen() {
 
       <View style={[styles.list, { paddingHorizontal: layout.horizontalPadding, paddingTop: layout.sectionGap, maxWidth: layout.contentMaxWidth, alignSelf: 'center', width: '100%', gap: layout.sectionGap }]}>
         {loading ? <LoadingState label={content.common.labels.loading} /> : null}
-        {error ? <ErrorState message={error} retryLabel={content.common.buttons.confirm} onRetry={reload} /> : null}
+        {error ? <ErrorState message={error} retryLabel={content.common.buttons.retry} onRetry={reload} /> : null}
 
         {items.map((item) => (
           <Pressable key={item.id} onPress={() => navigation.navigate('TeacherOmrExamBuilder', { examId: item.id })}>

@@ -24,19 +24,19 @@ export class ClassesService {
     });
   }
 
-  async listTeacherClasses(teacherId: string) {
-    const classes = await this.classesRepository.listTeacherClasses(teacherId);
+  async listTeacherClasses(teacherId: string, page = 1) {
+    const classes = await this.classesRepository.listTeacherClasses(teacherId, page);
     return classes.map((item) => this.mapClassLightweightToResponse(item));
   }
 
-  async listClasses(currentUser: AuthenticatedUser) {
+  async listClasses(currentUser: AuthenticatedUser, page = 1) {
     let classes: ClassLightweight[] = [];
     if (currentUser.role === Role.TEACHER) {
-      classes = await this.classesRepository.listTeacherClasses(currentUser.id);
+      classes = await this.classesRepository.listTeacherClasses(currentUser.id, page);
     } else if (currentUser.role === Role.STUDENT) {
-      classes = await this.classesRepository.listStudentClasses(currentUser.id);
+      classes = await this.classesRepository.listStudentClasses(currentUser.id, page);
     } else {
-      classes = await this.classesRepository.listAllClasses();
+      classes = await this.classesRepository.listAllClasses(page);
     }
     return classes.map((item) => this.mapClassLightweightToResponse(item));
   }

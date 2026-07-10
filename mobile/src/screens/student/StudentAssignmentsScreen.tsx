@@ -88,7 +88,7 @@ export function StudentAssignmentsScreen() {
   });
 
   return (
-    <Screen>
+    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
       <PageHeader
         backLabel={content.common.buttons.backToHome}
         title={content.student.assignments.title}
@@ -121,7 +121,7 @@ export function StudentAssignmentsScreen() {
         {error ? (
           <ErrorState
             message={error}
-            retryLabel={content.common.buttons.confirm}
+            retryLabel={content.common.buttons.retry}
             onRetry={reload}
           />
         ) : null}

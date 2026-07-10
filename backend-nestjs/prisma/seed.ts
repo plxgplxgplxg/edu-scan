@@ -24,19 +24,67 @@ async function main() {
   const teacher = await seedUser('teacher@eduscan.vn', 'Giáo viên Mẫu', Role.TEACHER, 'Teacher@1234');
   const student = await seedUser('student@eduscan.vn', 'Học sinh Mẫu', Role.STUDENT, 'Student@1234', '20224871');
 
-  const class12A1 = await prisma.class.upsert({
-    where: { code: 'L12A1' },
-    update: { name: 'Lớp 12A1', subject: 'Toán học', schoolYear: '2025-2026', teacherId: teacher.id },
-    create: { name: 'Lớp 12A1', subject: 'Toán học', schoolYear: '2025-2026', code: 'L12A1', teacherId: teacher.id }
-  });
-  console.log(`Seed class: ${class12A1.code}`);
+  const additionalStudents = await Promise.all([
+    seedUser('student.nguyenminhan@eduscan.vn', 'Nguyễn Minh Anh', Role.STUDENT, 'Student@1234', '20250001'),
+    seedUser('student.tranbaolong@eduscan.vn', 'Trần Bảo Long', Role.STUDENT, 'Student@1234', '20250002'),
+    seedUser('student.lethuyduong@eduscan.vn', 'Lê Thùy Dương', Role.STUDENT, 'Student@1234', '20250003'),
+    seedUser('student.phamquanghuy@eduscan.vn', 'Phạm Quang Huy', Role.STUDENT, 'Student@1234', '20250004'),
+    seedUser('student.vothanhha@eduscan.vn', 'Võ Thanh Hà', Role.STUDENT, 'Student@1234', '20250005'),
+  ]);
 
-  await prisma.classEnrollment.upsert({
-    where: { classId_studentId: { classId: class12A1.id, studentId: student.id } },
-    update: {},
-    create: { classId: class12A1.id, studentId: student.id }
-  });
-  console.log(`Enroll student ${student.email} into class ${class12A1.code}`);
+  const classDefinitions = [
+    { code: 'L12A1', name: 'Lớp 12A1', subject: 'Toán học' },
+    { code: 'L12A2', name: 'Lớp 12A2', subject: 'Vật lý' },
+    { code: 'L12A3', name: 'Lớp 12A3', subject: 'Hóa học' },
+    { code: 'L12A4', name: 'Lớp 12A4', subject: 'Ngữ văn' },
+    { code: 'L12A5', name: 'Lớp 12A5', subject: 'Tiếng Anh' },
+    { code: 'L11A1', name: 'Lớp 11A1', subject: 'Toán học' },
+    { code: 'L11A2', name: 'Lớp 11A2', subject: 'Vật lý' },
+    { code: 'L11A3', name: 'Lớp 11A3', subject: 'Hóa học' },
+    { code: 'L10A1', name: 'Lớp 10A1', subject: 'Toán học' },
+    { code: 'L10A2', name: 'Lớp 10A2', subject: 'Tiếng Anh' },
+  ];
+
+  const seededClasses = await Promise.all(classDefinitions.map(async (classDefinition) => {
+    const seededClass = await prisma.class.upsert({
+      where: { code: classDefinition.code },
+      update: { ...classDefinition, schoolYear: '2025-2026', teacherId: teacher.id },
+      create: { ...classDefinition, schoolYear: '2025-2026', teacherId: teacher.id },
+    });
+    console.log(`Seed class: ${seededClass.code}`);
+    return seededClass;
+  }));
+  const classByCode = new Map(seededClasses.map((seededClass) => [seededClass.code, seededClass]));
+  const class12A1 = classByCode.get('L12A1');
+  if (!class12A1) {
+    throw new Error('Seed class L12A1 was not created');
+  }
+
+  const enrollments = [
+    { classCode: 'L12A1', studentId: student.id },
+    { classCode: 'L12A1', studentId: additionalStudents[0].id },
+    { classCode: 'L12A2', studentId: additionalStudents[0].id },
+    { classCode: 'L12A3', studentId: additionalStudents[1].id },
+    { classCode: 'L12A4', studentId: additionalStudents[1].id },
+    { classCode: 'L12A5', studentId: additionalStudents[2].id },
+    { classCode: 'L11A1', studentId: additionalStudents[2].id },
+    { classCode: 'L11A2', studentId: additionalStudents[3].id },
+    { classCode: 'L11A3', studentId: additionalStudents[3].id },
+    { classCode: 'L10A1', studentId: additionalStudents[4].id },
+    { classCode: 'L10A2', studentId: additionalStudents[4].id },
+  ];
+  for (const enrollment of enrollments) {
+    const seededClass = classByCode.get(enrollment.classCode);
+    if (!seededClass) {
+      throw new Error(`Seed class ${enrollment.classCode} was not created`);
+    }
+    await prisma.classEnrollment.upsert({
+      where: { classId_studentId: { classId: seededClass.id, studentId: enrollment.studentId } },
+      update: {},
+      create: { classId: seededClass.id, studentId: enrollment.studentId },
+    });
+    console.log(`Enroll student ${enrollment.studentId} into class ${seededClass.code}`);
+  }
 
   let exam = await prisma.exam.findFirst({
     where: { title: 'Kiểm tra giữa kỳ Toán 12', teacherId: teacher.id }

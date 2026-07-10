@@ -28,12 +28,6 @@ import type { RootStackParamList } from '../../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-const subjectStyles: Record<string, { backgroundColor: string; color: string }> = {
-  Toán: { backgroundColor: '#E0E7FF', color: '#4338CA' },
-  'Vật lý': { backgroundColor: '#DBEAFE', color: '#1D4ED8' },
-  'Hoá học': { backgroundColor: '#DCFCE7', color: '#047857' },
-  'Sinh học': { backgroundColor: '#FEF3C7', color: '#B45309' },
-};
 
 export function TeacherClassesScreen() {
   const navigation = useNavigation<Nav>();
@@ -75,7 +69,7 @@ export function TeacherClassesScreen() {
   );
 
   return (
-    <Screen>
+    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
       <PageHeader
         backLabel={content.common.buttons.backToHome}
         title={content.teacher.classes.title}
@@ -99,6 +93,15 @@ export function TeacherClassesScreen() {
           },
         ]}
       >
+        {role === 'TEACHER' ? (
+          <PrimaryButton
+            variant="outline"
+            label={content.teacher.classes.createTitle}
+            icon={<Plus size={18} color={palette.primary} />}
+            onPress={() => setShowCreate(true)}
+          />
+        ) : null}
+
         <TextInputField
           label={content.common.search.classes}
           value={search}
@@ -111,35 +114,11 @@ export function TeacherClassesScreen() {
         {error ? (
           <ErrorState
             message={error}
-            retryLabel={content.common.buttons.confirm}
+            retryLabel={content.common.buttons.retry}
             onRetry={reload}
           />
         ) : null}
 
-        {filteredItems.map(item => {
-          const subjectStyle = subjectStyles[item.subject] ?? {
-            backgroundColor: palette.secondary,
-            color: palette.secondaryForeground,
-          };
-
-          return (
-            <Pressable
-              key={item.id}
-              onPress={() => navigation.navigate('TeacherClassDetail', { classId: item.id })}
-            >
-              <SurfaceCard style={styles.classCard}>
-                <View style={styles.classHeader}>
-                  <View style={styles.classContent}>
-                    <View
-                      style={[
-                        styles.subjectBadge,
-                        { backgroundColor: subjectStyle.backgroundColor },
-                      ]}
-                    >
-                      <AppText variant="caption" weight="medium" color={subjectStyle.color}>
-                        {item.subject}
-                      </AppText>
-                    </View>
                     <AppText variant="body" weight="medium">
                       {item.name}
                     </AppText>
@@ -171,14 +150,6 @@ export function TeacherClassesScreen() {
           />
         ) : null}
 
-        {role === 'TEACHER' ? (
-          <PrimaryButton
-            variant="outline"
-            label={content.teacher.classes.createTitle}
-            icon={<Plus size={18} color={palette.primary} />}
-            onPress={() => setShowCreate(true)}
-          />
-        ) : null}
       </View>
 
       <ModalSheet visible={showCreate} onClose={() => setShowCreate(false)}>
@@ -259,12 +230,7 @@ const styles = StyleSheet.create({
     gap: appTheme.spacing.sm,
     flex: 1,
   },
-  subjectBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: appTheme.radius.sm,
-  },
+
   classMeta: {
     flexDirection: 'row',
     alignItems: 'center',

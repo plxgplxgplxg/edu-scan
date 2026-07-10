@@ -93,7 +93,7 @@ export function StudentDashboardScreen() {
   };
 
   return (
-    <Screen>
+    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
       <PageHeader
         overline={content.student.dashboard.greeting}
         title={profileName}
@@ -164,7 +164,7 @@ export function StudentDashboardScreen() {
         {error ? (
           <ErrorState
             message={error}
-            retryLabel={content.common.buttons.confirm}
+            retryLabel={content.common.buttons.retry}
             onRetry={reload}
           />
         ) : null}

@@ -227,7 +227,11 @@ export function AppNavigator() {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator screenOptions={{ 
+        headerShown: false,
+        gestureEnabled: true,
+        animation: 'slide_from_right'
+      }}>
         {!role ? (
           <Stack.Screen name="Login" component={LoginScreen} />
         ) : null}

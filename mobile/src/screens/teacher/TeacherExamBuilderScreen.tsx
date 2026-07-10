@@ -52,7 +52,7 @@ export function TeacherExamBuilderScreen() {
   }
 
   return (
-    <Screen>
+    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
       <View style={[styles.container, { paddingHorizontal: layout.horizontalPadding, paddingTop: layout.sectionGap, maxWidth: layout.contentMaxWidth, alignSelf: 'center', width: '100%' }]}>
         <Pressable style={styles.backRow} onPress={() => navigation.goBack()}>
           <ArrowLeft size={16} color={palette.mutedForeground} />

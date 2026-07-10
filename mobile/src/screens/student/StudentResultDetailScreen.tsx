@@ -58,7 +58,7 @@ export function StudentResultDetailScreen() {
 
   if (!data && loading) {
     return (
-      <Screen>
+      <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
         <LoadingState label={content.common.labels.loading} />
       </Screen>
     );
@@ -66,10 +66,10 @@ export function StudentResultDetailScreen() {
 
   if (!data && error) {
     return (
-      <Screen>
+      <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
         <ErrorState
           message={error}
-          retryLabel={content.common.buttons.confirm}
+          retryLabel={content.common.buttons.retry}
           onRetry={reload}
         />
       </Screen>
@@ -93,7 +93,7 @@ export function StudentResultDetailScreen() {
   const reviewCount = resultDetails.filter(item => item.needsReview).length;
 
   return (
-    <Screen>
+    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
       <View
         style={[
           styles.hero,

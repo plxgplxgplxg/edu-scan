@@ -64,17 +64,19 @@ export class ClassesRepository {
     });
   }
 
-  async listTeacherClasses(teacherId: string): Promise<ClassLightweight[]> {
+  async listTeacherClasses(teacherId: string, page = 1): Promise<ClassLightweight[]> {
     return this.prismaService.class.findMany({
       where: { teacherId },
       include: classListInclude,
       orderBy: {
         createdAt: 'desc',
       },
+      take: 10,
+      skip: (page - 1) * 10,
     });
   }
 
-  async listStudentClasses(studentId: string): Promise<ClassLightweight[]> {
+  async listStudentClasses(studentId: string, page = 1): Promise<ClassLightweight[]> {
     return this.prismaService.class.findMany({
       where: {
         enrollments: {
@@ -87,15 +89,19 @@ export class ClassesRepository {
       orderBy: {
         createdAt: 'desc',
       },
+      take: 10,
+      skip: (page - 1) * 10,
     });
   }
 
-  async listAllClasses(): Promise<ClassLightweight[]> {
+  async listAllClasses(page = 1): Promise<ClassLightweight[]> {
     return this.prismaService.class.findMany({
       include: classListInclude,
       orderBy: {
         createdAt: 'desc',
       },
+      take: 10,
+      skip: (page - 1) * 10,
     });
   }
 

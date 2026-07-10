@@ -53,7 +53,7 @@ export function StudentClassesScreen() {
   const studentClasses = data ?? [];
 
   return (
-    <Screen>
+    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
       <PageHeader
         backLabel={content.common.buttons.backToHome}
         title={content.student.classes.title}
@@ -82,7 +82,7 @@ export function StudentClassesScreen() {
         {error ? (
           <ErrorState
             message={error}
-            retryLabel={content.common.buttons.confirm}
+            retryLabel={content.common.buttons.retry}
             onRetry={reload}
           />
         ) : null}
@@ -107,11 +107,6 @@ export function StudentClassesScreen() {
               </View>
               <View style={styles.flex}>
                 <View style={styles.inlineRow}>
-                  <View style={styles.subjectBadge}>
-                    <AppText variant="caption" color={palette.secondaryForeground}>
-                      {item.subject}
-                    </AppText>
-                  </View>
                   {(item.pendingAssignments ?? 0) > 0 ? (
                     <View style={styles.pendingBadge}>
                       <AppText variant="caption" color={palette.destructive}>
@@ -219,12 +214,7 @@ const styles = StyleSheet.create({
     gap: 6,
     flexWrap: 'wrap',
   },
-  subjectBadge: {
-    backgroundColor: palette.secondary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: appTheme.radius.pill,
-  },
+
   pendingBadge: {
     backgroundColor: '#FEE2E2',
     paddingHorizontal: 12,

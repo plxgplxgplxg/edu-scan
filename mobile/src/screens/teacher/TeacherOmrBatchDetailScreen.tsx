@@ -247,7 +247,7 @@ export function TeacherOmrBatchDetailScreen() {
 
   if (!batchId) {
     return (
-      <Screen>
+      <Screen refreshing={headerLoading} onRefresh={() => { void reloadHeader(); }}>
         <ErrorState
           message="Không tìm thấy batch OMR"
           retryLabel={content.common.buttons.back}
@@ -259,7 +259,7 @@ export function TeacherOmrBatchDetailScreen() {
 
   if (!batchHeader && headerLoading) {
     return (
-      <Screen>
+      <Screen refreshing={headerLoading} onRefresh={() => { void reloadHeader(); }}>
         <LoadingState label={content.common.labels.loading} />
       </Screen>
     );
@@ -270,7 +270,7 @@ export function TeacherOmrBatchDetailScreen() {
       <Screen>
         <ErrorState
           message={headerError}
-          retryLabel={content.common.buttons.confirm}
+          retryLabel={content.common.buttons.retry}
           onRetry={reloadHeader}
         />
       </Screen>
@@ -352,7 +352,7 @@ export function TeacherOmrBatchDetailScreen() {
   };
 
   return (
-    <Screen>
+    <Screen refreshing={headerLoading || submissionsLoading} onRefresh={() => { void reloadAll(); }}>
       <FlatList
         data={submissions}
         keyExtractor={(item) => item.id}

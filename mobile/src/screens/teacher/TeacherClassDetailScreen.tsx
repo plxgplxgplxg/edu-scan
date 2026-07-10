@@ -223,7 +223,7 @@ export function TeacherClassDetailScreen() {
 
   if (!currentClass && loading) {
     return (
-      <Screen>
+      <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
         <LoadingState label={content.common.labels.loading} />
       </Screen>
     );
@@ -231,10 +231,10 @@ export function TeacherClassDetailScreen() {
 
   if (!currentClass && error) {
     return (
-      <Screen>
+      <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
         <ErrorState
           message={error}
-          retryLabel={content.common.buttons.confirm}
+          retryLabel={content.common.buttons.retry}
           onRetry={reload}
         />
       </Screen>
@@ -254,7 +254,7 @@ export function TeacherClassDetailScreen() {
   }
 
   return (
-    <Screen>
+    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
       <PageHeader
         backLabel={content.common.buttons.back}
         title={currentClass.name}

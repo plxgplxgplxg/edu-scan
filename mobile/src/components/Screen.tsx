@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  RefreshControl,
   ScrollView,
   StyleSheet,
   View,
@@ -21,6 +22,8 @@ interface ScreenProps {
   scrollViewProps?: ScrollViewProps;
   withoutBottomInset?: boolean;
   bleedTop?: boolean;
+  refreshing?: boolean;
+  onRefresh?: () => void;
 }
 
 export function Screen({
@@ -31,6 +34,8 @@ export function Screen({
   scrollViewProps,
   withoutBottomInset = false,
   bleedTop = false,
+  refreshing = false,
+  onRefresh,
 }: ScreenProps) {
   const insets = useSafeAreaInsets();
   const layout = useResponsiveLayout();
@@ -56,6 +61,7 @@ export function Screen({
   const bottomInset = !withoutBottomInset
     ? layout.navHeight + Math.max(insets.bottom, layout.bottomOffset) + layout.sectionGap
     : 0;
+  const { refreshControl: customRefreshControl, ...restScrollViewProps } = scrollViewProps ?? {};
 
   const content = scrollable ? (
     <ScrollView
@@ -68,7 +74,17 @@ export function Screen({
         !withoutBottomInset ? { paddingBottom: bottomInset } : null,
         contentContainerStyle,
       ]}
-      {...scrollViewProps}
+      refreshControl={
+        customRefreshControl ??
+        (onRefresh ? (
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={appTheme.palette.primary}
+          />
+        ) : undefined)
+      }
+      {...restScrollViewProps}
     >
       {contentChildren}
     </ScrollView>

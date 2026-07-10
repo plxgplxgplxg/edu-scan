@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
@@ -41,17 +42,25 @@ export class ClassesController {
   @Get('my')
   @Roles(Role.TEACHER)
   @ClassesSwagger.LayDanhSachLopHocCuaToi()
-  async getMyClasses(@CurrentUser() currentUser: AuthenticatedUser) {
+  async getMyClasses(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Query('page') page?: string,
+  ) {
     assertUserRole(currentUser, [Role.TEACHER]);
-    return this.classesService.listTeacherClasses(currentUser.id);
+    const parsedPage = page ? parseInt(page, 10) : 1;
+    return this.classesService.listTeacherClasses(currentUser.id, parsedPage > 0 ? parsedPage : 1);
   }
 
   @Get()
   @Roles(Role.TEACHER, Role.STUDENT, Role.ADMIN)
   @ClassesSwagger.LayDanhSachLopHocTheoVaiTro()
-  async listClasses(@CurrentUser() currentUser: AuthenticatedUser) {
+  async listClasses(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Query('page') page?: string,
+  ) {
     assertUserRole(currentUser, [Role.TEACHER, Role.STUDENT, Role.ADMIN]);
-    return this.classesService.listClasses(currentUser);
+    const parsedPage = page ? parseInt(page, 10) : 1;
+    return this.classesService.listClasses(currentUser, parsedPage > 0 ? parsedPage : 1);
   }
 
   @Get(':id')

@@ -86,7 +86,7 @@ export function TeacherDashboardScreen() {
   };
 
   return (
-    <Screen>
+    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
       <PageHeader
         overline={content.teacher.dashboard.greeting}
         title={profileName}
@@ -163,7 +163,7 @@ export function TeacherDashboardScreen() {
         {error ? (
           <ErrorState
             message={error}
-            retryLabel={content.common.buttons.confirm}
+            retryLabel={content.common.buttons.retry}
             onRetry={reload}
           />
         ) : null}

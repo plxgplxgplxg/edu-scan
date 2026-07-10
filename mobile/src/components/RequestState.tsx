@@ -3,7 +3,6 @@ import { ActivityIndicator, View } from 'react-native';
 
 import { appTheme, palette } from '../theme/tokens';
 import { AppText } from './AppText';
-import { PrimaryButton } from './PrimaryButton';
 import { SkeletonCard } from './SkeletonCard';
 
 export function LoadingState({ label }: { label: string }) {
@@ -29,8 +28,8 @@ export function LoadingState({ label }: { label: string }) {
 
 export function ErrorState({
   message,
-  retryLabel,
-  onRetry,
+  retryLabel: _retryLabel,
+  onRetry: _onRetry,
 }: {
   message: string;
   retryLabel: string;
@@ -46,7 +45,6 @@ export function ErrorState({
       <AppText variant="body" color={palette.destructive}>
         {message}
       </AppText>
-      <PrimaryButton label={retryLabel} onPress={onRetry} />
     </View>
   );
 }

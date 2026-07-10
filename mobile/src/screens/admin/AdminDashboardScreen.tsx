@@ -74,7 +74,7 @@ export function AdminDashboardScreen() {
   };
 
   return (
-    <Screen>
+    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
       <PageHeader
         overline={content.admin.dashboard.title}
         title={content.meta.appName}
@@ -143,7 +143,7 @@ export function AdminDashboardScreen() {
         {error ? (
           <ErrorState
             message={error}
-            retryLabel={content.common.buttons.confirm}
+            retryLabel={content.common.buttons.retry}
             onRetry={reload}
           />
         ) : null}

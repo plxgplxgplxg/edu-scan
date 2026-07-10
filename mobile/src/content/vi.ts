@@ -21,6 +21,7 @@ export const vi = {
       back: 'Quay lại',
       cancel: 'Huỷ',
       confirm: 'Xác nhận',
+      retry: 'Thử lại',
       create: 'Tạo mới',
       createClass: 'Tạo lớp',
       createExam: 'Tạo đề thi',
