@@ -18,9 +18,10 @@ interface ModalSheetProps {
   visible: boolean;
   onClose: () => void;
   children: React.ReactNode;
+  scrollable?: boolean;
 }
 
-export function ModalSheet({ visible, onClose, children }: ModalSheetProps) {
+export function ModalSheet({ visible, onClose, children, scrollable = true }: ModalSheetProps) {
   const insets = useSafeAreaInsets();
   const layout = useResponsiveLayout();
 
@@ -52,6 +53,7 @@ export function ModalSheet({ visible, onClose, children }: ModalSheetProps) {
               paddingHorizontal: layout.isCompact ? appTheme.spacing.xl : appTheme.spacing.xxl,
               paddingTop: layout.sectionGap,
               maxHeight: layout.isCompact ? '92%' : '88%',
+              height: scrollable ? undefined : (layout.isCompact ? '92%' : '88%'),
               marginBottom: Platform.OS === 'android' ? insets.bottom : 0,
               ...appTheme.shadows.floating,
             }}
@@ -66,18 +68,22 @@ export function ModalSheet({ visible, onClose, children }: ModalSheetProps) {
                 marginBottom: appTheme.spacing.xl,
               }}
             />
-            <ScrollView
-              bounces={false}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode="on-drag"
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{
-                paddingBottom: insets.bottom + appTheme.spacing.xxl,
-                gap: appTheme.spacing.md,
-              }}
-            >
-              {children}
-            </ScrollView>
+            {scrollable ? (
+              <ScrollView
+                bounces={false}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{
+                  paddingBottom: insets.bottom + appTheme.spacing.xxl,
+                  gap: appTheme.spacing.md,
+                }}
+              >
+                {children}
+              </ScrollView>
+            ) : (
+              <View style={styles.virtualizedContent}>{children}</View>
+            )}
           </Pressable>
         </KeyboardAvoidingView>
       </Pressable>
@@ -89,5 +95,8 @@ const styles = {
     flex: 1,
     backgroundColor: appTheme.palette.overlay,
     justifyContent: 'flex-end',
+  } as const,
+  virtualizedContent: {
+    flex: 1,
   } as const,
 };

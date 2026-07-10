@@ -12,6 +12,7 @@ describe('BatchService', () => {
     recordSuccessfulFile: jest.fn(),
     recordFailedFile: jest.fn(),
     findBatchById: jest.fn(),
+    findBatchAccessById: jest.fn(),
     findTeacherBatchById: jest.fn(),
     findTeacherSubmissionById: jest.fn(),
   };
@@ -49,7 +50,7 @@ describe('BatchService', () => {
 
   it('returns test-code resolution fields in batch list', async () => {
     const batch = buildBatchEntity();
-    omrRepository.findBatchById.mockResolvedValue({
+    omrRepository.findBatchAccessById.mockResolvedValue({
       id: batch.id,
       teacherId: 'teacher-1',
     });

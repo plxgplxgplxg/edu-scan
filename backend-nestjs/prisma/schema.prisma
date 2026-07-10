@@ -270,6 +270,8 @@ model Submission {
   @@index([examId, studentId])
   @@index([batchId, status])
   @@index([batchId])
+  @@index([batchId, createdAt])
+  @@index([batchId, status, createdAt])
   @@index([studentCode])
   @@index([resolvedVariantId])
   @@index([testCodeResolutionStatus])

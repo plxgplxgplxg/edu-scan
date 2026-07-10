@@ -11,6 +11,8 @@ describe('BatchService', () => {
     recordSuccessfulFile: jest.fn(),
     recordFailedFile: jest.fn(),
     findBatchById: jest.fn(),
+    findBatchAccessById: jest.fn(),
+    findBatchSubmissionsPaginated: jest.fn(),
     findTeacherBatchById: jest.fn(),
     findTeacherSubmissionById: jest.fn(),
   };
@@ -48,7 +50,7 @@ describe('BatchService', () => {
   });
 
   it('throws not found when batch does not exist', async () => {
-    omrRepository.findBatchById.mockResolvedValue(null);
+    omrRepository.findBatchAccessById.mockResolvedValue(null);
 
     await expect(
       service.getTeacherBatchById('batch-1', 'teacher-1'),
@@ -56,7 +58,7 @@ describe('BatchService', () => {
   });
 
   it('throws forbidden when batch belongs to another teacher', async () => {
-    omrRepository.findBatchById.mockResolvedValue({
+    omrRepository.findBatchAccessById.mockResolvedValue({
       id: 'batch-1',
       teacherId: 'teacher-2',
     });
@@ -67,7 +69,7 @@ describe('BatchService', () => {
   });
 
   it('maps batch detail to response dto', async () => {
-    omrRepository.findBatchById.mockResolvedValue({
+    omrRepository.findBatchAccessById.mockResolvedValue({
       id: 'batch-1',
       teacherId: 'teacher-1',
     });
@@ -88,6 +90,54 @@ describe('BatchService', () => {
       reviewCount: 0,
       annotatedImageUrl: 'https://example.com/annotated.png',
     });
+  });
+
+  it('returns lightweight paginated OMR rows without loading answer details', async () => {
+    omrRepository.findBatchAccessById.mockResolvedValue({
+      id: 'batch-1',
+      teacherId: 'teacher-1',
+    });
+    omrRepository.findBatchSubmissionsPaginated.mockResolvedValue({
+      total: 1,
+      items: [
+        {
+          id: 'submission-1',
+          studentId: 'student-1',
+          studentCode: 'STU-001',
+          detectedTestId: '101',
+          resolvedTestCode: '101',
+          status: SubmissionStatus.GRADED,
+          score: 7.5,
+          maxScore: 10,
+          correctCount: 45,
+          wrongCount: 15,
+          reviewCount: 0,
+          student: { name: 'Student One' },
+          _count: { details: 60 },
+        },
+      ],
+    });
+
+    const result = await service.getTeacherBatchSubmissions(
+      'batch-1',
+      'teacher-1',
+      1,
+      20,
+    );
+
+    expect(result).toMatchObject({
+      total: 1,
+      totalPages: 1,
+      items: [
+        {
+          id: 'submission-1',
+          studentName: 'Student One',
+          questionCount: 60,
+        },
+      ],
+    });
+    expect(result.items[0]).not.toHaveProperty('details');
+    expect(omrRepository.findBatchById).not.toHaveBeenCalled();
   });
 
   it('maps submission detail response with artifact urls and review reason', async () => {

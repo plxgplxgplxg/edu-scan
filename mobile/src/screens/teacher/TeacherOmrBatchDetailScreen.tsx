@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { memo, useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -22,6 +22,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   getOmrBatchHeader,
   getOmrBatchSubmissions,
+  getOmrSubmissionDetail,
   updateSubmissionAnswers,
   updateSubmissionOverride,
   type OmrSubmissionDetailView,
@@ -50,8 +51,6 @@ type FilterKey = 'ALL' | 'NEEDS_REVIEW' | 'GRADED' | 'FAILED';
 const answerChoices = ['A', 'B', 'C', 'D'] as const;
 type AnswerChoice = (typeof answerChoices)[number];
 
-const PAGE_SIZE = 20;
-
 type SubmissionItem = {
   id: string;
   studentId: string | null;
@@ -59,13 +58,6 @@ type SubmissionItem = {
   studentName: string | null;
   detectedTestId: string | null;
   resolvedTestCode: string | null;
-  resolvedVariantId: string | null;
-  testCodeResolutionStatus: string;
-  imageUrl: string | null;
-  processedImageUrl: string | null;
-  annotatedImageUrl: string | null;
-  warpOverlayUrl: string | null;
-  answerScoresUrl: string | null;
   status: 'GRADED' | 'NEEDS_REVIEW' | 'FAILED';
   score: number;
   maxScore: number;
@@ -73,16 +65,146 @@ type SubmissionItem = {
   wrongCount: number;
   reviewCount: number;
   needsReview: boolean;
-  details: Array<{
-    questionNumber: number;
-    correctAnswer: string | null;
-    detectedAnswer: string | null;
-    finalAnswer: string | null;
-    isCorrect: boolean;
-    needsReview: boolean;
-    reviewReason: string | null;
-  }>;
+  questionCount: number;
 };
+
+type SubmissionDetail = OmrSubmissionDetailView;
+
+type AnswerDetail = SubmissionDetail['details'][number];
+
+const AnswerReviewCard = memo(function AnswerReviewCard({
+  detail,
+  currentAnswer,
+  onAnswerChange,
+}: {
+  detail: AnswerDetail;
+  currentAnswer: AnswerChoice | null;
+  onAnswerChange: (questionNumber: number, answer: AnswerChoice) => void;
+}) {
+  const isCorrect = currentAnswer && detail.correctAnswer
+    ? currentAnswer === detail.correctAnswer
+    : detail.isCorrect;
+
+  return (
+    <SurfaceCard
+      style={[styles.answerCard, detail.needsReview ? styles.answerNeedsReview : null]}
+    >
+      <View style={styles.rowBetween}>
+        <View style={styles.flex}>
+          <AppText variant="body" weight="semibold">
+            {`Câu ${String(detail.questionNumber)}`}
+          </AppText>
+          <AppText variant="caption" color={palette.mutedForeground}>
+            {`Máy đọc: ${detail.detectedAnswer ?? 'Trống'} • Đáp án chuẩn: ${detail.correctAnswer ?? '—'}`}
+          </AppText>
+          {detail.reviewReason ? (
+            <AppText variant="caption" color={palette.warning}>
+              {detail.reviewReason}
+            </AppText>
+          ) : null}
+        </View>
+        {isCorrect ? (
+          <CheckCircle2 size={16} color={palette.success} />
+        ) : (
+          <XCircle size={16} color={palette.destructive} />
+        )}
+      </View>
+      <View style={styles.answerOptions}>
+        {answerChoices.map((choice) => (
+          <Pressable
+            key={`${detail.questionNumber}-${choice}`}
+            style={[styles.answerOption, currentAnswer === choice ? styles.answerOptionActive : null]}
+            onPress={() => onAnswerChange(detail.questionNumber, choice)}
+          >
+            <AppText
+              variant="label"
+              weight="semibold"
+              color={currentAnswer === choice ? palette.white : palette.foreground}
+            >
+              {choice}
+            </AppText>
+          </Pressable>
+        ))}
+      </View>
+    </SurfaceCard>
+  );
+});
+
+const OmrAnswerEditor = memo(function OmrAnswerEditor({
+  submission,
+  answerDraft,
+  saving,
+  onAnswerChange,
+  onSave,
+  onOpenOverride,
+}: {
+  submission: SubmissionDetail;
+  answerDraft: Record<number, AnswerChoice | null>;
+  saving: boolean;
+  onAnswerChange: (questionNumber: number, answer: AnswerChoice) => void;
+  onSave: () => void;
+  onOpenOverride: () => void;
+}) {
+  const renderAnswer = useCallback(({ item }: { item: AnswerDetail }) => (
+    <AnswerReviewCard
+      detail={item}
+      currentAnswer={(answerDraft[item.questionNumber] as AnswerChoice | null) ?? null}
+      onAnswerChange={onAnswerChange}
+    />
+  ), [answerDraft, onAnswerChange]);
+
+  return (
+    <FlatList
+      data={submission.details}
+      renderItem={renderAnswer}
+      keyExtractor={(item) => String(item.questionNumber)}
+      extraData={answerDraft}
+      initialNumToRender={6}
+      maxToRenderPerBatch={8}
+      windowSize={5}
+      removeClippedSubviews
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={styles.answerListContent}
+      ListHeaderComponent={
+        <>
+          <AppText variant="headline" weight="bold" style={styles.sheetTitle}>
+            Chi tiết bài làm OMR
+          </AppText>
+          <View style={styles.tabRow}>
+            <Pressable style={styles.tab} onPress={onOpenOverride}>
+              <AppText variant="label" color={palette.mutedForeground}>
+                Ghép học sinh / Mã đề
+              </AppText>
+            </Pressable>
+            <View style={[styles.tab, styles.tabActive]}>
+              <AppText variant="label" weight="semibold" color={palette.primary}>
+                {`Sửa đáp án (${String(submission.details.length)} câu)`}
+              </AppText>
+            </View>
+          </View>
+          <SurfaceCard style={styles.scoreSummary}>
+            <AppText variant="body" weight="semibold">Kết quả hiện tại</AppText>
+            <View style={styles.scoreRow}>
+              <AppText variant="caption" color={palette.mutedForeground}>
+                {`Đúng: ${submission.correctCount} | Sai: ${submission.wrongCount} | Cần xem: ${submission.reviewCount}`}
+              </AppText>
+              <AppText variant="label" weight="bold" color={palette.primary}>
+                {`${submission.score}/${submission.maxScore}`}
+              </AppText>
+            </View>
+          </SurfaceCard>
+        </>
+      }
+      ListFooterComponent={
+        <PrimaryButton
+          label="Lưu đáp án & Tính lại điểm"
+          loading={saving}
+          onPress={onSave}
+        />
+      }
+    />
+  );
+});
 
 export function TeacherOmrBatchDetailScreen() {
   const navigation = useNavigation<Nav>();
@@ -94,7 +216,12 @@ export function TeacherOmrBatchDetailScreen() {
   const batchId = route.params?.batchId;
 
   const [filter, setFilter] = useState<FilterKey>('ALL');
-  const [selectedSubmission, setSelectedSubmission] = useState<SubmissionItem | null>(null);
+  const [selectedSubmission, setSelectedSubmission] = useState<SubmissionDetail | null>(null);
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
+  const [submissionLoading, setSubmissionLoading] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const detailRequestIdRef = useRef(0);
+  const submissionDetailCacheRef = useRef(new Map<string, SubmissionDetail>());
   const [studentCode, setStudentCode] = useState('');
   const [resolvedTestCode, setResolvedTestCode] = useState('');
   const [answerDraft, setAnswerDraft] = useState<Record<number, AnswerChoice | null>>({});
@@ -170,17 +297,79 @@ export function TeacherOmrBatchDetailScreen() {
     setFilter(next);
   }, []);
 
-  const openSubmission = useCallback((submission: SubmissionItem) => {
-    setSelectedSubmission(submission);
-    setStudentCode(submission.studentCode ?? '');
-    setResolvedTestCode(submission.resolvedTestCode ?? submission.detectedTestId ?? '');
-    setAnswerDraft(
-      Object.fromEntries(
-        submission.details.map((d) => [d.questionNumber, (d.finalAnswer as AnswerChoice | null) ?? null]),
-      ),
-    );
+  const openSubmission = useCallback(async (submissionId: string) => {
+    if (!accessToken) {
+      return;
+    }
+
+    const requestId = detailRequestIdRef.current + 1;
+    detailRequestIdRef.current = requestId;
+    setSelectedSubmissionId(submissionId);
+    setSelectedSubmission(null);
+    setSubmissionLoading(true);
+    setSubmissionError(null);
     setSubmitError(null);
     setActiveTab('override');
+
+    const cachedSubmission = submissionDetailCacheRef.current.get(submissionId);
+    if (cachedSubmission) {
+      setSelectedSubmission(cachedSubmission);
+      setStudentCode(cachedSubmission.studentCode ?? '');
+      setResolvedTestCode(cachedSubmission.resolvedTestCode ?? cachedSubmission.detectedTestId ?? '');
+      setAnswerDraft(
+        Object.fromEntries(
+          cachedSubmission.details.map((detail) => [
+            detail.questionNumber,
+            (detail.finalAnswer as AnswerChoice | null) ?? null,
+          ]),
+        ),
+      );
+      setSubmissionLoading(false);
+      return;
+    }
+
+    try {
+      const submission = await getOmrSubmissionDetail(accessToken, submissionId);
+      if (detailRequestIdRef.current !== requestId) {
+        return;
+      }
+
+      setSelectedSubmission(submission);
+      submissionDetailCacheRef.current.set(submission.id, submission);
+      setStudentCode(submission.studentCode ?? '');
+      setResolvedTestCode(submission.resolvedTestCode ?? submission.detectedTestId ?? '');
+      setAnswerDraft(
+        Object.fromEntries(
+          submission.details.map((detail) => [
+            detail.questionNumber,
+            (detail.finalAnswer as AnswerChoice | null) ?? null,
+          ]),
+        ),
+      );
+    } catch (error) {
+      if (detailRequestIdRef.current === requestId) {
+        setSubmissionError(error instanceof Error ? error.message : 'Không thể tải chi tiết bài làm');
+      }
+    } finally {
+      if (detailRequestIdRef.current === requestId) {
+        setSubmissionLoading(false);
+      }
+    }
+  }, [accessToken]);
+
+  const closeSubmission = useCallback(() => {
+    detailRequestIdRef.current += 1;
+    setSelectedSubmissionId(null);
+    setSelectedSubmission(null);
+    setSubmissionLoading(false);
+    setSubmissionError(null);
+  }, []);
+
+  const handleAnswerChange = useCallback((questionNumber: number, answer: AnswerChoice) => {
+    setAnswerDraft((current) => ({
+      ...current,
+      [questionNumber]: current[questionNumber] === answer ? null : answer,
+    }));
   }, []);
 
   const reloadAll = useCallback(async () => {
@@ -210,6 +399,7 @@ export function TeacherOmrBatchDetailScreen() {
             'A',
         })),
       });
+      submissionDetailCacheRef.current.delete(selectedSubmission.id);
       showToast('Đã cập nhật bài làm OMR');
       setSelectedSubmission(null);
       await reloadAll();
@@ -235,6 +425,7 @@ export function TeacherOmrBatchDetailScreen() {
       }));
 
       await updateSubmissionAnswers(accessToken, selectedSubmission.id, answers);
+      submissionDetailCacheRef.current.delete(selectedSubmission.id);
       showToast('Đã cập nhật đáp án và tính lại điểm');
       setSelectedSubmission(null);
       await reloadAll();
@@ -297,7 +488,7 @@ export function TeacherOmrBatchDetailScreen() {
     null;
 
   const renderSubmissionItem = ({ item }: { item: SubmissionItem }) => (
-    <Pressable onPress={() => openSubmission(item)}>
+    <Pressable onPress={() => { void openSubmission(item.id); }}>
       <SurfaceCard
         style={[
           styles.submissionCard,
@@ -321,7 +512,7 @@ export function TeacherOmrBatchDetailScreen() {
         </View>
         <View style={styles.inlineMeta}>
           <AppText variant="caption" color={palette.mutedForeground}>
-            {`${item.correctCount}/${item.details.length} đúng`}
+            {`${item.correctCount}/${item.questionCount} đúng`}
           </AppText>
           <AppText variant="caption" color={palette.mutedForeground}>
             {`${item.score}/${item.maxScore} điểm`}
@@ -455,10 +646,32 @@ export function TeacherOmrBatchDetailScreen() {
       />
 
       <ModalSheet
-        visible={!!selectedSubmission}
-        onClose={() => setSelectedSubmission(null)}
+        visible={!!selectedSubmissionId}
+        onClose={closeSubmission}
+        scrollable={activeTab !== 'answers'}
       >
-        {selectedSubmission ? (
+        {submissionLoading ? (
+          <LoadingState label="Đang tải bài làm OMR" />
+        ) : submissionError ? (
+          <ErrorState
+            message={submissionError}
+            retryLabel="Thử lại"
+            onRetry={() => {
+              if (selectedSubmissionId) {
+                void openSubmission(selectedSubmissionId);
+              }
+            }}
+          />
+        ) : selectedSubmission && activeTab === 'answers' ? (
+          <OmrAnswerEditor
+            submission={selectedSubmission}
+            answerDraft={answerDraft}
+            saving={saving}
+            onAnswerChange={handleAnswerChange}
+            onSave={handleSaveAnswers}
+            onOpenOverride={() => setActiveTab('override')}
+          />
+        ) : selectedSubmission ? (
           <>
             <AppText variant="headline" weight="bold" style={styles.sheetTitle}>
               Chi tiết bài làm OMR
@@ -573,71 +786,14 @@ export function TeacherOmrBatchDetailScreen() {
                 </SurfaceCard>
 
                 <View style={styles.answersList}>
-                  {selectedSubmission.details.map((detail) => {
-                    const currentAnswer = answerDraft[detail.questionNumber] ?? null;
-
-                    return (
-                      <SurfaceCard
-                        key={detail.questionNumber}
-                        style={[
-                          styles.answerCard,
-                          detail.needsReview ? styles.answerNeedsReview : null,
-                        ]}
-                      >
-                        <View style={styles.rowBetween}>
-                          <View style={styles.flex}>
-                            <AppText variant="body" weight="semibold">
-                              {`Câu ${String(detail.questionNumber)}`}
-                            </AppText>
-                            <AppText variant="caption" color={palette.mutedForeground}>
-                              {`Máy đọc: ${detail.detectedAnswer ?? 'Trống'} • Đáp án chuẩn: ${detail.correctAnswer ?? '—'}`}
-                            </AppText>
-                            {detail.reviewReason ? (
-                              <AppText variant="caption" color={palette.warning}>
-                                {detail.reviewReason}
-                              </AppText>
-                            ) : null}
-                          </View>
-                          {currentAnswer && detail.correctAnswer ? (
-                            currentAnswer === detail.correctAnswer ? (
-                              <CheckCircle2 size={16} color={palette.success} />
-                            ) : (
-                              <XCircle size={16} color={palette.destructive} />
-                            )
-                          ) : detail.isCorrect ? (
-                            <CheckCircle2 size={16} color={palette.success} />
-                          ) : (
-                            <XCircle size={16} color={palette.destructive} />
-                          )}
-                        </View>
-                        <View style={styles.answerOptions}>
-                          {answerChoices.map((choice) => (
-                            <Pressable
-                              key={`${detail.questionNumber}-${choice}`}
-                              style={[
-                                styles.answerOption,
-                                currentAnswer === choice ? styles.answerOptionActive : null,
-                              ]}
-                              onPress={() =>
-                                setAnswerDraft((current) => ({
-                                  ...current,
-                                  [detail.questionNumber]: current[detail.questionNumber] === choice ? null : choice,
-                                }))
-                              }
-                            >
-                              <AppText
-                                variant="label"
-                                weight="semibold"
-                                color={currentAnswer === choice ? palette.white : palette.foreground}
-                              >
-                                {choice}
-                              </AppText>
-                            </Pressable>
-                          ))}
-                        </View>
-                      </SurfaceCard>
-                    );
-                  })}
+                  {selectedSubmission.details.map((detail) => (
+                    <AnswerReviewCard
+                      key={detail.questionNumber}
+                      detail={detail}
+                      currentAnswer={(answerDraft[detail.questionNumber] as AnswerChoice | null) ?? null}
+                      onAnswerChange={handleAnswerChange}
+                    />
+                  ))}
                 </View>
 
                 <PrimaryButton
@@ -780,6 +936,10 @@ const styles = StyleSheet.create({
   },
   answersList: {
     gap: appTheme.spacing.md,
+  },
+  answerListContent: {
+    gap: appTheme.spacing.md,
+    paddingBottom: appTheme.spacing.xxl,
   },
   answerCard: {
     gap: appTheme.spacing.md,

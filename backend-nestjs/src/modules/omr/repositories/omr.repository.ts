@@ -60,8 +60,9 @@ export const omrBatchDetailInclude = {
 
 export const omrBatchHeaderInclude = {
   exam: {
-    include: {
-      variants: variantInclude,
+    select: {
+      id: true,
+      title: true,
     },
   },
 } satisfies Prisma.OmrBatchInclude;
@@ -142,6 +143,32 @@ export type OmrSubmissionWithRelations = Prisma.SubmissionGetPayload<{
     details: {
       orderBy: {
         questionNumber: 'asc';
+      };
+    };
+  };
+}>;
+
+export type OmrSubmissionListItem = Prisma.SubmissionGetPayload<{
+  select: {
+    id: true;
+    studentId: true;
+    studentCode: true;
+    detectedTestId: true;
+    resolvedTestCode: true;
+    status: true;
+    score: true;
+    maxScore: true;
+    correctCount: true;
+    wrongCount: true;
+    reviewCount: true;
+    student: {
+      select: {
+        name: true;
+      };
+    };
+    _count: {
+      select: {
+        details: true;
       };
     };
   };
@@ -251,19 +278,23 @@ export class OmrRepository {
     const [items, total] = await Promise.all([
       this.prismaService.submission.findMany({
         where,
-        include: {
+        select: {
+          id: true,
+          studentId: true,
+          studentCode: true,
+          detectedTestId: true,
+          resolvedTestCode: true,
+          status: true,
+          score: true,
+          maxScore: true,
+          correctCount: true,
+          wrongCount: true,
+          reviewCount: true,
           student: {
-            select: { id: true, name: true, studentCode: true },
+            select: { name: true },
           },
-          resolvedVariant: {
-            include: {
-              answerKeys: {
-                orderBy: { questionNumber: 'asc' },
-              },
-            },
-          },
-          details: {
-            orderBy: { questionNumber: 'asc' },
+          _count: {
+            select: { details: true },
           },
         },
         orderBy: { createdAt: 'asc' },
@@ -299,6 +330,13 @@ export class OmrRepository {
           },
         },
       },
+    });
+  }
+
+  async findBatchAccessById(batchId: string) {
+    return this.prismaService.omrBatch.findUnique({
+      where: { id: batchId },
+      select: { id: true, teacherId: true },
     });
   }
 

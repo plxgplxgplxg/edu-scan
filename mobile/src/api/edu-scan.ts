@@ -311,8 +311,22 @@ type OmrBatchApi = {
   }>;
 };
 
+type OmrSubmissionListItemApi = Omit<OmrBatchApi['submissions'][number],
+  | 'resolvedVariantId'
+  | 'imageUrl'
+  | 'processedImageUrl'
+  | 'annotatedImageUrl'
+  | 'warpOverlayUrl'
+  | 'answerScoresUrl'
+  | 'details'
+> & {
+  questionCount: number;
+};
+
+export type OmrSubmissionDetailView = OmrBatchApi['submissions'][number];
+
 type OmrBatchSubmissionsPageApi = {
-  items: OmrBatchApi['submissions'];
+  items: OmrSubmissionListItemApi[];
   total: number;
   page: number;
   limit: number;
@@ -355,8 +369,6 @@ export type TeacherQuestionDetailView = {
   };
   correctAnswer: 'A' | 'B' | 'C' | 'D';
 };
-
-export type OmrSubmissionDetailView = OmrSubmissionSummary;
 
 export type ReportExportJob = {
   jobId: string;
@@ -753,6 +765,16 @@ export async function getOmrBatchSubmissions(
 
   return requestJson<OmrBatchSubmissionsPageApi>(
     `/omr/batch/${encodeURIComponent(batchId)}/submissions?${params.toString()}`,
+    { token },
+  );
+}
+
+export async function getOmrSubmissionDetail(
+  token: string,
+  submissionId: string,
+) {
+  return requestJson<OmrSubmissionDetailView>(
+    `/omr/submissions/${encodeURIComponent(submissionId)}`,
     { token },
   );
 }

@@ -96,6 +96,50 @@ export class OmrSubmissionResponseDto {
   details!: OmrSubmissionDetailResponseDto[];
 }
 
+export class OmrSubmissionListItemResponseDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ format: 'uuid', nullable: true })
+  studentId!: string | null;
+
+  @ApiProperty({ nullable: true })
+  studentCode!: string | null;
+
+  @ApiProperty({ nullable: true })
+  studentName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  detectedTestId!: string | null;
+
+  @ApiProperty({ nullable: true })
+  resolvedTestCode!: string | null;
+
+  @ApiProperty({ enum: SubmissionStatus, enumName: 'SubmissionStatus' })
+  status!: SubmissionStatus;
+
+  @ApiProperty()
+  score!: number;
+
+  @ApiProperty()
+  maxScore!: number;
+
+  @ApiProperty()
+  correctCount!: number;
+
+  @ApiProperty()
+  wrongCount!: number;
+
+  @ApiProperty()
+  reviewCount!: number;
+
+  @ApiProperty()
+  needsReview!: boolean;
+
+  @ApiProperty({ description: 'Số câu có trong bài làm, không tải chi tiết đáp án.' })
+  questionCount!: number;
+}
+
 export class OmrSubmissionDetailViewResponseDto extends OmrSubmissionResponseDto {
   @ApiProperty({ format: 'uuid' })
   examId!: string;

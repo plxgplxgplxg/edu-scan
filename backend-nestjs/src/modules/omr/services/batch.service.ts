@@ -12,6 +12,7 @@ import {
 } from '@prisma/client';
 import {
   OmrBatchResponseDto,
+  OmrSubmissionListItemResponseDto,
   OmrSubmissionDetailViewResponseDto,
   OmrSubmissionResponseDto,
 } from '../dto/response/omr-batch-response.dto';
@@ -22,6 +23,7 @@ import {
   OmrBatchWithRelations,
   OmrRepository,
   OmrSubmissionWithRelations,
+  OmrSubmissionListItem,
 } from '../repositories/omr.repository';
 import { buildOmrSseChannelId, OmrSseEvent } from '../sse/omr-sse-event';
 import { SseRegistryService } from './sse-registry.service';
@@ -145,14 +147,9 @@ export class BatchService {
       status,
     );
 
-    const exam = await this.omrRepository.findBatchById(batchId);
-
     return {
       items: items.map((submission) =>
-        this.toSubmissionResponseDto({
-          ...submission,
-          exam: exam!.exam,
-        } as OmrSubmissionWithRelations),
+        this.toSubmissionListItemResponseDto(submission),
       ),
       total,
       page,
@@ -162,7 +159,7 @@ export class BatchService {
   }
 
   async assertTeacherBatchAccess(batchId: string, teacherId: string) {
-    const batch = await this.omrRepository.findBatchById(batchId);
+    const batch = await this.omrRepository.findBatchAccessById(batchId);
 
     if (!batch) {
       throw new NotFoundException('OMR batch not found');
@@ -370,6 +367,27 @@ export class BatchService {
       batchId: submission.batchId,
       createdAt: submission.createdAt,
       updatedAt: submission.updatedAt,
+    };
+  }
+
+  private toSubmissionListItemResponseDto(
+    submission: OmrSubmissionListItem,
+  ): OmrSubmissionListItemResponseDto {
+    return {
+      id: submission.id,
+      studentId: submission.studentId,
+      studentCode: submission.studentCode,
+      studentName: submission.student?.name ?? null,
+      detectedTestId: submission.detectedTestId,
+      resolvedTestCode: submission.resolvedTestCode,
+      status: submission.status,
+      score: submission.score ?? 0,
+      maxScore: submission.maxScore ?? 0,
+      correctCount: submission.correctCount ?? 0,
+      wrongCount: submission.wrongCount ?? 0,
+      reviewCount: submission.reviewCount ?? 0,
+      needsReview: submission.status === SubmissionStatus.NEEDS_REVIEW,
+      questionCount: submission._count.details,
     };
   }
 
