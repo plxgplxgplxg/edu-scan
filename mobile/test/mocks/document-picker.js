@@ -1,3 +1,4 @@
+/* eslint-env jest */
 const types = {
   pdf: 'application/pdf',
   doc: 'application/msword',

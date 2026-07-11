@@ -1,3 +1,4 @@
+/* eslint-env jest */
 const store = new Map();
 
 module.exports = {

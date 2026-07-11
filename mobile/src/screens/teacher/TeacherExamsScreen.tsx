@@ -62,8 +62,8 @@ export function TeacherExamsScreen() {
   }, [data?.classes, classSearch]);
 
   return (
-    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
-      <View style={[styles.header, { paddingHorizontal: layout.horizontalPadding, paddingTop: layout.sectionGap, maxWidth: layout.contentMaxWidth, alignSelf: 'center', width: '100%' }]}>
+    <Screen refreshing={loading} onRefresh={() => { reload().catch(() => {}); }}>
+      <View style={[styles.header, styles.container, { paddingHorizontal: layout.horizontalPadding, paddingTop: layout.sectionGap, maxWidth: layout.contentMaxWidth }]}>
         <Pressable style={styles.backRow} onPress={() => navigation.navigate('TeacherTabs', { screen: 'TeacherDashboard' })}>
           <ArrowLeft size={16} color={palette.mutedForeground} />
           <AppText variant="label" color={palette.mutedForeground}>{content.common.buttons.backToHome}</AppText>
@@ -77,7 +77,7 @@ export function TeacherExamsScreen() {
         <TextInputField label={content.common.search.exams} value={search} onChangeText={setSearch} placeholder={content.common.search.exams} trailing={<Search size={18} color={palette.mutedForeground} />} />
       </View>
 
-      <View style={[styles.list, { paddingHorizontal: layout.horizontalPadding, paddingTop: layout.sectionGap, maxWidth: layout.contentMaxWidth, alignSelf: 'center', width: '100%', gap: layout.sectionGap }]}>
+      <View style={[styles.list, styles.container, { paddingHorizontal: layout.horizontalPadding, paddingTop: layout.sectionGap, maxWidth: layout.contentMaxWidth, gap: layout.sectionGap }]}>
         {loading ? <LoadingState label={content.common.labels.loading} /> : null}
         {error ? <ErrorState message={error} retryLabel={content.common.buttons.retry} onRetry={reload} /> : null}
 
@@ -89,7 +89,7 @@ export function TeacherExamsScreen() {
                 <View style={styles.flex}>
                   <View style={styles.examTitleRow}>
                     <AppText variant="body" weight="medium">{item.title}</AppText>
-                    <AppText variant="caption" color={item.status === 'PUBLISHED' ? palette.success : palette.warning}>{item.status === 'PUBLISHED' ? 'Published' : 'Draft'}</AppText>
+                    <AppText variant="caption" color={item.status === 'PUBLISHED' ? palette.success : palette.warning}>{item.status === 'PUBLISHED' ? 'Phát hành' : 'Bản nháp'}</AppText>
                   </View>
                   <View style={styles.metaWrap}>
                     <View style={styles.inlineMeta}><Hash size={11} color={palette.mutedForeground} /><AppText variant="caption" color={palette.mutedForeground}>{`${String(item.variantCount)} mã đề`}</AppText></View>
@@ -154,7 +154,7 @@ export function TeacherExamsScreen() {
         ) : null}
 
         <PrimaryButton
-          label="Tạo đề và thêm câu hỏi (Bước 2)"
+          label="Tạo đề và thêm đáp án (Bước 2)"
           loading={submitting}
           onPress={async () => {
             if (!accessToken) return;
@@ -193,6 +193,7 @@ export function TeacherExamsScreen() {
 }
 
 const styles = StyleSheet.create({
+  container: { alignSelf: 'center', width: '100%' },
   header: { gap: appTheme.spacing.md },
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: appTheme.spacing.md },

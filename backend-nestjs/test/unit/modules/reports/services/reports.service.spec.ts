@@ -9,7 +9,7 @@ describe('ReportsService', () => {
   const repository = {
     findTeacherClassById: jest.fn(),
     findClassEnrollments: jest.fn(),
-    findClassExamsByScope: jest.fn(),
+    findExamsForClassScope: jest.fn(),
     findSubmissionsForClassScope: jest.fn(),
   };
 
@@ -62,7 +62,7 @@ describe('ReportsService', () => {
         },
       },
     ]);
-    repository.findClassExamsByScope.mockResolvedValue([
+    repository.findExamsForClassScope.mockResolvedValue([
       {
         id: 'exam-1',
         title: 'Midterm',
@@ -107,7 +107,7 @@ describe('ReportsService', () => {
       scope: 'exam-1',
     });
 
-    expect(repository.findClassExamsByScope).toHaveBeenCalledWith({
+    expect(repository.findExamsForClassScope).toHaveBeenCalledWith({
       classId: 'class-1',
       teacherId: 'teacher-1',
       scope: 'exam-1',
@@ -136,7 +136,7 @@ describe('ReportsService', () => {
         },
       },
     ]);
-    repository.findClassExamsByScope.mockResolvedValue([
+    repository.findExamsForClassScope.mockResolvedValue([
       {
         id: 'exam-1',
         title: 'Midterm',

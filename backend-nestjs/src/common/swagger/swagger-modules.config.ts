@@ -4,8 +4,6 @@ import { AuthModule } from '../../modules/auth/auth.module';
 import { ClassesModule } from '../../modules/classes/classes.module';
 import { ExamsModule } from '../../modules/exams/exams.module';
 import { OmrModule } from '../../modules/omr/omr.module';
-import { QuestionsModule } from '../../modules/questions/questions.module';
-import { RemarksModule } from '../../modules/remarks/remarks.module';
 import { ReportsModule } from '../../modules/reports/reports.module';
 import { SubmissionsModule } from '../../modules/submissions/submissions.module';
 import { UsersModule } from '../../modules/users/users.module';
@@ -39,10 +37,6 @@ export const SWAGGER_MODULES_CONFIG: Record<
     ...SWAGGER_MODULES_METADATA.exams,
     moduleClass: ExamsModule,
   },
-  questions: {
-    ...SWAGGER_MODULES_METADATA.questions,
-    moduleClass: QuestionsModule,
-  },
   submissions: {
     ...SWAGGER_MODULES_METADATA.submissions,
     moduleClass: SubmissionsModule,
@@ -54,10 +48,6 @@ export const SWAGGER_MODULES_CONFIG: Record<
   omr: {
     ...SWAGGER_MODULES_METADATA.omr,
     moduleClass: OmrModule,
-  },
-  remarks: {
-    ...SWAGGER_MODULES_METADATA.remarks,
-    moduleClass: RemarksModule,
   },
   reports: {
     ...SWAGGER_MODULES_METADATA.reports,

@@ -48,7 +48,10 @@ export class ClassesController {
   ) {
     assertUserRole(currentUser, [Role.TEACHER]);
     const parsedPage = page ? parseInt(page, 10) : 1;
-    return this.classesService.listTeacherClasses(currentUser.id, parsedPage > 0 ? parsedPage : 1);
+    return this.classesService.listTeacherClasses(
+      currentUser.id,
+      parsedPage > 0 ? parsedPage : 1,
+    );
   }
 
   @Get()
@@ -60,7 +63,10 @@ export class ClassesController {
   ) {
     assertUserRole(currentUser, [Role.TEACHER, Role.STUDENT, Role.ADMIN]);
     const parsedPage = page ? parseInt(page, 10) : 1;
-    return this.classesService.listClasses(currentUser, parsedPage > 0 ? parsedPage : 1);
+    return this.classesService.listClasses(
+      currentUser,
+      parsedPage > 0 ? parsedPage : 1,
+    );
   }
 
   @Get(':id')
@@ -88,6 +94,17 @@ export class ClassesController {
       currentUser.id,
       updateClassDto,
     );
+  }
+
+  @Delete(':id')
+  @Roles(Role.TEACHER)
+  @ClassesSwagger.XoaLopHoc()
+  async deleteClass(
+    @Param('id') classId: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ) {
+    assertUserRole(currentUser, [Role.TEACHER]);
+    return this.classesService.deleteClass(classId, currentUser.id);
   }
 
   @Post(':id/students')

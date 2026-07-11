@@ -4,7 +4,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
-import { ClassesRepository, ClassLightweight } from '../repositories/classes.repository';
+import {
+  ClassesRepository,
+  ClassLightweight,
+} from '../repositories/classes.repository';
 import { CreateClassDto } from '../dto/request/create-class.dto';
 import { UpdateClassDto } from '../dto/request/update-class.dto';
 import { AddStudentDto } from '../dto/request/add-student.dto';
@@ -25,16 +28,25 @@ export class ClassesService {
   }
 
   async listTeacherClasses(teacherId: string, page = 1) {
-    const classes = await this.classesRepository.listTeacherClasses(teacherId, page);
+    const classes = await this.classesRepository.listTeacherClasses(
+      teacherId,
+      page,
+    );
     return classes.map((item) => this.mapClassLightweightToResponse(item));
   }
 
   async listClasses(currentUser: AuthenticatedUser, page = 1) {
     let classes: ClassLightweight[] = [];
     if (currentUser.role === Role.TEACHER) {
-      classes = await this.classesRepository.listTeacherClasses(currentUser.id, page);
+      classes = await this.classesRepository.listTeacherClasses(
+        currentUser.id,
+        page,
+      );
     } else if (currentUser.role === Role.STUDENT) {
-      classes = await this.classesRepository.listStudentClasses(currentUser.id, page);
+      classes = await this.classesRepository.listStudentClasses(
+        currentUser.id,
+        page,
+      );
     } else {
       classes = await this.classesRepository.listAllClasses(page);
     }
@@ -52,16 +64,19 @@ export class ClassesService {
       teacher: item.teacher,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
-      enrollments: Array.from({ length: item._count?.enrollments ?? 0 }, () => ({
-        joinedAt: new Date(),
-        student: {
-          id: '',
-          name: '',
-          email: '',
-          studentCode: '',
-          isActive: true,
-        },
-      })),
+      enrollments: Array.from(
+        { length: item._count?.enrollments ?? 0 },
+        () => ({
+          joinedAt: new Date(),
+          student: {
+            id: '',
+            name: '',
+            email: '',
+            studentCode: '',
+            isActive: true,
+          },
+        }),
+      ),
     };
   }
 
@@ -124,6 +139,21 @@ export class ClassesService {
       teacherId,
       updateClassDto,
     );
+  }
+
+  async deleteClass(classId: string, teacherId: string) {
+    const classEntity = await this.classesRepository.findTeacherClassById(
+      classId,
+      teacherId,
+    );
+
+    if (!classEntity) {
+      throw new NotFoundException('Class not found!');
+    }
+
+    await this.classesRepository.deleteTeacherClass(classId, teacherId);
+
+    return { id: classId, deleted: true };
   }
 
   async addStudentToClass(

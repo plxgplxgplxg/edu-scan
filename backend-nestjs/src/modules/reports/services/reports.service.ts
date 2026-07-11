@@ -63,7 +63,7 @@ export class ReportsService {
       throw new BadRequestException('Class has no enrolled students to export');
     }
 
-    const exams = await this.reportsRepository.findClassExamsByScope({
+    const exams = await this.reportsRepository.findExamsForClassScope({
       classId: input.classId,
       teacherId: input.teacherId,
       scope: normalizedScope,

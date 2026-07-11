@@ -26,7 +26,7 @@ describe('ReportsRepository', () => {
   it('queries exams in all scope with ownership condition', async () => {
     prisma.exam.findMany.mockResolvedValue([]);
 
-    await repository.findClassExamsByScope({
+    await repository.findExamsForClassScope({
       classId: 'class-1',
       teacherId: 'teacher-1',
       scope: 'all',

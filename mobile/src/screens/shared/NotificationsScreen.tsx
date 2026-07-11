@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unstable-nested-components, no-void, react-native/no-inline-styles */
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import {
@@ -5,7 +6,6 @@ import {
   BookOpen,
   CheckCircle,
   FileText,
-  MessageSquare,
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -33,6 +33,32 @@ export function NotificationsScreen() {
     useNotifications();
   const handleRefresh = () => {
     reload().catch(() => undefined);
+  };
+  const openNotification = async (item: typeof notifications[number]) => {
+    await markAsRead(item.id);
+
+    const intent = item.routeIntent;
+    if (!intent) {
+      return;
+    }
+
+    if (intent.route === 'StudentClassDetail' && role === 'STUDENT') {
+      navigation.navigate('StudentClassDetail', { 
+        classId: intent.classId, 
+        assignmentId: intent.assignmentId, 
+        mode: intent.mode 
+      });
+      return;
+    }
+
+    if (intent.route === 'TeacherClassDetail' && role === 'TEACHER') {
+      navigation.navigate('TeacherClassDetail', { classId: intent.classId });
+      return;
+    }
+
+    if (intent.route === 'TeacherOmrBatchDetail' && role === 'TEACHER') {
+      navigation.navigate('TeacherOmrBatchDetail', { batchId: intent.batchId });
+    }
   };
 
   return (
@@ -86,7 +112,7 @@ export function NotificationsScreen() {
           <Pressable
             key={item.id}
             onPress={() => {
-              markAsRead(item.id).catch(() => undefined);
+              openNotification(item).catch(() => undefined);
             }}
           >
             <SurfaceCard style={[styles.card, !item.read ? styles.unreadCard : null]}>
@@ -105,9 +131,6 @@ export function NotificationsScreen() {
                 ) : null}
                 {item.type === 'result' ? (
                   <FileText size={18} color={palette.info} />
-                ) : null}
-                {item.type === 'remark' ? (
-                  <MessageSquare size={18} color={palette.warning} />
                 ) : null}
                 {item.type === 'system' ? (
                   <CheckCircle size={18} color={palette.success} />

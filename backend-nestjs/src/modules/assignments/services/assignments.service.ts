@@ -5,6 +5,7 @@ import {
   Inject,
   NotFoundException,
 } from '@nestjs/common';
+import { extname } from 'node:path';
 import { PrismaService } from '../../../database/prisma.service';
 import { AssignmentsRepository } from '../repositories/assignments.repository';
 import { CreateAssignmentDto } from '../dtos/create-assignment.dto';
@@ -12,16 +13,20 @@ import { SubmitAssignmentDto } from '../dtos/submit-assignment.dto';
 import { GradeSubmitDto } from '../dtos/grade-submit.dto';
 import { GradeStatus, SubmitStatus } from '@prisma/client';
 import { IStorageService } from '../../../storage/storage.interface';
-
-const SUPPORTED_SUBMISSION_MIME_TYPES = new Set([
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'text/plain',
-]);
+import {
+  ASSIGNMENT_SUBMISSION_EXTENSIONS,
+  ASSIGNMENT_SUBMISSION_MAX_FILE_BYTES,
+  ASSIGNMENT_SUBMISSION_MIME_TYPES,
+} from '../assignment-file-policy';
+import {
+  NotificationsService,
+  NOTIFICATIONS_QUEUE_NAME,
+  JOB_ASSIGNMENT_DUE_SOON,
+  JOB_ASSIGNMENT_OVERDUE,
+  JOB_TEACHER_ASSIGNMENT_SUMMARY,
+} from '../../notifications/services/notifications.service';
+import { InjectQueue } from '@nestjs/bull';
+import type { Queue } from 'bull';
 
 @Injectable()
 export class AssignmentsService {
@@ -30,6 +35,9 @@ export class AssignmentsService {
     private readonly prisma: PrismaService,
     @Inject(IStorageService)
     private readonly storageService: IStorageService,
+    private readonly notificationsService: NotificationsService,
+    @InjectQueue(NOTIFICATIONS_QUEUE_NAME)
+    private readonly notificationsQueue: Queue,
   ) {}
 
   async createAssignment(teacherId: string, dto: CreateAssignmentDto) {
@@ -39,36 +47,83 @@ export class AssignmentsService {
       throw new BadRequestException('Deadline must be a future date.');
     }
 
-    const latePenaltyPct = dto.latePenaltyPct ?? 0;
+    const allowLate = dto.allowLate ?? false;
+    const latePenaltyPct = allowLate ? (dto.latePenaltyPct ?? 0) : 0;
     if (latePenaltyPct < 0 || latePenaltyPct > 100) {
       throw new BadRequestException(
         'Late penalty percentage must be between 0 and 100.',
       );
     }
 
-    const ownedClasses = await this.prisma.class.findMany({
-      where: { teacherId, id: { in: dto.classIds } },
+    const ownedClass = await this.prisma.class.findFirst({
+      where: { teacherId, id: dto.classId },
       select: { id: true },
     });
 
-    if (ownedClasses.length !== dto.classIds.length) {
-      throw new ForbiddenException(
-        'One or more classes do not belong to this teacher.',
-      );
+    if (!ownedClass) {
+      throw new ForbiddenException('Class does not belong to this teacher.');
     }
 
-    return this.assignmentsRepository.create(
+    const assignment = await this.assignmentsRepository.create({
+      title: dto.title,
+      description: dto.description,
+      deadline,
+      allowLate,
+      latePenaltyPct,
+      maxScore: dto.maxScore ?? 10,
+      teacherId,
+      classId: dto.classId,
+    });
+
+    const enrollments = await this.prisma.classEnrollment.findMany({
+      where: { classId: dto.classId },
+      select: { studentId: true },
+    });
+
+    await this.notificationsService.createAssignmentCreatedNotifications({
+      assignmentId: assignment.id,
+      classId: dto.classId,
+      title: assignment.title,
+      deadline: assignment.deadline,
+      students: enrollments.map((enrollment) => ({ id: enrollment.studentId })),
+    });
+
+    const nowTime = Date.now();
+    const deadlineTime = deadline.getTime();
+    const msToDeadline = deadlineTime - nowTime;
+    const msToDueSoon = Math.max(0, msToDeadline - 24 * 60 * 60 * 1000);
+
+    await this.notificationsQueue.add(
+      JOB_ASSIGNMENT_DUE_SOON,
+      { assignmentId: assignment.id },
       {
-        title: dto.title,
-        description: dto.description,
-        deadline,
-        allowLate: dto.allowLate ?? false,
-        latePenaltyPct,
-        maxScore: dto.maxScore ?? 10,
-        teacherId,
-      } as any,
-      dto.classIds,
+        delay: msToDueSoon,
+        jobId: `due-soon:${assignment.id}`,
+        removeOnComplete: true,
+      },
     );
+
+    await this.notificationsQueue.add(
+      JOB_ASSIGNMENT_OVERDUE,
+      { assignmentId: assignment.id },
+      {
+        delay: Math.max(0, msToDeadline),
+        jobId: `overdue:${assignment.id}`,
+        removeOnComplete: true,
+      },
+    );
+
+    await this.notificationsQueue.add(
+      JOB_TEACHER_ASSIGNMENT_SUMMARY,
+      { assignmentId: assignment.id },
+      {
+        delay: Math.max(0, msToDeadline),
+        jobId: `summary:${assignment.id}`,
+        removeOnComplete: true,
+      },
+    );
+
+    return assignment;
   }
 
   async listAssignmentsForTeacher(teacherId: string) {
@@ -90,13 +145,12 @@ export class AssignmentsService {
       throw new NotFoundException('Assignment not found.');
     }
 
-    const classIds = assignment.classes.map((c) => c.classId);
     const enrollment = await this.prisma.classEnrollment.findFirst({
-      where: { studentId, classId: { in: classIds } },
+      where: { studentId, classId: assignment.classId },
     });
     if (!enrollment) {
       throw new ForbiddenException(
-        'You are not enrolled in any class assigned to this assignment.',
+        'You are not enrolled in the class assigned to this assignment.',
       );
     }
 
@@ -156,13 +210,12 @@ export class AssignmentsService {
       throw new NotFoundException('Assignment not found.');
     }
 
-    const classIds = assignment.classes.map((c) => c.classId);
     const enrollment = await this.prisma.classEnrollment.findFirst({
-      where: { studentId, classId: { in: classIds } },
+      where: { studentId, classId: assignment.classId },
     });
     if (!enrollment) {
       throw new ForbiddenException(
-        'You are not enrolled in any class assigned to this assignment.',
+        'You are not enrolled in the class assigned to this assignment.',
       );
     }
 
@@ -211,8 +264,17 @@ export class AssignmentsService {
     file?: Express.Multer.File,
   ) {
     if (file) {
-      if (!SUPPORTED_SUBMISSION_MIME_TYPES.has(file.mimetype)) {
+      if (!ASSIGNMENT_SUBMISSION_MIME_TYPES.has(file.mimetype)) {
         throw new BadRequestException('Unsupported submission file type.');
+      }
+      const extension = extname(file.originalname).toLowerCase();
+      if (!ASSIGNMENT_SUBMISSION_EXTENSIONS.has(extension)) {
+        throw new BadRequestException('Unsupported submission file extension.');
+      }
+      if (file.size > ASSIGNMENT_SUBMISSION_MAX_FILE_BYTES) {
+        throw new BadRequestException(
+          'Submission file exceeds the configured size limit.',
+        );
       }
 
       return this.storageService.uploadFile(

@@ -64,7 +64,10 @@ export class ClassesRepository {
     });
   }
 
-  async listTeacherClasses(teacherId: string, page = 1): Promise<ClassLightweight[]> {
+  async listTeacherClasses(
+    teacherId: string,
+    page = 1,
+  ): Promise<ClassLightweight[]> {
     return this.prismaService.class.findMany({
       where: { teacherId },
       include: classListInclude,
@@ -76,7 +79,10 @@ export class ClassesRepository {
     });
   }
 
-  async listStudentClasses(studentId: string, page = 1): Promise<ClassLightweight[]> {
+  async listStudentClasses(
+    studentId: string,
+    page = 1,
+  ): Promise<ClassLightweight[]> {
     return this.prismaService.class.findMany({
       where: {
         enrollments: {
@@ -161,6 +167,37 @@ export class ClassesRepository {
     return this.prismaService.class.findUnique({
       where: { id: classId },
       include: classDetailInclude,
+    });
+  }
+
+  async deleteTeacherClass(classId: string, teacherId: string) {
+    return this.prismaService.$transaction(async (tx) => {
+      const assignments = await tx.assignment.findMany({
+        where: { classId, teacherId },
+        select: { id: true },
+      });
+      const assignmentIds = assignments.map((assignment) => assignment.id);
+
+      if (assignmentIds.length > 0) {
+        await tx.assignmentSubmit.deleteMany({
+          where: { assignmentId: { in: assignmentIds } },
+        });
+        await tx.assignment.deleteMany({
+          where: { id: { in: assignmentIds }, teacherId },
+        });
+      }
+
+      await tx.classEnrollment.deleteMany({
+        where: { classId },
+      });
+
+      await tx.examClass.deleteMany({
+        where: { classId },
+      });
+
+      return tx.class.delete({
+        where: { id: classId },
+      });
     });
   }
 

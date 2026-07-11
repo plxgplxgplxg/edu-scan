@@ -1,3 +1,4 @@
+/* eslint-env jest */
 const React = require('react');
 
 module.exports = {

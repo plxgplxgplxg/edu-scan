@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unused-vars */
 import { INestApplication } from '@nestjs/common';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

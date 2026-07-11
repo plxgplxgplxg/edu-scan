@@ -4,16 +4,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Bell,
   BookOpen,
-  FileText,
-  GraduationCap,
-  HelpCircle,
   Home,
-  MessageSquare,
   ScanLine,
-  TrendingUp,
   User,
   Users,
-  ClipboardList,
   type LucideIcon,
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -32,24 +26,15 @@ const roleModules: Record<UserRole, Record<string, { labelKey: string; icon: Luc
   TEACHER: {
     home: { labelKey: 'home', icon: Home, route: 'TeacherDashboard' },
     classes: { labelKey: 'classes', icon: BookOpen, route: 'TeacherClasses' },
-    exams: { labelKey: 'exams', icon: FileText, route: 'TeacherOmrExams' },
     omr: { labelKey: 'omr', icon: ScanLine, route: 'TeacherOMR' },
-    remarks: { labelKey: 'remarks', icon: MessageSquare, route: 'TeacherRemarks' },
-    questions: { labelKey: 'questions', icon: HelpCircle, route: 'TeacherQuestions' },
-    assignments: { labelKey: 'assignments', icon: ClipboardList, route: 'TeacherAssignments' },
   },
   STUDENT: {
     home: { labelKey: 'home', icon: Home, route: 'StudentDashboard' },
     classes: { labelKey: 'classes', icon: BookOpen, route: 'StudentClasses' },
-    results: { labelKey: 'results', icon: GraduationCap, route: 'StudentResults' },
-    assignments: { labelKey: 'assignments', icon: ClipboardList, route: 'StudentAssignments' },
-    remarks: { labelKey: 'remarks', icon: MessageSquare, route: 'StudentRemarks' },
-    progress: { labelKey: 'progress', icon: TrendingUp, route: 'StudentProgress' },
   },
   ADMIN: {
     home: { labelKey: 'home', icon: Home, route: 'AdminDashboard' },
     users: { labelKey: 'users', icon: Users, route: 'AdminUsers' },
-    classes: { labelKey: 'classes', icon: BookOpen, route: 'TeacherClasses' },
   },
 };
 

@@ -16,7 +16,10 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalInterceptors(new LoggingInterceptor(), new TransformInterceptor());
+  app.useGlobalInterceptors(
+    new LoggingInterceptor(),
+    new TransformInterceptor(),
+  );
   app.useGlobalFilters(new HttpExceptionFilter());
   app.enableCors();
 

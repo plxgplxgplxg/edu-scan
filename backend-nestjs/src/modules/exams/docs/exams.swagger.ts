@@ -26,7 +26,7 @@ export const ExamsSwagger = {
         summary: 'Tạo đề thi mới',
         roles: [Role.TEACHER],
         notes:
-          'Giáo viên tạo đề thi, gán cho lớp học, cấu hình mã đề, đáp án và sơ đồ câu hỏi. Không được gửi đồng thời `answerKeys` legacy và `variants` trong cùng request.',
+          'Giáo viên tạo đề kiểm tra trắc nghiệm, gán cho lớp học, cấu hình mã đề và đáp án. Không được gửi đồng thời `answerKeys` legacy và `variants` trong cùng request.',
       }),
       ApiBody({ type: CreateExamDto }),
       ApiWrappedCreatedResponse({
@@ -56,7 +56,7 @@ export const ExamsSwagger = {
         summary: 'Lấy chi tiết đề thi',
         roles: [Role.TEACHER],
         notes:
-          'Trả về đầy đủ thông tin đề thi, bao gồm lớp áp dụng, danh sách mã đề, đáp án và question map nếu có.',
+          'Trả về đầy đủ thông tin đề kiểm tra, bao gồm lớp áp dụng, danh sách mã đề và đáp án.',
       }),
       ApiParam({ name: 'id', description: 'ID đề thi', format: 'uuid' }),
       ApiWrappedOkResponse({
@@ -72,7 +72,7 @@ export const ExamsSwagger = {
         summary: 'Cập nhật đề thi',
         roles: [Role.TEACHER],
         notes:
-          'Nếu đề thi đã có bài làm hoặc batch OMR, service sẽ chặn thay đổi `classIds`, `variants`, `answerKeys` và `questionMap` để bảo toàn dữ liệu chấm bài.',
+          'Nếu đề thi đã có bài làm hoặc đợt chấm bài, service sẽ chặn thay đổi `classIds`, `variants` và `answerKeys` để bảo toàn dữ liệu chấm bài.',
       }),
       ApiParam({ name: 'id', description: 'ID đề thi', format: 'uuid' }),
       ApiBody({ type: UpdateExamDto }),
@@ -89,7 +89,7 @@ export const ExamsSwagger = {
         summary: 'Xóa đề thi',
         roles: [Role.TEACHER],
         notes:
-          'Chỉ được xóa khi đề thi chưa phát sinh bài làm và chưa có batch OMR liên quan.',
+          'Chỉ được xóa khi đề thi chưa phát sinh bài làm và chưa có đợt chấm bài liên quan.',
       }),
       ApiParam({ name: 'id', description: 'ID đề thi', format: 'uuid' }),
       ApiWrappedOkResponse({

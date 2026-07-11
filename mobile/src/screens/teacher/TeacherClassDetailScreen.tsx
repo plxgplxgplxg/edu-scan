@@ -1,5 +1,6 @@
+/* eslint-disable react/no-unstable-nested-components, no-void, react-native/no-inline-styles */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
 import {
   BookOpen,
   CheckCircle,
@@ -17,13 +18,18 @@ import {
   addStudentToClass,
   createClassReportExportJob,
   createAssignment,
+  deleteClass,
   downloadClassReportExportFile,
+  getAssignmentSubmits,
   getClassDetail,
+  gradeAssignmentSubmit,
   listAssignments,
   mapClassDetail,
   mapTeacherAssignmentSummary,
   removeStudentFromClass,
+  type AssignmentSubmitApi,
 } from '../../api/edu-scan';
+import type { AssignmentSummary } from '../../types/domain';
 import { AppText } from '../../components/AppText';
 import { ModalSheet } from '../../components/ModalSheet';
 import { PageHeader } from '../../components/PageHeader';
@@ -65,6 +71,9 @@ export function TeacherClassDetailScreen() {
   const [showAddStudent, setShowAddStudent] = useState(false);
   const [studentLookup, setStudentLookup] = useState('');
   const [showCreateAssignment, setShowCreateAssignment] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState<AssignmentSummary | null>(null);
+  const [assignmentSubmits, setAssignmentSubmits] = useState<AssignmentSubmitApi[]>([]);
+  const [gradeForms, setGradeForms] = useState<Record<string, { score: string; feedback: string }>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const reportJobUnsubscribeRef = useRef<(() => void) | null>(null);
@@ -101,7 +110,7 @@ export function TeacherClassDetailScreen() {
       return {
         currentClass: detail,
         assignments: assignments
-          .filter((item) => item.classes.some((entry) => entry.classId === classItem.id))
+          .filter((item) => item.classId === classItem.id)
           .map((item) => mapTeacherAssignmentSummary(item, classMap)),
       };
     },
@@ -112,6 +121,36 @@ export function TeacherClassDetailScreen() {
   const currentClassId = currentClass?.id ?? null;
   const classStudents = currentClass?.students ?? [];
   const teacherAssignments = data?.assignments ?? [];
+
+  const openAssignmentSubmits = async (assignment: AssignmentSummary) => {
+    if (!accessToken) {
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const submits = await getAssignmentSubmits(accessToken, assignment.id);
+      setAssignmentSubmits(submits);
+      setGradeForms(
+        Object.fromEntries(
+          submits.map((submit) => [
+            submit.id,
+            {
+              score: submit.score === null ? '' : String(submit.score),
+              feedback: submit.feedback ?? '',
+            },
+          ]),
+        ),
+      );
+      setSelectedAssignment(assignment);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     return () => {
@@ -205,6 +244,42 @@ export function TeacherClassDetailScreen() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const confirmDeleteClass = () => {
+    if (!currentClass) {
+      return;
+    }
+
+    Alert.alert(
+      'Xoá lớp học',
+      `Bạn có chắc muốn xoá lớp "${currentClass.name}"? Bài tập, bài nộp, ghi danh và liên kết đề kiểm tra trắc nghiệm của lớp này sẽ bị xoá.`,
+      [
+        { text: content.common.buttons.cancel, style: 'cancel' },
+        {
+          text: 'Xoá lớp',
+          style: 'destructive',
+          onPress: () => {
+            if (!accessToken) {
+              return;
+            }
+
+            setSubmitting(true);
+            setSubmitError(null);
+            deleteClass(accessToken, currentClass.id)
+              .then(() => {
+                navigation.navigate('TeacherTabs', { screen: 'TeacherClasses' });
+              })
+              .catch((err: unknown) => {
+                setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+              })
+              .finally(() => {
+                setSubmitting(false);
+              });
+          },
+        },
+      ],
+    );
   };
 
   const tabItems = useMemo(
@@ -404,6 +479,14 @@ export function TeacherClassDetailScreen() {
                       {`${String(progress)}%`}
                     </AppText>
                   </View>
+                  <PrimaryButton
+                    variant="outline"
+                    label={content.teacher.classes.viewSubmissions}
+                    loading={submitting}
+                    onPress={() => {
+                      void openAssignmentSubmits(item);
+                    }}
+                  />
                 </SurfaceCard>
               );
             })}
@@ -444,6 +527,13 @@ export function TeacherClassDetailScreen() {
               onPress={async () => {
                 await startReportExport('pdf');
               }}
+            />
+            <PrimaryButton
+              variant="danger"
+              label="Xoá lớp học"
+              loading={submitting}
+              icon={<Trash2 size={18} color={palette.destructive} />}
+              onPress={confirmDeleteClass}
             />
             {reportJob ? (
               <SurfaceCard style={styles.reportCard}>
@@ -581,7 +671,7 @@ export function TeacherClassDetailScreen() {
                   maxScore: Number(assignmentForm.maxScore),
                   allowLate: Number(assignmentForm.latePenaltyPct) > 0,
                   latePenaltyPct: Number(assignmentForm.latePenaltyPct),
-                  classIds: [currentClass.id],
+                  classId: currentClass.id,
                 });
                 setShowCreateAssignment(false);
                 setAssignmentForm({
@@ -599,6 +689,108 @@ export function TeacherClassDetailScreen() {
               }
             }}
           />
+          {submitError ? (
+            <AppText variant="caption" color={palette.destructive}>
+              {submitError}
+            </AppText>
+          ) : null}
+        </View>
+      </ModalSheet>
+
+      <ModalSheet
+        visible={!!selectedAssignment}
+        onClose={() => setSelectedAssignment(null)}
+      >
+        <AppText variant="headline" weight="bold" style={styles.sheetTitle}>
+          {selectedAssignment?.title ?? ''}
+        </AppText>
+        <View style={styles.sheetForm}>
+          {classStudents.map((student) => {
+            const submit = assignmentSubmits.find((item) => item.studentId === student.id);
+            const form = submit ? gradeForms[submit.id] ?? { score: '', feedback: '' } : null;
+            const submitLabel = submit
+              ? submit.submitStatus === 'LATE'
+                ? 'Trễ'
+                : 'Đúng hạn'
+              : 'Chưa nộp';
+
+            return (
+              <SurfaceCard key={student.id} style={styles.submitCard}>
+                <View style={styles.assignmentHead}>
+                  <View style={styles.flex}>
+                    <AppText variant="body" weight="medium">
+                      {student.name}
+                    </AppText>
+                    <AppText variant="caption" color={palette.mutedForeground}>
+                      {`${student.studentCode || student.email} • ${submitLabel}`}
+                    </AppText>
+                  </View>
+                  {submit?.fileUrl ? (
+                    <Pressable
+                      onPress={() => {
+                        void Linking.openURL(submit.fileUrl);
+                      }}
+                    >
+                      <AppText variant="label" weight="semibold" color={palette.primary}>
+                        Tải file
+                      </AppText>
+                    </Pressable>
+                  ) : null}
+                </View>
+                {submit && form ? (
+                  <View style={styles.gradeForm}>
+                    <TextInputField
+                      label="Điểm"
+                      value={form.score}
+                      keyboardType="numeric"
+                      onChangeText={(value) =>
+                        setGradeForms((current) => ({
+                          ...current,
+                          [submit.id]: { ...form, score: value },
+                        }))
+                      }
+                      placeholder={`0-${String(selectedAssignment?.maxScore ?? 10)}`}
+                    />
+                    <TextInputField
+                      label="Nhận xét"
+                      value={form.feedback}
+                      onChangeText={(value) =>
+                        setGradeForms((current) => ({
+                          ...current,
+                          [submit.id]: { ...form, feedback: value },
+                        }))
+                      }
+                      placeholder="Nhận xét nhanh"
+                    />
+                    <PrimaryButton
+                      label="Lưu điểm"
+                      loading={submitting}
+                      onPress={async () => {
+                        if (!accessToken || !selectedAssignment) {
+                          return;
+                        }
+
+                        setSubmitting(true);
+                        setSubmitError(null);
+
+                        try {
+                          await gradeAssignmentSubmit(accessToken, selectedAssignment.id, submit.id, {
+                            score: Number(form.score),
+                            feedback: form.feedback.trim() || undefined,
+                          });
+                          await openAssignmentSubmits(selectedAssignment);
+                        } catch (err) {
+                          setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+                        } finally {
+                          setSubmitting(false);
+                        }
+                      }}
+                    />
+                  </View>
+                ) : null}
+              </SurfaceCard>
+            );
+          })}
           {submitError ? (
             <AppText variant="caption" color={palette.destructive}>
               {submitError}
@@ -711,5 +903,11 @@ const styles = StyleSheet.create({
   },
   sheetForm: {
     gap: appTheme.spacing.lg,
+  },
+  submitCard: {
+    gap: appTheme.spacing.md,
+  },
+  gradeForm: {
+    gap: appTheme.spacing.sm,
   },
 });

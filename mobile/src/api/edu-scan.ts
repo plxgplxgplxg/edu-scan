@@ -6,15 +6,10 @@ import type {
   OmrBatchSummary,
   OmrSubmissionDetail,
   OmrSubmissionSummary,
-  ProgressPoint,
-  QuestionSummary,
-  RemarkSummary,
-  ResultDetailRow,
-  ResultSummary,
   StudentRecord,
   UserSummary,
 } from '../types/domain';
-import type { DifficultyKey, UserRole } from '../types/app';
+import type { UserRole } from '../types/app';
 import { requestBinary, requestJson } from './http';
 
 type Role = UserRole;
@@ -66,7 +61,8 @@ type AssignmentApi = {
   latePenaltyPct: number;
   maxScore: number;
   teacherId: string;
-  classes: Array<{ classId: string }>;
+  classId: string;
+  class?: { id: string; name: string };
   _count?: { submits: number };
   submits?: Array<{
     id: string;
@@ -76,7 +72,7 @@ type AssignmentApi = {
   }>;
 };
 
-type AssignmentSubmitApi = {
+export type AssignmentSubmitApi = {
   id: string;
   assignmentId: string;
   studentId: string;
@@ -115,104 +111,6 @@ type ExamApi = {
       correctAnswer: 'A' | 'B' | 'C' | 'D';
     }>;
   }>;
-  questionMap: Array<{
-    questionNumber: number;
-    questionId: string | null;
-    question?: {
-      id: string;
-      content: string;
-      subject: string;
-      difficulty: DifficultyKey;
-    } | null;
-  }>;
-  classQuestions: Array<{
-    id: string;
-    orderIndex: number;
-    type: 'MULTIPLE_CHOICE' | 'ESSAY';
-    content: string;
-    optionA: string | null;
-    optionB: string | null;
-    optionC: string | null;
-    optionD: string | null;
-    answerChoice: 'A' | 'B' | 'C' | 'D' | null;
-    answerText: string | null;
-    maxScore: number;
-  }>;
-};
-
-type ClassExamSubmissionApi = {
-  id: string;
-  status: 'PENDING_MANUAL_GRADE' | 'GRADED';
-  autoScore: number;
-  manualScore: number;
-  totalScore: number | null;
-};
-
-type QuestionListApi = {
-  items: Array<{
-    id: string;
-    content: string;
-    optionA: string;
-    optionB: string;
-    optionC: string;
-    optionD: string;
-    correctAnswer: 'A' | 'B' | 'C' | 'D';
-    subject: string;
-    difficulty: DifficultyKey;
-    tags: string[];
-  }>;
-  total: number;
-};
-
-type QuestionApi = QuestionListApi['items'][number];
-
-type RemarkApi = {
-  id: string;
-  submissionDetailId: string;
-  studentId: string;
-  reviewerId: string | null;
-  reason: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  teacherComment: string | null;
-  createdAt: string;
-  submissionDetail?: {
-    id: string;
-    questionNumber: number;
-    detectedAnswer: string | null;
-    finalAnswer: string | null;
-    needsReview: boolean;
-    reviewReason: string | null;
-    submission?: {
-      student: {
-        name: string;
-        studentCode: string | null;
-      } | null;
-      exam: {
-        title: string;
-      };
-    };
-  };
-};
-
-type SubmissionListApi = {
-  items: Array<{
-    id: string;
-    examId: string;
-    examTitle: string;
-    status: 'GRADED' | 'NEEDS_REVIEW' | 'FAILED';
-    createdAt: string;
-    reviewedAt: string | null;
-    score: number;
-    maxScore: number;
-    totalCorrect: number;
-    totalQuestions: number;
-    needsReview: boolean;
-    reviewNote: string | null;
-  }>;
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
 };
 
 type SubmissionDetailApi = {
@@ -242,17 +140,15 @@ type SubmissionDetailApi = {
   }>;
 };
 
-type ProgressApi = Array<{
-  date: string;
-  score: number;
-  maxScore: number;
-  examId: string;
-  examTitle: string;
-  submissionId: string;
-  status: 'GRADED' | 'NEEDS_REVIEW' | 'FAILED';
-  needsReview: boolean;
-  reviewNote: string | null;
-}>;
+type NotificationApi = {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  createdAt: string;
+  readAt: string | null;
+  routeIntent?: NotificationItem['routeIntent'];
+};
 
 type UserApi = {
   id: string;
@@ -355,21 +251,6 @@ export type TeacherExamView = {
   questionCount: number;
 };
 
-export type TeacherQuestionDetailView = {
-  id: string;
-  content: string;
-  subject: string;
-  difficulty: DifficultyKey;
-  tags: string[];
-  options: {
-    A: string;
-    B: string;
-    C: string;
-    D: string;
-  };
-  correctAnswer: 'A' | 'B' | 'C' | 'D';
-};
-
 export type ReportExportJob = {
   jobId: string;
   classId: string;
@@ -432,6 +313,13 @@ export async function removeStudentFromClass(
   });
 }
 
+export async function deleteClass(token: string, classId: string) {
+  return requestJson<{ id: string; deleted: boolean }>(`/classes/${classId}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
 export async function joinClassByCode(token: string, code: string) {
   return requestJson<ClassApi>(`/classes/join/${encodeURIComponent(code)}`, {
     method: 'POST',
@@ -449,6 +337,22 @@ export async function getAssignmentSubmits(token: string, assignmentId: string) 
   });
 }
 
+export async function gradeAssignmentSubmit(
+  token: string,
+  assignmentId: string,
+  submitId: string,
+  payload: { score: number; feedback?: string },
+) {
+  return requestJson<AssignmentSubmitApi>(
+    `/assignments/${assignmentId}/submits/${submitId}/grade`,
+    {
+      method: 'PATCH',
+      token,
+      body: payload,
+    },
+  );
+}
+
 export async function createAssignment(
   token: string,
   payload: {
@@ -458,7 +362,7 @@ export async function createAssignment(
     allowLate?: boolean;
     latePenaltyPct?: number;
     maxScore?: number;
-    classIds: string[];
+    classId: string;
   },
 ) {
   return requestJson<AssignmentApi>('/assignments', {
@@ -507,10 +411,6 @@ export async function listOmrExams(token: string) {
   return requestJson<ExamApi[]>('/exams/omr/my', { token });
 }
 
-export async function listClassExams(token: string) {
-  return requestJson<ExamApi[]>('/exams/class/my', { token });
-}
-
 export async function createExam(
   token: string,
   payload: {
@@ -537,12 +437,24 @@ export async function createOmrExam(
   });
 }
 
-export async function createClassExam(
+export async function updateExam(
   token: string,
-  payload: { title: string; maxScore: number; classIds: string[] },
+  examId: string,
+  payload: {
+    title?: string;
+    maxScore?: number;
+    classIds?: string[];
+    variants?: Array<{
+      testCode: string;
+      answerKeys: Array<{
+        questionNumber: number;
+        correctAnswer: 'A' | 'B' | 'C' | 'D';
+      }>;
+    }>;
+  },
 ) {
-  return requestJson<ExamApi>('/exams/class', {
-    method: 'POST',
+  return requestJson<ExamApi>(`/exams/${encodeURIComponent(examId)}`, {
+    method: 'PATCH',
     token,
     body: payload,
   });
@@ -554,11 +466,10 @@ export async function upsertExamQuestionAnswer(
   payload: {
     questionNumber: number;
     correctAnswer: 'A' | 'B' | 'C' | 'D';
-    questionId?: string;
     testCode?: string;
   },
 ) {
-  return requestJson<ExamApi>(`/exams/${encodeURIComponent(examId)}/questions`, {
+  return requestJson<ExamApi>(`/exams/${encodeURIComponent(examId)}/answer-keys`, {
     method: 'POST',
     token,
     body: payload,
@@ -570,7 +481,7 @@ export async function removeExamQuestionAnswer(
   examId: string,
   payload: { questionNumber: number; testCode?: string },
 ) {
-  return requestJson<ExamApi>(`/exams/${encodeURIComponent(examId)}/questions`, {
+  return requestJson<ExamApi>(`/exams/${encodeURIComponent(examId)}/answer-keys`, {
     method: 'DELETE',
     token,
     body: payload,
@@ -584,131 +495,10 @@ export async function publishExam(token: string, examId: string) {
   });
 }
 
-export async function upsertClassExamQuestion(
-  token: string,
-  examId: string,
-  payload: {
-    orderIndex: number;
-    type: 'MULTIPLE_CHOICE' | 'ESSAY';
-    content: string;
-    optionA?: string;
-    optionB?: string;
-    optionC?: string;
-    optionD?: string;
-    answerChoice?: 'A' | 'B' | 'C' | 'D';
-    answerText?: string;
-    maxScore: number;
-  },
-) {
-  return requestJson<ExamApi>(`/exams/class/${encodeURIComponent(examId)}/questions`, {
-    method: 'POST',
-    token,
-    body: payload,
-  });
-}
-
-export async function deleteClassExamQuestion(token: string, examId: string, questionId: string) {
-  return requestJson<ExamApi>(`/exams/class/${encodeURIComponent(examId)}/questions`, {
-    method: 'DELETE',
-    token,
-    body: { questionId },
-  });
-}
-
-export async function publishClassExam(token: string, examId: string) {
-  return requestJson<ExamApi>(`/exams/class/${encodeURIComponent(examId)}/publish`, {
-    method: 'POST',
-    token,
-  });
-}
-
-export async function submitClassExam(
-  token: string,
-  examId: string,
-  payload: {
-    answers: Array<{ questionId: string; selectedChoice?: 'A' | 'B' | 'C' | 'D'; essayAnswer?: string }>;
-  },
-) {
-  return requestJson<ClassExamSubmissionApi>(`/class-exams/${encodeURIComponent(examId)}/submissions`, {
-    method: 'POST',
-    token,
-    body: payload,
-  });
-}
-
-export async function listQuestions(token: string, keyword?: string) {
-  const query = keyword ? `?keyword=${encodeURIComponent(keyword)}` : '';
-  return requestJson<QuestionListApi>(`/questions${query}`, { token });
-}
-
-export async function createQuestion(
-  token: string,
-  payload: {
-    content: string;
-    optionA: string;
-    optionB: string;
-    optionC: string;
-    optionD: string;
-    correctAnswer: 'A' | 'B' | 'C' | 'D';
-    subject: string;
-    difficulty: DifficultyKey;
-    tags?: string[];
-  },
-) {
-  return requestJson<QuestionApi>('/questions', {
-    method: 'POST',
-    token,
-    body: payload,
-  });
-}
-
-export async function listTeacherRemarks(token: string) {
-  return requestJson<RemarkApi[]>('/remarks', { token });
-}
-
-export async function listStudentRemarks(token: string) {
-  return requestJson<RemarkApi[]>('/remarks/me', { token });
-}
-
-export async function reviewRemark(
-  token: string,
-  remarkId: string,
-  payload: {
-    status: 'APPROVED' | 'REJECTED';
-    finalAnswer?: 'A' | 'B' | 'C' | 'D';
-    teacherComment?: string;
-  },
-) {
-  return requestJson<RemarkApi>(`/remarks/${remarkId}/review`, {
-    method: 'PATCH',
-    token,
-    body: payload,
-  });
-}
-
-export async function createRemark(
-  token: string,
-  payload: { submissionDetailId: string; reason: string },
-) {
-  return requestJson<RemarkApi>('/remarks', {
-    method: 'POST',
-    token,
-    body: payload,
-  });
-}
-
-export async function listStudentSubmissions(token: string) {
-  return requestJson<SubmissionListApi>('/submissions/me?limit=100', { token });
-}
-
 export async function getSubmissionDetail(token: string, submissionId: string) {
   return requestJson<SubmissionDetailApi>(`/submissions/${submissionId}`, {
     token,
   });
-}
-
-export async function listStudentProgress(token: string) {
-  return requestJson<ProgressApi>('/submissions/me/progress', { token });
 }
 
 export async function listUsers(token: string) {
@@ -893,12 +683,10 @@ export function mapClassSummary(
   assignments: AssignmentApi[] = [],
   role: Role,
 ): ClassSummary {
-  const assignmentCount = assignments.filter((assignment) =>
-    assignment.classes.some((link) => link.classId === item.id),
-  ).length;
+  const assignmentCount = assignments.filter((assignment) => assignment.classId === item.id).length;
 
   const pendingAssignments = assignments.filter((assignment) => {
-    if (!assignment.classes.some((link) => link.classId === item.id)) {
+    if (assignment.classId !== item.id) {
       return false;
     }
 
@@ -947,14 +735,10 @@ export function mapTeacherAssignmentSummary(
   item: AssignmentApi,
   classesById: Map<string, ClassApi>,
 ): AssignmentSummary {
-  const classNames = item.classes
-    .map((entry) => classesById.get(entry.classId)?.name)
-    .filter((name): name is string => !!name);
+  const classItem = classesById.get(item.classId);
+  const classNames = [classItem?.name ?? item.class?.name].filter((name): name is string => !!name);
 
-  const totalStudents = item.classes.reduce((count, entry) => {
-    const classItem = classesById.get(entry.classId);
-    return count + (classItem?.enrollments.length ?? 0);
-  }, 0);
+  const totalStudents = classItem?.enrollments.length ?? 0;
 
   return {
     id: item.id,
@@ -984,9 +768,7 @@ export function mapStudentAssignmentSummary(
     title: item.title,
     description: item.description ?? '',
     deadline: item.deadline,
-    classNames: item.classes
-      .map((entry) => classesById.get(entry.classId)?.name)
-      .filter((name): name is string => !!name),
+    classNames: [classesById.get(item.classId)?.name ?? item.class?.name].filter((name): name is string => !!name),
     submitted: !!submit,
     submitStatus: submit?.submitStatus ?? null,
     gradeStatus: submit?.gradeStatus ?? null,
@@ -1006,85 +788,7 @@ export function mapExamSummary(item: ExamApi): TeacherExamView {
     classNames: item.classes.map((entry) => entry.name),
     hasSubmissions: false,
     status: item.status,
-    questionCount:
-      item.variants[0]?.answerKeys.length ?? item.questionMap.length ?? 0,
-  };
-}
-
-export function mapQuestionSummary(item: QuestionApi): QuestionSummary {
-  return {
-    id: item.id,
-    content: item.content,
-    subject: item.subject,
-    difficulty: item.difficulty,
-    tags: item.tags,
-  };
-}
-
-export function mapQuestionDetail(
-  item: QuestionApi,
-): TeacherQuestionDetailView {
-  return {
-    id: item.id,
-    content: item.content,
-    subject: item.subject,
-    difficulty: item.difficulty,
-    tags: item.tags,
-    options: {
-      A: item.optionA,
-      B: item.optionB,
-      C: item.optionC,
-      D: item.optionD,
-    },
-    correctAnswer: item.correctAnswer,
-  };
-}
-
-export function mapRemarkSummary(item: RemarkApi): RemarkSummary {
-  return {
-    id: item.id,
-    examTitle: item.submissionDetail?.submission?.exam.title ?? '',
-    questionNumber: item.submissionDetail?.questionNumber ?? 0,
-    reason: item.reason,
-    status: item.status,
-    createdAt: item.createdAt,
-    teacherComment: item.teacherComment ?? undefined,
-    studentName: item.submissionDetail?.submission?.student?.name ?? undefined,
-    studentCode:
-      item.submissionDetail?.submission?.student?.studentCode ?? undefined,
-  };
-}
-
-export function mapResultSummary(item: SubmissionListApi['items'][number]): ResultSummary {
-  return {
-    id: item.id,
-    examTitle: item.examTitle,
-    score: item.score,
-    maxScore: item.maxScore,
-    totalCorrect: item.totalCorrect,
-    totalQuestions: item.totalQuestions,
-    status: item.status,
-    createdAt: item.createdAt,
-  };
-}
-
-export function mapResultDetail(item: SubmissionDetailApi): ResultDetailRow[] {
-  return item.details.map((detail) => ({
-    questionNumber: detail.questionNumber,
-    detectedAnswer: detail.detectedAnswer,
-    finalAnswer: detail.finalAnswer,
-    correctAnswer: detail.correctAnswer,
-    isCorrect: detail.isCorrect,
-    needsReview: detail.needsReview,
-    reviewReason: detail.reviewReason ?? undefined,
-  }));
-}
-
-export function mapProgressPoint(item: ProgressApi[number]): ProgressPoint {
-  return {
-    date: item.date,
-    score: item.score,
-    examTitle: item.examTitle,
+    questionCount: item.variants[0]?.answerKeys.length ?? 0,
   };
 }
 
@@ -1179,21 +883,12 @@ export async function buildNotifications(
   role: Role,
 ): Promise<NotificationItem[]> {
   if (role === 'TEACHER') {
-    const [remarks, assignments, omrBatches] = await Promise.all([
-      listTeacherRemarks(token),
+    const [assignments, omrBatches] = await Promise.all([
       listAssignments(token),
       listOmrBatches(token),
     ]);
 
     return [
-      ...remarks.slice(0, 5).map((remark) => ({
-        id: `remark-${remark.id}`,
-        type: 'remark' as const,
-        title: remark.submissionDetail?.submission?.exam.title ?? 'Phúc khảo mới',
-        body: remark.reason,
-        time: remark.createdAt,
-        read: remark.status !== 'PENDING',
-      })),
       ...assignments.slice(0, 3).map((assignment) => ({
         id: `assignment-${assignment.id}`,
         type: 'assignment' as const,
@@ -1206,7 +901,7 @@ export async function buildNotifications(
         id: `omr-${batch.id}`,
         type: 'system' as const,
         title: batch.examTitle,
-        body: `Batch OMR ${batch.status.toLowerCase()}`,
+        body: `Đợt chấm bài ${batch.status.toLowerCase()}`,
         time: batch.createdAt,
         read: batch.status === 'COMPLETED',
       })),
@@ -1214,21 +909,9 @@ export async function buildNotifications(
   }
 
   if (role === 'STUDENT') {
-    const [submissions, assignments, remarks] = await Promise.all([
-      listStudentSubmissions(token),
-      listAssignments(token),
-      listStudentRemarks(token),
-    ]);
+    const assignments = await listAssignments(token);
 
     return [
-      ...submissions.items.slice(0, 5).map((submission) => ({
-        id: `result-${submission.id}`,
-        type: 'result' as const,
-        title: submission.examTitle,
-        body: `Điểm ${submission.score}/${submission.maxScore}`,
-        time: submission.createdAt,
-        read: !submission.needsReview,
-      })),
       ...assignments.slice(0, 5).map((assignment) => ({
         id: `assignment-${assignment.id}`,
         type: 'assignment' as const,
@@ -1236,14 +919,6 @@ export async function buildNotifications(
         body: `Hạn nộp ${assignment.deadline}`,
         time: assignment.deadline,
         read: !!assignment.submits?.[0],
-      })),
-      ...remarks.slice(0, 5).map((remark) => ({
-        id: `remark-${remark.id}`,
-        type: 'remark' as const,
-        title: remark.submissionDetail?.submission?.exam.title ?? 'Phúc khảo',
-        body: remark.teacherComment || remark.reason,
-        time: remark.createdAt,
-        read: remark.status !== 'PENDING',
       })),
     ].sort((left, right) => right.time.localeCompare(left.time));
   }
@@ -1269,3 +944,78 @@ export async function buildNotifications(
     })),
   ];
 }
+
+export async function listNotifications(token: string) {
+  const items = await requestJson<NotificationApi[]>('/notifications', { token });
+  return items.map((item): NotificationItem => ({
+    id: item.id,
+    type: item.type.startsWith('ASSIGNMENT') ? 'assignment' : item.type.startsWith('OMR') ? 'result' : 'system',
+    title: item.title,
+    body: item.body,
+    time: item.createdAt,
+    read: !!item.readAt,
+    routeIntent: item.routeIntent,
+  }));
+}
+
+export async function markNotificationRead(token: string, notificationId: string) {
+  return requestJson<{ id: string; read: boolean }>(`/notifications/${notificationId}/read`, {
+    method: 'PATCH',
+    token,
+  });
+}
+
+export type TeacherStatsOverview = {
+  totalClasses: number;
+  totalUniqueStudents: number;
+  activeAssignmentsThisMonth: number;
+  expiredAssignmentsThisMonth: number;
+};
+
+export type StudentStatsOverview = {
+  totalClasses: number;
+  onTimeSubmits: number;
+  lateSubmits: number;
+  missingSubmits: number;
+};
+
+export type AdminStatsOverview = {
+  overview: {
+    totalTeachers: number;
+    totalStudents: number;
+    totalClasses: number;
+  };
+  classes: {
+    data: Array<{
+      id: string;
+      name: string;
+      code: string;
+      subject: string;
+      teacherName: string;
+      studentCount: number;
+    }>;
+    meta: { total: number; page: number; limit: number; totalPages: number };
+  };
+};
+
+export async function getTeacherStats(token: string) {
+  return requestJson<TeacherStatsOverview>('/stats/teacher', { token });
+}
+
+export async function getStudentStats(token: string) {
+  return requestJson<StudentStatsOverview>('/stats/student', { token });
+}
+
+export async function getAdminStats(token: string, page = 1, limit = 10, search = '') {
+  const query = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (search) query.append('search', search);
+  return requestJson<AdminStatsOverview>(`/stats/admin?${query.toString()}`, { token });
+}
+
+export async function getTeacherClassStats(token: string, classId: string) {
+  return requestJson<{ studentCount: number; activeAssignments: number; submissionRate: number }>(
+    `/stats/teacher/class/${classId}`,
+    { token }
+  );
+}
+

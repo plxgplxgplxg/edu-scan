@@ -6,7 +6,6 @@ import {
   IsNumber,
   Min,
   Max,
-  IsArray,
   IsDateString,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -40,7 +39,7 @@ export class CreateAssignmentDto {
   @Type(() => Number)
   maxScore?: number;
 
-  @IsArray()
-  @IsString({ each: true })
-  classIds: string[];
+  @IsString()
+  @IsNotEmpty()
+  classId: string;
 }

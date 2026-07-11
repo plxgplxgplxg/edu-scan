@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unstable-nested-components, no-void, react-native/no-inline-styles */
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import {

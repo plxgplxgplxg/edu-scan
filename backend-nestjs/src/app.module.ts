@@ -16,9 +16,9 @@ import { OmrModule } from './modules/omr/omr.module';
 import { UsersModule } from './modules/users/users.module';
 import { SubmissionsModule } from './modules/submissions/submissions.module';
 import { AssignmentsModule } from './modules/assignments/assignments.module';
-import { RemarksModule } from './modules/remarks/remarks.module';
-import { QuestionsModule } from './modules/questions/questions.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { StatisticsModule } from './modules/statistics/statistics.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { BullModule } from '@nestjs/bull';
 @Module({
@@ -53,10 +53,10 @@ import { BullModule } from '@nestjs/bull';
     UsersModule,
     SubmissionsModule,
     AssignmentsModule,
-    QuestionsModule,
     ReportsModule,
+    NotificationsModule,
+    StatisticsModule,
     EventEmitterModule.forRoot(),
-    RemarksModule,
   ],
   controllers: [AppController],
   providers: [AppService],

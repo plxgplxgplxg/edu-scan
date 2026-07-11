@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { StreamableFile } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { of } from 'rxjs';

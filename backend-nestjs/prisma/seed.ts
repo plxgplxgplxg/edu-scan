@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import bcrypt from 'bcrypt';
-import { PrismaClient, Role, ExamStatus, ExamType, SubmitStatus, GradeStatus } from '@prisma/client';
+import { PrismaClient, Role, ExamStatus, SubmitStatus, GradeStatus } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 
@@ -95,7 +95,6 @@ async function main() {
         title: 'Kiểm tra giữa kỳ Toán 12',
         maxScore: 10.0,
         status: ExamStatus.PUBLISHED,
-        type: ExamType.OMR,
         teacherId: teacher.id
       }
     });
@@ -147,18 +146,14 @@ async function main() {
         description: 'Hoàn thành các bài tập khảo sát hàm số trong sách giáo khoa.',
         deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         maxScore: 10.0,
-        teacherId: teacher.id
+        teacherId: teacher.id,
+        classId: class12A1.id
       }
     });
   }
   console.log(`Seed assignment: ${assignment.title}`);
 
-  await prisma.assignmentClass.upsert({
-    where: { assignmentId_classId: { assignmentId: assignment.id, classId: class12A1.id } },
-    update: {},
-    create: { assignmentId: assignment.id, classId: class12A1.id }
-  });
-  console.log(`Assign assignment ${assignment.title} to class ${class12A1.code}`);
+
 
   await prisma.assignmentSubmit.upsert({
     where: { assignmentId_studentId: { assignmentId: assignment.id, studentId: student.id } },

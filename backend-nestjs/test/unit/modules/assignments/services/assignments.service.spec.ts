@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   BadRequestException,
@@ -9,6 +10,7 @@ import { AssignmentsRepository } from '../../../../../src/modules/assignments/re
 import { PrismaService } from '../../../../../src/database/prisma.service';
 import { GradeStatus, SubmitStatus } from '@prisma/client';
 import { IStorageService } from '../../../../../src/storage/storage.interface';
+import { NotificationsService } from '../../../../../src/modules/notifications/services/notifications.service';
 
 const mockAssignmentsRepository = () => ({
   create: jest.fn(),
@@ -23,10 +25,11 @@ const mockAssignmentsRepository = () => ({
 
 const mockPrismaService = () => ({
   class: {
-    findMany: jest.fn(),
+    findFirst: jest.fn(),
   },
   classEnrollment: {
     findFirst: jest.fn(),
+    findMany: jest.fn(),
   },
 });
 
@@ -35,19 +38,22 @@ const mockStorageService = () => ({
   deleteFile: jest.fn(),
 });
 
+const mockNotificationsService = () => ({
+  createAssignmentCreatedNotifications: jest.fn(),
+});
+
 describe('AssignmentsService', () => {
   let service: AssignmentsService;
   let repository: ReturnType<typeof mockAssignmentsRepository>;
   let prisma: ReturnType<typeof mockPrismaService>;
   let storageService: ReturnType<typeof mockStorageService>;
+  let notificationsService: ReturnType<typeof mockNotificationsService>;
 
   const TEACHER_ID = 'teacher-uuid-1';
   const STUDENT_ID = 'student-uuid-1';
   const ASSIGNMENT_ID = 'assign-uuid-1';
   const SUBMIT_ID = 'submit-uuid-1';
   const CLASS_ID_1 = 'class-uuid-1';
-  const CLASS_ID_2 = 'class-uuid-2';
-
   const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
   const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
@@ -62,7 +68,8 @@ describe('AssignmentsService', () => {
     teacherId: TEACHER_ID,
     createdAt: new Date(),
     updatedAt: new Date(),
-    classes: [{ classId: CLASS_ID_1 }, { classId: CLASS_ID_2 }],
+    classId: CLASS_ID_1,
+    class: { id: CLASS_ID_1, name: '10A1' },
   };
 
   const mockSubmit = {
@@ -88,6 +95,7 @@ describe('AssignmentsService', () => {
         },
         { provide: PrismaService, useFactory: mockPrismaService },
         { provide: IStorageService, useFactory: mockStorageService },
+        { provide: NotificationsService, useFactory: mockNotificationsService },
       ],
     }).compile();
 
@@ -95,6 +103,7 @@ describe('AssignmentsService', () => {
     repository = module.get(AssignmentsRepository);
     prisma = module.get(PrismaService);
     storageService = module.get(IStorageService);
+    notificationsService = module.get(NotificationsService);
   });
 
   it('should be defined', () => {
@@ -109,7 +118,7 @@ describe('AssignmentsService', () => {
       allowLate: false,
       latePenaltyPct: 0,
       maxScore: 10,
-      classIds: [CLASS_ID_1, CLASS_ID_2],
+      classId: CLASS_ID_1,
     };
 
     it('should throw BadRequestException when deadline is in the past', async () => {
@@ -143,28 +152,28 @@ describe('AssignmentsService', () => {
     });
 
     it('should throw ForbiddenException when a classId does not belong to the teacher', async () => {
-      const dto = { ...baseDto, classIds: [CLASS_ID_1, 'foreign-class-id'] };
-      prisma.class.findMany.mockResolvedValue([{ id: CLASS_ID_1 }]);
+      const dto = { ...baseDto, classId: 'foreign-class-id' };
+      prisma.class.findFirst.mockResolvedValue(null);
       await expect(service.createAssignment(TEACHER_ID, dto)).rejects.toThrow(
         ForbiddenException,
       );
       await expect(service.createAssignment(TEACHER_ID, dto)).rejects.toThrow(
-        'One or more classes do not belong to this teacher.',
+        'Class does not belong to this teacher.',
       );
     });
 
     it('should create assignment successfully with valid data', async () => {
-      prisma.class.findMany.mockResolvedValue([
-        { id: CLASS_ID_1 },
-        { id: CLASS_ID_2 },
+      prisma.class.findFirst.mockResolvedValue({ id: CLASS_ID_1 });
+      prisma.classEnrollment.findMany.mockResolvedValue([
+        { studentId: STUDENT_ID },
       ]);
       repository.create.mockResolvedValue(mockAssignment);
 
       const result = await service.createAssignment(TEACHER_ID, baseDto);
 
-      expect(prisma.class.findMany).toHaveBeenCalledWith(
+      expect(prisma.class.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ teacherId: TEACHER_ID }),
+          where: { teacherId: TEACHER_ID, id: CLASS_ID_1 },
         }),
       );
       expect(repository.create).toHaveBeenCalledWith(
@@ -172,10 +181,19 @@ describe('AssignmentsService', () => {
           title: baseDto.title,
           deadline: expect.any(Date),
           teacherId: TEACHER_ID,
+          classId: CLASS_ID_1,
         }),
-        [CLASS_ID_1, CLASS_ID_2],
       );
       expect(result).toEqual(mockAssignment);
+      expect(
+        notificationsService.createAssignmentCreatedNotifications,
+      ).toHaveBeenCalledWith({
+        assignmentId: ASSIGNMENT_ID,
+        classId: CLASS_ID_1,
+        title: mockAssignment.title,
+        deadline: mockAssignment.deadline,
+        students: [{ id: STUDENT_ID }],
+      });
     });
   });
 
@@ -221,7 +239,7 @@ describe('AssignmentsService', () => {
       ).rejects.toThrow('Assignment not found.');
     });
 
-    it('should throw ForbiddenException when student is not enrolled in any assigned class', async () => {
+    it('should throw ForbiddenException when student is not enrolled in the assigned class', async () => {
       repository.findById.mockResolvedValue(mockAssignment);
       prisma.classEnrollment.findFirst.mockResolvedValue(null);
 
@@ -231,7 +249,7 @@ describe('AssignmentsService', () => {
       await expect(
         service.submitAssignment(ASSIGNMENT_ID, STUDENT_ID, submitDto),
       ).rejects.toThrow(
-        'You are not enrolled in any class assigned to this assignment.',
+        'You are not enrolled in the class assigned to this assignment.',
       );
     });
 
@@ -370,7 +388,8 @@ describe('AssignmentsService', () => {
       await expect(
         service.submitAssignment(ASSIGNMENT_ID, STUDENT_ID, {}, {
           ...multipartFile,
-          mimetype: 'application/zip',
+          originalname: 'essay.txt',
+          mimetype: 'text/plain',
         } as Express.Multer.File),
       ).rejects.toThrow(BadRequestException);
     });
@@ -429,7 +448,7 @@ describe('AssignmentsService', () => {
       ).rejects.toThrow('Assignment not found.');
     });
 
-    it('should throw ForbiddenException when student is not enrolled in any assigned class', async () => {
+    it('should throw ForbiddenException when student is not enrolled in the assigned class', async () => {
       repository.findById.mockResolvedValue(mockAssignment);
       prisma.classEnrollment.findFirst.mockResolvedValue(null);
       await expect(
@@ -438,7 +457,7 @@ describe('AssignmentsService', () => {
       await expect(
         service.getMySubmit(ASSIGNMENT_ID, STUDENT_ID),
       ).rejects.toThrow(
-        'You are not enrolled in any class assigned to this assignment.',
+        'You are not enrolled in the class assigned to this assignment.',
       );
     });
 

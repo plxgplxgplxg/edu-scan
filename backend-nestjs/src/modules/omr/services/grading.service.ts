@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  UnprocessableEntityException,
-} from '@nestjs/common';
+import { Injectable, UnprocessableEntityException } from '@nestjs/common';
 import {
   AnswerChoice,
   SubmissionStatus,
@@ -277,7 +273,10 @@ export class GradingService {
     }
 
     const answerKeyMap = new Map(
-      (answerKeys ?? []).map((item) => [item.questionNumber, item.correctAnswer]),
+      (answerKeys ?? []).map((item) => [
+        item.questionNumber,
+        item.correctAnswer,
+      ]),
     );
 
     const authoritativeQuestionNumbers =
@@ -300,12 +299,13 @@ export class GradingService {
         };
       }
 
-      const detectedAnswer = this.normalizeDetectedAnswer(answer.detectedAnswer);
+      const detectedAnswer = this.normalizeDetectedAnswer(
+        answer.detectedAnswer,
+      );
       const finalAnswer = this.normalizeFinalAnswer(detectedAnswer);
       const needsReview = Boolean(answer.needsReview) || finalAnswer === null;
       const reviewReason =
-        answer.reviewReason ??
-        (finalAnswer === null ? 'LOW_CONFIDENCE' : null);
+        answer.reviewReason ?? (finalAnswer === null ? 'LOW_CONFIDENCE' : null);
       const isCorrect =
         correctAnswer !== null &&
         !needsReview &&

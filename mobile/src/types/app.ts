@@ -11,32 +11,19 @@ export type StatusKey =
   | 'COMPLETED'
   | 'PARTIAL_FAILED'
   | 'ON_TIME'
-  | 'LATE'
-  | 'APPROVED'
-  | 'REJECTED'
-  | 'EASY'
-  | 'MEDIUM'
-  | 'HARD';
-
-export type DifficultyKey = 'EASY' | 'MEDIUM' | 'HARD';
+  | 'LATE';
 
 export type TeacherModuleKey =
   | 'home'
   | 'classes'
-  | 'exams'
   | 'omr'
-  | 'remarks'
-  | 'questions'
   | 'assignments';
 
 export type StudentModuleKey =
   | 'home'
   | 'classes'
-  | 'results'
-  | 'assignments'
-  | 'remarks'
-  | 'progress';
+  | 'assignments';
 
-export type AdminModuleKey = 'home' | 'users' | 'classes';
+export type AdminModuleKey = 'home' | 'users';
 
 export type ModuleKey = TeacherModuleKey | StudentModuleKey | AdminModuleKey;

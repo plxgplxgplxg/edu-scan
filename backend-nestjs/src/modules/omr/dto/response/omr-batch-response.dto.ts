@@ -136,7 +136,9 @@ export class OmrSubmissionListItemResponseDto {
   @ApiProperty()
   needsReview!: boolean;
 
-  @ApiProperty({ description: 'Số câu có trong bài làm, không tải chi tiết đáp án.' })
+  @ApiProperty({
+    description: 'Số câu có trong bài làm, không tải chi tiết đáp án.',
+  })
   questionCount!: number;
 }
 

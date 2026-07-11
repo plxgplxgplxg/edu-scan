@@ -25,8 +25,14 @@ export class CloudinaryService implements IStorageService {
         { folder },
         (error, result) => {
           if (error) {
-            this.logger.error('Thử upload file lên Cloudinary thất bại', error);
-            return reject(error);
+            this.logger.error(
+              'Thử upload file lên Cloudinary thất bại',
+              error instanceof Error ? error.stack : JSON.stringify(error),
+            );
+            // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+            return reject(
+              error instanceof Error ? error : new Error(JSON.stringify(error)),
+            );
           }
           if (!result)
             return reject(new Error('Khong nhan duoc ket qua tra ve'));

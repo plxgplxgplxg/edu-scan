@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
-  AnswerChoice,
   OmrBatchStatus,
   SubmissionStatus,
   TestCodeResolutionStatus,
@@ -121,13 +120,13 @@ export class BatchService {
       throw new NotFoundException('OMR batch not found');
     }
 
-    const [matchedCount, unmatchedCount, total] = await Promise.all([
+    const [matchedCount, unmatchedCount] = await Promise.all([
       this.omrRepository.countBatchSubmissionsByStudentMatched(batchId, true),
       this.omrRepository.countBatchSubmissionsByStudentMatched(batchId, false),
       this.omrRepository.countBatchSubmissions(batchId),
     ]);
 
-    return this.toBatchHeaderResponseDto(batch, matchedCount, unmatchedCount, total);
+    return this.toBatchHeaderResponseDto(batch, matchedCount, unmatchedCount);
   }
 
   async getTeacherBatchSubmissions(
@@ -140,12 +139,13 @@ export class BatchService {
     await this.assertTeacherBatchAccess(batchId, teacherId);
 
     const safeLimit = Math.min(limit, SUBMISSION_PAGE_SIZE);
-    const { items, total } = await this.omrRepository.findBatchSubmissionsPaginated(
-      batchId,
-      page,
-      safeLimit,
-      status,
-    );
+    const { items, total } =
+      await this.omrRepository.findBatchSubmissionsPaginated(
+        batchId,
+        page,
+        safeLimit,
+        status,
+      );
 
     return {
       items: items.map((submission) =>
@@ -213,7 +213,7 @@ export class BatchService {
       finalAnswer: d.finalAnswer,
       needsReview: d.needsReview,
       reviewReason: d.reviewReason,
-      correctAnswer: d.correctAnswer as AnswerChoice | null,
+      correctAnswer: d.correctAnswer,
       isCorrect: d.isCorrect ?? false,
     }));
     const summary = this.gradingService.summarizeSubmission(
@@ -305,7 +305,6 @@ export class BatchService {
     batch: OmrBatchHeader,
     matchedCount: number,
     unmatchedCount: number,
-    totalSubmissions: number,
   ): OmrBatchResponseDto {
     return {
       id: batch.id,
@@ -352,7 +351,8 @@ export class BatchService {
       updatedAt: batch.updatedAt,
       submissions: [],
       matchedCount: batch.submissions.filter((item) => !!item.studentId).length,
-      unmatchedCount: batch.submissions.filter((item) => !item.studentId).length,
+      unmatchedCount: batch.submissions.filter((item) => !item.studentId)
+        .length,
     };
   }
 

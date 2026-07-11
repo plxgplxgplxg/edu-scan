@@ -1,5 +1,6 @@
+/* eslint-disable react/no-unstable-nested-components, no-void, react-native/no-inline-styles */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import {
   ArrowLeft,
   Check,
@@ -22,7 +23,7 @@ import { AppText } from '../../components/AppText';
 import { ModalSheet } from '../../components/ModalSheet';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ProgressBar } from '../../components/ProgressBar';
-import { ErrorState, LoadingState } from '../../components/RequestState';
+import { ErrorState } from '../../components/RequestState';
 import { Screen } from '../../components/Screen';
 import { StatusBadge } from '../../components/StatusBadge';
 import { SurfaceCard } from '../../components/SurfaceCard';
@@ -73,7 +74,7 @@ export function TeacherOmrScreen() {
     },
     [accessToken],
   );
-  const omrBatches = data?.batches ?? [];
+  const omrBatches = useMemo(() => data?.batches ?? [], [data?.batches]);
   const filteredExams = useMemo(() => {
     const keyword = examSearch.trim().toLowerCase();
     if (!keyword) {
@@ -133,23 +134,22 @@ export function TeacherOmrScreen() {
     }
 
     const interval = setInterval(() => {
-      void reload();
+      reload().catch(() => {});
     }, 3000);
 
     return () => clearInterval(interval);
   }, [omrBatches, reload]);
 
   return (
-    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
+    <Screen refreshing={loading} onRefresh={() => { reload().catch(() => {}); }}>
       <View
         style={[
           styles.header,
+          styles.container,
           {
             paddingHorizontal: layout.horizontalPadding,
             paddingTop: layout.sectionGap,
             maxWidth: layout.contentMaxWidth,
-            alignSelf: 'center',
-            width: '100%',
           },
         ]}
       >
@@ -172,12 +172,11 @@ export function TeacherOmrScreen() {
       <View
         style={[
           styles.body,
+          styles.container,
           {
             paddingHorizontal: layout.horizontalPadding,
             paddingTop: layout.sectionGap,
             maxWidth: layout.contentMaxWidth,
-            alignSelf: 'center',
-            width: '100%',
             gap: layout.sectionGap,
           },
         ]}
@@ -380,6 +379,7 @@ export function TeacherOmrScreen() {
 }
 
 const styles = StyleSheet.create({
+  container: { alignSelf: 'center', width: '100%' },
   header: {
     gap: appTheme.spacing.md,
   },

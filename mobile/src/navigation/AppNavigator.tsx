@@ -2,14 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import {
-  BookOpen,
-  ClipboardList,
-  GraduationCap,
-  Home,
-  ScanLine,
-  User,
-} from 'lucide-react-native';
+import { BookOpen, Home, ScanLine, User } from 'lucide-react-native';
 
 import { useAuth } from '../store/auth-store';
 import type {
@@ -23,24 +16,17 @@ import { TeacherDashboardScreen } from '../screens/teacher/TeacherDashboardScree
 import { TeacherClassesScreen } from '../screens/teacher/TeacherClassesScreen';
 import { TeacherClassDetailScreen } from '../screens/teacher/TeacherClassDetailScreen';
 import { TeacherOmrExamsScreen } from '../screens/teacher/TeacherOmrExamsScreen';
-import { TeacherClassExamsScreen } from '../screens/teacher/TeacherClassExamsScreen';
 import { TeacherOmrScreen } from '../screens/teacher/TeacherOmrScreen';
-import { TeacherAssignmentsScreen } from '../screens/teacher/TeacherAssignmentsScreen';
-import { TeacherRemarksScreen } from '../screens/teacher/TeacherRemarksScreen';
-import { TeacherQuestionsScreen } from '../screens/teacher/TeacherQuestionsScreen';
 import { TeacherExamBuilderScreen } from '../screens/teacher/TeacherExamBuilderScreen';
-import { TeacherClassExamBuilderScreen } from '../screens/teacher/TeacherClassExamBuilderScreen';
 import { TeacherOmrBatchDetailScreen } from '../screens/teacher/TeacherOmrBatchDetailScreen';
 import { StudentDashboardScreen } from '../screens/student/StudentDashboardScreen';
 import { StudentClassesScreen } from '../screens/student/StudentClassesScreen';
 import { StudentClassDetailScreen } from '../screens/student/StudentClassDetailScreen';
-import { StudentResultsScreen } from '../screens/student/StudentResultsScreen';
-import { StudentResultDetailScreen } from '../screens/student/StudentResultDetailScreen';
-import { StudentAssignmentsScreen } from '../screens/student/StudentAssignmentsScreen';
-import { StudentRemarksScreen } from '../screens/student/StudentRemarksScreen';
-import { StudentProgressScreen } from '../screens/student/StudentProgressScreen';
 import { AdminDashboardScreen } from '../screens/admin/AdminDashboardScreen';
 import { AdminUsersScreen } from '../screens/admin/AdminUsersScreen';
+import { TeacherStatisticsScreen } from '../screens/teacher/TeacherStatisticsScreen';
+import { StudentStatisticsScreen } from '../screens/student/StudentStatisticsScreen';
+import { AdminStatisticsScreen } from '../screens/admin/AdminStatisticsScreen';
 import { ProfileScreen } from '../screens/shared/ProfileScreen';
 import { NotificationsScreen } from '../screens/shared/NotificationsScreen';
 import { palette } from '../theme/tokens';
@@ -50,20 +36,22 @@ const TeacherTab = createBottomTabNavigator<TeacherTabParamList>();
 const StudentTab = createBottomTabNavigator<StudentTabParamList>();
 const AdminTab = createBottomTabNavigator<AdminTabParamList>();
 
+const tabBarStyle = {
+  height: 72,
+  paddingTop: 8,
+  paddingBottom: 8,
+} as const;
+
+const screenOptions = {
+  headerShown: false,
+  tabBarActiveTintColor: palette.primary,
+  tabBarInactiveTintColor: palette.mutedForeground,
+  tabBarStyle,
+};
+
 function TeacherTabsNavigator() {
   return (
-    <TeacherTab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: palette.primary,
-        tabBarInactiveTintColor: palette.mutedForeground,
-        tabBarStyle: {
-          height: 72,
-          paddingTop: 8,
-          paddingBottom: 8,
-        },
-      }}
-    >
+    <TeacherTab.Navigator screenOptions={screenOptions}>
       <TeacherTab.Screen
         name="TeacherDashboard"
         component={TeacherDashboardScreen}
@@ -84,17 +72,9 @@ function TeacherTabsNavigator() {
         name="TeacherOMR"
         component={TeacherOmrScreen}
         options={{
-          title: 'OMR',
-          tabBarIcon: ({ color, size }) => <ScanLine color={color} size={size + 2} />,
-        }}
-      />
-      <TeacherTab.Screen
-        name="TeacherAssignments"
-        component={TeacherAssignmentsScreen}
-        options={{
-          title: 'Bài tập',
+          title: 'Kiểm tra',
           tabBarIcon: ({ color, size }) => (
-            <ClipboardList color={color} size={size} />
+            <ScanLine color={color} size={size + 2} />
           ),
         }}
       />
@@ -112,18 +92,7 @@ function TeacherTabsNavigator() {
 
 function StudentTabsNavigator() {
   return (
-    <StudentTab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: palette.primary,
-        tabBarInactiveTintColor: palette.mutedForeground,
-        tabBarStyle: {
-          height: 72,
-          paddingTop: 8,
-          paddingBottom: 8,
-        },
-      }}
-    >
+    <StudentTab.Navigator screenOptions={screenOptions}>
       <StudentTab.Screen
         name="StudentDashboard"
         component={StudentDashboardScreen}
@@ -141,26 +110,6 @@ function StudentTabsNavigator() {
         }}
       />
       <StudentTab.Screen
-        name="StudentAssignments"
-        component={StudentAssignmentsScreen}
-        options={{
-          title: 'Bài tập',
-          tabBarIcon: ({ color, size }) => (
-            <ClipboardList color={color} size={size} />
-          ),
-        }}
-      />
-      <StudentTab.Screen
-        name="StudentResults"
-        component={StudentResultsScreen}
-        options={{
-          title: 'Kết quả',
-          tabBarIcon: ({ color, size }) => (
-            <GraduationCap color={color} size={size} />
-          ),
-        }}
-      />
-      <StudentTab.Screen
         name="SharedProfile"
         component={ProfileScreen}
         options={{
@@ -174,18 +123,7 @@ function StudentTabsNavigator() {
 
 function AdminTabsNavigator() {
   return (
-    <AdminTab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: palette.primary,
-        tabBarInactiveTintColor: palette.mutedForeground,
-        tabBarStyle: {
-          height: 72,
-          paddingTop: 8,
-          paddingBottom: 8,
-        },
-      }}
-    >
+    <AdminTab.Navigator screenOptions={screenOptions}>
       <AdminTab.Screen
         name="AdminDashboard"
         component={AdminDashboardScreen}
@@ -200,14 +138,6 @@ function AdminTabsNavigator() {
         options={{
           title: 'Tài khoản',
           tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
-        }}
-      />
-      <AdminTab.Screen
-        name="TeacherClasses"
-        component={TeacherClassesScreen}
-        options={{
-          title: 'Lớp học',
-          tabBarIcon: ({ color, size }) => <BookOpen color={color} size={size} />,
         }}
       />
       <AdminTab.Screen
@@ -227,46 +157,71 @@ export function AppNavigator() {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ 
-        headerShown: false,
-        gestureEnabled: true,
-        animation: 'slide_from_right'
-      }}>
-        {!role ? (
-          <Stack.Screen name="Login" component={LoginScreen} />
-        ) : null}
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: false,
+          gestureEnabled: true,
+          animation: 'slide_from_right',
+        }}
+      >
+        {!role ? <Stack.Screen name="Login" component={LoginScreen} /> : null}
 
         {role === 'TEACHER' ? (
           <>
             <Stack.Screen name="TeacherTabs" component={TeacherTabsNavigator} />
-            <Stack.Screen name="TeacherClassDetail" component={TeacherClassDetailScreen} />
+            <Stack.Screen
+              name="TeacherClassDetail"
+              component={TeacherClassDetailScreen}
+            />
             <Stack.Screen name="TeacherOmrExams" component={TeacherOmrExamsScreen} />
-            <Stack.Screen name="TeacherOmrBatchDetail" component={TeacherOmrBatchDetailScreen} />
-            <Stack.Screen name="TeacherClassExams" component={TeacherClassExamsScreen} />
-            <Stack.Screen name="TeacherRemarks" component={TeacherRemarksScreen} />
-            <Stack.Screen name="TeacherQuestions" component={TeacherQuestionsScreen} />
-            <Stack.Screen name="TeacherOmrExamBuilder" component={TeacherExamBuilderScreen} />
-            <Stack.Screen name="TeacherClassExamBuilder" component={TeacherClassExamBuilderScreen} />
-            <Stack.Screen name="SharedNotifications" component={NotificationsScreen} />
+            <Stack.Screen
+              name="TeacherOmrBatchDetail"
+              component={TeacherOmrBatchDetailScreen}
+            />
+            <Stack.Screen
+              name="TeacherOmrExamBuilder"
+              component={TeacherExamBuilderScreen}
+            />
+            <Stack.Screen
+              name="SharedNotifications"
+              component={NotificationsScreen}
+            />
+            <Stack.Screen
+              name="TeacherStatistics"
+              component={TeacherStatisticsScreen}
+            />
           </>
         ) : null}
 
         {role === 'STUDENT' ? (
           <>
             <Stack.Screen name="StudentTabs" component={StudentTabsNavigator} />
-            <Stack.Screen name="StudentClassDetail" component={StudentClassDetailScreen} />
-            <Stack.Screen name="StudentResultDetail" component={StudentResultDetailScreen} />
-            <Stack.Screen name="StudentRemarks" component={StudentRemarksScreen} />
-            <Stack.Screen name="StudentProgress" component={StudentProgressScreen} />
-            <Stack.Screen name="SharedNotifications" component={NotificationsScreen} />
+            <Stack.Screen
+              name="StudentClassDetail"
+              component={StudentClassDetailScreen}
+            />
+            <Stack.Screen
+              name="SharedNotifications"
+              component={NotificationsScreen}
+            />
+            <Stack.Screen
+              name="StudentStatistics"
+              component={StudentStatisticsScreen}
+            />
           </>
         ) : null}
 
         {role === 'ADMIN' ? (
           <>
             <Stack.Screen name="AdminTabs" component={AdminTabsNavigator} />
-            <Stack.Screen name="TeacherClassDetail" component={TeacherClassDetailScreen} />
-            <Stack.Screen name="SharedNotifications" component={NotificationsScreen} />
+            <Stack.Screen
+              name="SharedNotifications"
+              component={NotificationsScreen}
+            />
+            <Stack.Screen
+              name="AdminStatistics"
+              component={AdminStatisticsScreen}
+            />
           </>
         ) : null}
       </Stack.Navigator>

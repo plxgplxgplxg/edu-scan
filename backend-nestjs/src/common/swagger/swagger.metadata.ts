@@ -3,11 +3,9 @@ export type SwaggerModuleKey =
   | 'users'
   | 'classes'
   | 'exams'
-  | 'questions'
   | 'submissions'
   | 'assignments'
   | 'omr'
-  | 'remarks'
   | 'reports';
 
 export interface SwaggerModuleMetadata {
@@ -86,23 +84,12 @@ export const SWAGGER_MODULES_METADATA: Record<
     key: 'exams',
     title: 'exams',
     description:
-      'Tài liệu dành cho quản lý đề thi, mã đề, đáp án và cấu hình ánh xạ câu hỏi.',
+      'Tài liệu dành cho quản lý đề kiểm tra trắc nghiệm, mã đề và đáp án.',
     tagName: 'exams',
-    tagDescription: 'Quản lý đề thi, mã đề, đáp án và sơ đồ câu hỏi.',
+    tagDescription: 'Quản lý đề kiểm tra trắc nghiệm, mã đề và đáp án.',
     docsPath: '/api/docs/exams',
     jsonPath: '/api/docs-json/exams',
     exportFileName: 'openapi.exams.json',
-  },
-  questions: {
-    key: 'questions',
-    title: 'questions',
-    description:
-      'Tài liệu dành cho ngân hàng câu hỏi của giáo viên, bao gồm tạo mới, lọc, cập nhật và xóa câu hỏi.',
-    tagName: 'questions',
-    tagDescription: 'Ngân hàng câu hỏi của giáo viên.',
-    docsPath: '/api/docs/questions',
-    jsonPath: '/api/docs-json/questions',
-    exportFileName: 'openapi.questions.json',
   },
   submissions: {
     key: 'submissions',
@@ -128,25 +115,14 @@ export const SWAGGER_MODULES_METADATA: Record<
   },
   omr: {
     key: 'omr',
-    title: 'omr',
+    title: 'kiem-tra-trac-nghiem',
     description:
-      'Tài liệu dành cho tải lên batch ảnh OMR, theo dõi xử lý và xem chi tiết kết quả nhận dạng.',
-    tagName: 'OMR',
-    tagDescription: 'Tải lên batch OMR, chấm bài và theo dõi kết quả xử lý.',
+      'Tài liệu dành cho tải lên đợt chấm bài trắc nghiệm, theo dõi xử lý và xem chi tiết kết quả nhận dạng.',
+    tagName: 'Kiểm tra trắc nghiệm',
+    tagDescription: 'Tải lên đợt chấm bài, chấm bài và theo dõi kết quả xử lý.',
     docsPath: '/api/docs/omr',
     jsonPath: '/api/docs-json/omr',
     exportFileName: 'openapi.omr.json',
-  },
-  remarks: {
-    key: 'remarks',
-    title: 'remarks',
-    description:
-      'Tài liệu dành cho tạo yêu cầu phúc khảo và duyệt kết quả phúc khảo.',
-    tagName: 'remarks',
-    tagDescription: 'Yêu cầu phúc khảo của học sinh và quy trình duyệt.',
-    docsPath: '/api/docs/remarks',
-    jsonPath: '/api/docs-json/remarks',
-    exportFileName: 'openapi.remarks.json',
   },
   reports: {
     key: 'reports',

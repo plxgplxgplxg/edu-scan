@@ -60,7 +60,7 @@ describe('AssignmentsController', () => {
       const dto = {
         title: 'Weekly Assignment 1',
         deadline: new Date(Date.now() + 86400000).toISOString(),
-        classIds: ['class-1'],
+        classId: 'class-1',
         allowLate: false,
         latePenaltyPct: 0,
         maxScore: 10,

@@ -1,11 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { GradeStatus, SubmitStatus } from '@prisma/client';
 
-export class AssignmentClassLinkDto {
-  @ApiProperty({ format: 'uuid' })
-  classId!: string;
-}
-
 export class AssignmentTeacherSummaryDto {
   @ApiProperty({ type: Number, example: 12 })
   submits!: number;
@@ -50,8 +45,11 @@ export class AssignmentResponseDto {
   @ApiProperty({ format: 'uuid' })
   teacherId!: string;
 
-  @ApiProperty({ type: [AssignmentClassLinkDto] })
-  classes!: AssignmentClassLinkDto[];
+  @ApiProperty({ format: 'uuid' })
+  classId!: string;
+
+  @ApiProperty({ required: false, nullable: true })
+  className?: string | null;
 
   @ApiProperty({ type: AssignmentTeacherSummaryDto, required: false })
   _count?: AssignmentTeacherSummaryDto;

@@ -1,9 +1,19 @@
 import { useState } from 'react';
 
 import { submitAssignment } from '../../../api/edu-scan';
-import { documentTypes, pickSingleDocument } from '../../shared/infrastructure/document-picker/document-picker-adapter';
+import { pickSingleDocument } from '../../shared/infrastructure/document-picker/document-picker-adapter';
 import type { NativeFile } from '../../shared/domain/native-file';
 import { useToast } from '../../../app/ToastProvider';
+import {
+  ASSIGNMENT_SUBMISSION_EXTENSIONS,
+  ASSIGNMENT_SUBMISSION_MAX_FILE_BYTES,
+  ASSIGNMENT_SUBMISSION_MIME_TYPES,
+} from '../domain/assignment-file-policy';
+
+function getFileExtension(name: string) {
+  const dotIndex = name.lastIndexOf('.');
+  return dotIndex >= 0 ? name.slice(dotIndex).toLowerCase() : '';
+}
 
 export function useAssignmentSubmission({
   accessToken,
@@ -18,14 +28,16 @@ export function useAssignmentSubmission({
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const pickFile = async () => {
-    const file = await pickSingleDocument([
-      documentTypes.pdf,
-      documentTypes.doc,
-      documentTypes.docx,
-      documentTypes.images,
-      documentTypes.plainText,
-    ]);
+    const file = await pickSingleDocument(ASSIGNMENT_SUBMISSION_MIME_TYPES);
     if (file) {
+      if (!ASSIGNMENT_SUBMISSION_EXTENSIONS.has(getFileExtension(file.name))) {
+        setSubmitError('Định dạng tệp không được hỗ trợ');
+        return;
+      }
+      if (file.size !== null && file.size > ASSIGNMENT_SUBMISSION_MAX_FILE_BYTES) {
+        setSubmitError('Tệp vượt quá giới hạn 25MB');
+        return;
+      }
       setSelectedFile(file);
       setSubmitError(null);
     }

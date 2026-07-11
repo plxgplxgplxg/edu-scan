@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unstable-nested-components, no-void, react-native/no-inline-styles */
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Switch, View } from 'react-native';
 import {
@@ -7,7 +8,6 @@ import {
   LogOut,
   Moon,
   Shield,
-  TrendingUp,
   User,
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -25,10 +25,10 @@ import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import { getInitials } from '../../utils/string';
 import {
+  listAssignments,
   listClasses,
   listExams,
   listOmrBatches,
-  listStudentSubmissions,
 } from '../../api/edu-scan';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import type { RootStackParamList } from '../../navigation/types';
@@ -72,14 +72,14 @@ export function ProfileScreen() {
       }
 
       if (role === 'STUDENT') {
-        const submissions = await listStudentSubmissions(accessToken);
-        const graded = submissions.items.filter((item) => item.status === 'GRADED');
+        const [classes, assignments] = await Promise.all([
+          listClasses(accessToken),
+          listAssignments(accessToken),
+        ]);
 
         return {
-          average:
-            graded.reduce((sum, item) => sum + item.score, 0) /
-            Math.max(graded.length, 1),
-          exams: submissions.items.length,
+          classes: classes.length,
+          assignments: assignments.filter((item) => !item.submits?.[0]).length,
         };
       }
 
@@ -145,17 +145,6 @@ export function ProfileScreen() {
     },
   ];
 
-  if (role === 'STUDENT') {
-    menuItems.splice(3, 0, {
-      key: 'progress',
-      title: content.student.progress.title,
-      subtitle: content.student.progress.subtitle,
-      icon: <TrendingUp size={18} color={palette.tertiary} />,
-      onPress: () => navigation.navigate('StudentProgress'),
-      rightElement: <ChevronRight size={18} color={palette.mutedForeground} />,
-    });
-  }
-
   return (
     <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
       <PageHeader
@@ -197,12 +186,15 @@ export function ProfileScreen() {
               {role === 'STUDENT' ? (
                 <>
                   <MetricBlock
-                    label={content.student.dashboard.metrics.average}
-                    value={(((data as { average?: number } | null)?.average ?? 0)).toFixed(1)}
+                    label={content.student.dashboard.metrics.classes}
+                    value={String((data as { classes?: number } | null)?.classes ?? 0)}
                     light
                   />
-                  <MetricBlock label={content.student.dashboard.metrics.exams} value={String((data as { exams?: number } | null)?.exams ?? 0)} light />
-                  <MetricBlock label={content.shared.profile.studentRank} value="Khá" light />
+                  <MetricBlock
+                    label={content.student.dashboard.metrics.assignments}
+                    value={String((data as { assignments?: number } | null)?.assignments ?? 0)}
+                    light
+                  />
                 </>
               ) : null}
             </View>

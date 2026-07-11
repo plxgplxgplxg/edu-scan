@@ -1,5 +1,10 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
-import { AnswerChoice, OmrBatchStatus, SubmissionStatus } from '@prisma/client';
+import {
+  AnswerChoice,
+  OmrBatchStatus,
+  SubmissionStatus,
+  TestCodeResolutionStatus,
+} from '@prisma/client';
 import { BatchService } from '../../../../../src/modules/omr/services/batch.service';
 
 describe('BatchService', () => {
@@ -193,7 +198,7 @@ describe('BatchService', () => {
       isExternal: false,
       detectedTestId: null,
       resolvedTestCode: null,
-      testCodeResolutionStatus: 'MISSING_TEST_CODE' as any,
+      testCodeResolutionStatus: TestCodeResolutionStatus.MISSING_TEST_CODE,
       status: SubmissionStatus.NEEDS_REVIEW,
       score: 0,
       maxScore: 10,

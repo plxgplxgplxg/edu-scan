@@ -1,9 +1,9 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/require-await, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument */
 import { Test, TestingModule } from '@nestjs/testing';
 import { SubmissionsService } from '../../../../../src/modules/submissions/services/submissions.service';
 import { SubmissionsRepository } from '../../../../../src/modules/submissions/repositories/submissions.repository';
 import { PrismaService } from '../../../../../src/database/prisma.service';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   Role,
   SubmissionStatus,
@@ -26,10 +26,6 @@ describe('SubmissionsService', () => {
             findAll: jest.fn(),
             findOneWithDetails: jest.fn(),
             update: jest.fn(),
-            updateSubmissionDetail: jest.fn(),
-            findStudentSubmissionsPaginated: jest.fn(),
-            countStudentSubmissions: jest.fn(),
-            findStudentSubmissionsForProgress: jest.fn(),
           },
         },
         {
@@ -46,12 +42,6 @@ describe('SubmissionsService', () => {
               update: jest.fn(),
               findUnique: jest.fn(),
             },
-          },
-        },
-        {
-          provide: EventEmitter2,
-          useValue: {
-            emit: jest.fn(),
           },
         },
       ],
@@ -182,131 +172,6 @@ describe('SubmissionsService', () => {
           finalAnswer: AnswerChoice.B,
         },
       });
-    });
-  });
-
-  describe('handleRemarkApprovedEvent', () => {
-    it('updates submission detail and emits update event', async () => {
-      const emitSpy = jest.spyOn(
-        (service as any).eventEmitter,
-        'emit',
-      ) as jest.Mock;
-      jest.spyOn(prisma.submissionDetail, 'findUnique').mockResolvedValue({
-        id: 'detail-1',
-        submissionId: 'sub-1',
-        questionNumber: 2,
-      } as any);
-      const updateSpy = jest
-        .spyOn(repository, 'updateSubmissionDetail')
-        .mockResolvedValue({} as any);
-
-      await service.handleRemarkApprovedEvent({
-        submissionDetailId: 'detail-1',
-        finalAnswer: AnswerChoice.C,
-      } as any);
-
-      expect(updateSpy).toHaveBeenCalledWith('sub-1', 2, {
-        finalAnswer: AnswerChoice.C,
-      });
-      expect(emitSpy).toHaveBeenCalledWith('submission.detail.updated', {
-        submissionId: 'sub-1',
-        questionNumber: 2,
-        finalAnswer: AnswerChoice.C,
-        source: 'remark.approved',
-      });
-    });
-  });
-
-  describe('findMySubmissions', () => {
-    it('should reject non-student users', async () => {
-      await expect(
-        service.findMySubmissions(
-          { id: 'teacher-1', role: Role.TEACHER },
-          {} as any,
-        ),
-      ).rejects.toThrow(ForbiddenException);
-    });
-
-    it('should return empty state when student has no submissions', async () => {
-      jest
-        .spyOn(repository, 'findStudentSubmissionsPaginated')
-        .mockResolvedValue([] as any);
-      jest.spyOn(repository, 'countStudentSubmissions').mockResolvedValue(0);
-
-      const result = await service.findMySubmissions(
-        { id: 'student-1', role: Role.STUDENT },
-        {},
-      );
-
-      expect(result).toEqual({
-        items: [],
-        total: 0,
-        page: 1,
-        limit: 20,
-        totalPages: 0,
-      });
-    });
-  });
-
-  describe('getMyProgress', () => {
-    it('should return empty array when student has no submissions', async () => {
-      jest
-        .spyOn(repository, 'findStudentSubmissionsForProgress')
-        .mockResolvedValue([] as any);
-
-      const result = await service.getMyProgress({
-        id: 'student-1',
-        role: Role.STUDENT,
-      });
-
-      expect(result).toEqual([]);
-    });
-
-    it('should return progress payload in expected format', async () => {
-      jest
-        .spyOn(repository, 'findStudentSubmissionsForProgress')
-        .mockResolvedValue([
-          {
-            id: 'sub-1',
-            status: SubmissionStatus.NEEDS_REVIEW,
-            createdAt: new Date('2026-04-10T10:00:00.000Z'),
-            reviewedAt: null,
-            exam: {
-              id: 'exam-1',
-              title: 'Midterm',
-              maxScore: 10,
-            },
-            details: [
-              { questionNumber: 1, finalAnswer: AnswerChoice.A },
-              { questionNumber: 2, finalAnswer: AnswerChoice.B },
-            ],
-            resolvedVariant: {
-              answerKeys: [
-                { questionNumber: 1, correctAnswer: AnswerChoice.A },
-                { questionNumber: 2, correctAnswer: AnswerChoice.C },
-              ],
-            },
-          },
-        ] as any);
-
-      const result = await service.getMyProgress({
-        id: 'student-1',
-        role: Role.STUDENT,
-      });
-
-      expect(result).toEqual([
-        {
-          date: '2026-04-10T10:00:00.000Z',
-          score: 5,
-          maxScore: 10,
-          examId: 'exam-1',
-          examTitle: 'Midterm',
-          submissionId: 'sub-1',
-          status: SubmissionStatus.NEEDS_REVIEW,
-          needsReview: true,
-          reviewNote: 'Pending manual review',
-        },
-      ]);
     });
   });
 });

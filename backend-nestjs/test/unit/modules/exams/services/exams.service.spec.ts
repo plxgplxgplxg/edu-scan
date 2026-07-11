@@ -11,10 +11,12 @@ describe('ExamsService', () => {
     listTeacherExams: jest.fn(),
     findTeacherExamById: jest.fn(),
     findTeacherClassesByIds: jest.fn(),
-    findTeacherQuestionsByIds: jest.fn(),
     countExamDependencies: jest.fn(),
     updateExam: jest.fn(),
     deleteExam: jest.fn(),
+    updateExamStatus: jest.fn(),
+    upsertExamQuestionAnswer: jest.fn(),
+    removeExamQuestionAnswer: jest.fn(),
   };
 
   const teacherId = 'teacher-1';
@@ -25,7 +27,7 @@ describe('ExamsService', () => {
     service = new ExamsService(examsRepository as never);
   });
 
-  it('normalizes and creates an exam', async () => {
+  it('normalizes and creates an OMR exam without question bank mapping', async () => {
     const createExamDto: CreateExamDto = {
       title: '  Midterm Exam  ',
       maxScore: 10,
@@ -39,19 +41,11 @@ describe('ExamsService', () => {
           ],
         },
       ],
-      questionMap: [
-        { questionNumber: 2, questionId: 'question-2' },
-        { questionNumber: 1, questionId: 'question-1' },
-      ],
     };
 
     examsRepository.findTeacherClassesByIds.mockResolvedValue([
       { id: 'class-a' },
       { id: 'class-b' },
-    ]);
-    examsRepository.findTeacherQuestionsByIds.mockResolvedValue([
-      { id: 'question-1' },
-      { id: 'question-2' },
     ]);
     examsRepository.createExam.mockResolvedValue(buildExamEntity());
 
@@ -60,7 +54,6 @@ describe('ExamsService', () => {
     expect(examsRepository.createExam).toHaveBeenCalledWith({
       title: 'Midterm Exam',
       maxScore: 10,
-      type: 'OMR',
       teacherId,
       classIds: ['class-b', 'class-a'],
       variants: [
@@ -72,33 +65,24 @@ describe('ExamsService', () => {
           ],
         },
       ],
-      questionMap: [
-        { questionNumber: 1, questionId: 'question-1' },
-        { questionNumber: 2, questionId: 'question-2' },
-      ],
     });
   });
 
-  it('rejects create when question map references a missing answer key number', async () => {
-    examsRepository.findTeacherClassesByIds.mockResolvedValue([
-      { id: 'class-a' },
-    ]);
-    examsRepository.findTeacherQuestionsByIds.mockResolvedValue([
-      { id: 'question-1' },
-    ]);
-
+  it('rejects variants with different question number sets', async () => {
     await expect(
       service.createExam(teacherId, {
         title: 'Exam',
         maxScore: 10,
-        classIds: ['class-a'],
         variants: [
           {
             testCode: 'A01',
             answerKeys: [{ questionNumber: 1, correctAnswer: AnswerChoice.A }],
           },
+          {
+            testCode: 'B01',
+            answerKeys: [{ questionNumber: 2, correctAnswer: AnswerChoice.B }],
+          },
         ],
-        questionMap: [{ questionNumber: 2, questionId: 'question-1' }],
       }),
     ).rejects.toThrow(BadRequestException);
 
@@ -151,8 +135,21 @@ describe('ExamsService', () => {
           ],
         },
       ],
-      questionMap: [{ questionNumber: 1, questionId: 'question-1' }],
     });
+  });
+
+  it('publishes when all variants have complete answer keys', async () => {
+    examsRepository.findTeacherExamById.mockResolvedValue(buildExamEntity());
+    examsRepository.updateExamStatus.mockResolvedValue(
+      buildExamEntity({ status: 'PUBLISHED' }),
+    );
+
+    await service.publishExam(examId, teacherId);
+
+    expect(examsRepository.updateExamStatus).toHaveBeenCalledWith(
+      examId,
+      'PUBLISHED',
+    );
   });
 
   it('rejects delete when the exam already has dependent data', async () => {
@@ -183,7 +180,7 @@ function buildExamEntity(overrides: Partial<Record<string, unknown>> = {}) {
     id: 'exam-1',
     title: 'Exam',
     maxScore: 10,
-    type: 'OMR',
+    status: 'DRAFT',
     teacherId: 'teacher-1',
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -211,18 +208,6 @@ function buildExamEntity(overrides: Partial<Record<string, unknown>> = {}) {
           { questionNumber: 1, correctAnswer: AnswerChoice.A },
           { questionNumber: 2, correctAnswer: AnswerChoice.B },
         ],
-      },
-    ],
-    questionMap: [
-      {
-        questionNumber: 1,
-        questionId: 'question-1',
-        question: {
-          id: 'question-1',
-          content: 'Question 1',
-          subject: 'Math',
-          difficulty: 'EASY',
-        },
       },
     ],
     ...overrides,

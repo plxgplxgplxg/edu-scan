@@ -1,4 +1,9 @@
-import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { readFile } from 'node:fs/promises';
 import { basename, extname } from 'node:path';
 import { IStorageService } from '../../../storage/storage.interface';
@@ -69,7 +74,9 @@ export class ImageUploadService {
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.logger.warn(`Failed to upload OMR artifact from ${artifactRef}: ${message}`);
+      this.logger.warn(
+        `Failed to upload OMR artifact from ${artifactRef}: ${message}`,
+      );
       return null;
     }
   }

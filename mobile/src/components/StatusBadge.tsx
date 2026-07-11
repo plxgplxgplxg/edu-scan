@@ -15,16 +15,15 @@ export function StatusBadge({ status }: { status: StatusKey }) {
   let textColor = appTheme.palette.mutedForeground;
   let dotColor = appTheme.palette.mutedForeground;
 
-  // Set colors based on the design document
-  if (['GRADED', 'COMPLETED', 'ON_TIME', 'APPROVED', 'EASY'].includes(status)) {
+  if (['GRADED', 'COMPLETED', 'ON_TIME'].includes(status)) {
     backgroundColor = appTheme.palette.successSoft;
     textColor = appTheme.palette.success;
     dotColor = appTheme.palette.success;
-  } else if (['NEEDS_REVIEW', 'PARTIAL_FAILED', 'MEDIUM'].includes(status)) {
+  } else if (['NEEDS_REVIEW', 'PARTIAL_FAILED'].includes(status)) {
     backgroundColor = appTheme.palette.warningSoft;
     textColor = appTheme.palette.warning;
     dotColor = appTheme.palette.warning;
-  } else if (['FAILED', 'LATE', 'REJECTED', 'HARD'].includes(status)) {
+  } else if (['FAILED', 'LATE'].includes(status)) {
     backgroundColor = appTheme.palette.destructiveSoft;
     textColor = appTheme.palette.destructive;
     dotColor = appTheme.palette.destructive;

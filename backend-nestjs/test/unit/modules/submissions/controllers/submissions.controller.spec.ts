@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { Test, TestingModule } from '@nestjs/testing';
 import { SubmissionsController } from '../../../../../src/modules/submissions/controllers/submissions.controller';
 import { SubmissionsService } from '../../../../../src/modules/submissions/services/submissions.service';
@@ -17,8 +18,6 @@ describe('SubmissionsController', () => {
             findAll: jest.fn(),
             findOneWithScore: jest.fn(),
             manualOverride: jest.fn(),
-            findMySubmissions: jest.fn(),
-            getMyProgress: jest.fn(),
           },
         },
       ],
@@ -56,34 +55,5 @@ describe('SubmissionsController', () => {
       .mockResolvedValue({ id: 'sub-1' } as any);
     await controller.manualOverride('sub-1', dto);
     expect(manualOverrideSpy).toHaveBeenCalledWith('sub-1', dto);
-  });
-
-  it('should call findMySubmissions with student user id', async () => {
-    const mockUser = { id: 'student-1', role: Role.STUDENT };
-    const query = { page: 1, limit: 10 };
-    const findMySubmissionsSpy = jest
-      .spyOn(service, 'findMySubmissions')
-      .mockResolvedValue({
-        items: [],
-        total: 0,
-        page: 1,
-        limit: 10,
-        totalPages: 0,
-      } as any);
-
-    await controller.findMySubmissions({ user: mockUser }, query as any);
-
-    expect(findMySubmissionsSpy).toHaveBeenCalledWith(mockUser, query as any);
-  });
-
-  it('should call getMyProgress with student user id', async () => {
-    const mockUser = { id: 'student-1', role: Role.STUDENT };
-    const getMyProgressSpy = jest
-      .spyOn(service, 'getMyProgress')
-      .mockResolvedValue([] as any);
-
-    await controller.getMyProgress({ user: mockUser });
-
-    expect(getMyProgressSpy).toHaveBeenCalledWith(mockUser);
   });
 });

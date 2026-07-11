@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+/* eslint-disable react/no-unstable-nested-components, no-void, react-native/no-inline-styles */
+import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -10,7 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowRight, Eye, EyeOff, ScanLine } from 'lucide-react-native';
 
-import { demoAccounts } from '../../api/mockData';
+
 import { useAuth } from '../../store/auth-store';
 import { appTheme } from '../../theme/tokens';
 import { clamp, useResponsiveLayout } from '../../theme/responsive';

@@ -7,18 +7,10 @@ import React, {
   useState,
 } from 'react';
 
-import { buildNotifications } from '../../../api/edu-scan';
+import { listNotifications, markNotificationRead } from '../../../api/edu-scan';
 import type { NotificationItem } from '../../../types/domain';
 import type { UserRole } from '../../../types/app';
 import { useAuth } from '../../../store/auth-store';
-import {
-  loadJsonValue,
-  saveJsonValue,
-} from '../../shared/infrastructure/storage/json-storage';
-
-const STORAGE_KEY = '@eduscan/notifications/read-state';
-
-type ReadState = Record<string, true>;
 
 interface NotificationsContextValue {
   notifications: NotificationItem[];
@@ -31,37 +23,11 @@ interface NotificationsContextValue {
 
 const NotificationsContext = createContext<NotificationsContextValue | null>(null);
 
-function buildNotificationIdSet(items: NotificationItem[]) {
-  return new Set(items.map((item) => item.id));
-}
-
-function mergeReadState(items: NotificationItem[], readState: ReadState) {
-  return items.map((item) => ({
-    ...item,
-    read: item.read || !!readState[item.id],
-  }));
-}
-
 async function loadNotificationsFeed(
   token: string,
-  role: UserRole,
+  _role: UserRole,
 ): Promise<NotificationItem[]> {
-  const [readState, remoteItems] = await Promise.all([
-    loadJsonValue<ReadState>(STORAGE_KEY, {}),
-    buildNotifications(token, role),
-  ]);
-
-  const hydratedItems = mergeReadState(remoteItems, readState);
-  const currentIds = buildNotificationIdSet(hydratedItems);
-  const nextReadState = Object.fromEntries(
-    Object.entries(readState).filter(([id]) => currentIds.has(id)),
-  ) as ReadState;
-
-  if (Object.keys(nextReadState).length !== Object.keys(readState).length) {
-    await saveJsonValue(STORAGE_KEY, nextReadState);
-  }
-
-  return hydratedItems;
+  return listNotifications(token);
 }
 
 export function NotificationsProvider({
@@ -106,10 +72,10 @@ export function NotificationsProvider({
       ),
     );
 
-    const readState = await loadJsonValue<ReadState>(STORAGE_KEY, {});
-    readState[notificationId] = true;
-    await saveJsonValue(STORAGE_KEY, readState);
-  }, []);
+    if (accessToken) {
+      await markNotificationRead(accessToken, notificationId);
+    }
+  }, [accessToken]);
 
   const value = useMemo<NotificationsContextValue>(
     () => ({

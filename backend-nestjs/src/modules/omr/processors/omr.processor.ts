@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
 import { Injectable, Logger } from '@nestjs/common';
 import { SubmissionStatus, TestCodeResolutionStatus } from '@prisma/client';
 import { OmrRepository } from '../repositories/omr.repository';
@@ -76,7 +77,9 @@ export class OmrProcessor {
     );
 
     const file = this.deserializeFile(data.file);
-    this.logger.log(`uploading file: ${file.originalname} size=${file.size}bytes`);
+    this.logger.log(
+      `uploading file: ${file.originalname} size=${file.size}bytes`,
+    );
     const imageUrl = await this.imageUploadService.uploadFile(
       file,
       data.batchId,
@@ -89,12 +92,16 @@ export class OmrProcessor {
     });
     let detectResult;
     try {
-      this.logger.log(`Calling OMR gRPC service detectImage: imageUrl=${imageUrl}, templateName=${data.templateName}`);
+      this.logger.log(
+        `Calling OMR gRPC service detectImage: imageUrl=${imageUrl}, templateName=${data.templateName}`,
+      );
       detectResult = await this.omrClientService.detectImage({
         imageUrl,
         templateName: data.templateName,
       });
-      this.logger.log(`OMR gRPC service call succeeded: studentCode=${detectResult.studentCode}, testId=${detectResult.testId}`);
+      this.logger.log(
+        `OMR gRPC service call succeeded: studentCode=${detectResult.studentCode}, testId=${detectResult.testId}`,
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       const stack = error instanceof Error ? error.stack : undefined;

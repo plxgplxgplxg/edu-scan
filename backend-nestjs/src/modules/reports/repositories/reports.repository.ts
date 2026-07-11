@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 
-type FindClassExamsByScopeParams = {
+type FindExamsForClassScopeParams = {
   classId: string;
   teacherId: string;
   scope: string;
@@ -56,11 +56,11 @@ export class ReportsRepository {
     });
   }
 
-  async findClassExamsByScope({
+  async findExamsForClassScope({
     classId,
     teacherId,
     scope,
-  }: FindClassExamsByScopeParams) {
+  }: FindExamsForClassScopeParams) {
     return this.prisma.exam.findMany({
       where: {
         teacherId,

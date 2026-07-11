@@ -1,9 +1,8 @@
+/* eslint-disable react/no-unstable-nested-components, no-void, react-native/no-inline-styles */
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import {
   BarChart2,
-  BookOpen,
-  Settings,
   Users,
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -27,16 +26,12 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const adminDashboardModules = [
   { id: 'users', gradient: ['#6552F5', '#8B5CF6'], isLarge: true },
-  { id: 'classes', gradient: ['#2E9BFF', '#00D4B4'], isLarge: false },
   { id: 'stats', gradient: ['#12B886', '#00D4B4'], isLarge: false },
-  { id: 'settings', gradient: ['#FF9500', '#FF5FA2'], isLarge: false },
 ] as const;
 
 const moduleIcons = {
   users: <Users size={24} color={palette.white} />,
-  classes: <BookOpen size={24} color={palette.white} />,
   stats: <BarChart2 size={24} color={palette.white} />,
-  settings: <Settings size={24} color={palette.white} />,
 };
 
 export function AdminDashboardScreen() {
@@ -121,21 +116,15 @@ export function AdminDashboardScreen() {
               subtitle={
                 module.id === 'users'
                   ? `${String(metrics.teachers + metrics.students)} người dùng`
-                  : module.id === 'classes'
-                    ? `${String(metrics.classes)} lớp đang hoạt động`
-                    : content.admin.dashboard.moduleCounts[module.id as keyof typeof content.admin.dashboard.moduleCounts]
+                  : `${String(metrics.classes)} lớp trong thống kê`
               }
               colors={module.gradient}
               onPress={() => {
                 if (module.id === 'users') {
                   navigation.navigate('AdminTabs', { screen: 'AdminUsers' });
                 }
-                if (module.id === 'classes') {
-                  navigation.navigate('AdminTabs', { screen: 'TeacherClasses' });
-                }
-                if (module.id === 'settings') navigation.navigate('SharedProfile');
                 if (module.id === 'stats') {
-                  navigation.navigate('AdminTabs', { screen: 'AdminDashboard' });
+                  navigation.navigate('AdminStatistics');
                 }
               }}
             />

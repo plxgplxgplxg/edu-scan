@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
 import {
   Injectable,
   NestInterceptor,
@@ -19,9 +20,15 @@ export class LoggingInterceptor implements NestInterceptor {
 
     this.logger.log(
       `--> ${method} ${url}` +
-        (body && Object.keys(body).length ? ` body=${JSON.stringify(body)}` : '') +
-        (query && Object.keys(query).length ? ` query=${JSON.stringify(query)}` : '') +
-        (params && Object.keys(params).length ? ` params=${JSON.stringify(params)}` : ''),
+        (body && Object.keys(body).length
+          ? ` body=${JSON.stringify(body)}`
+          : '') +
+        (query && Object.keys(query).length
+          ? ` query=${JSON.stringify(query)}`
+          : '') +
+        (params && Object.keys(params).length
+          ? ` params=${JSON.stringify(params)}`
+          : ''),
     );
 
     return next.handle().pipe(

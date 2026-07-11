@@ -289,7 +289,7 @@ export function TeacherOmrBatchDetailScreen() {
 
   const handleLoadMore = useCallback(() => {
     if (page < totalPages && !loadingMoreRef.current) {
-      void loadSubmissions(page + 1, filter, false);
+      loadSubmissions(page + 1, filter, false).catch(() => {});
     }
   }, [page, totalPages, filter, loadSubmissions]);
 
@@ -438,7 +438,7 @@ export function TeacherOmrBatchDetailScreen() {
 
   if (!batchId) {
     return (
-      <Screen refreshing={headerLoading} onRefresh={() => { void reloadHeader(); }}>
+      <Screen refreshing={headerLoading} onRefresh={() => { reloadHeader().catch(() => {}); }}>
         <ErrorState
           message="Không tìm thấy batch OMR"
           retryLabel={content.common.buttons.back}
@@ -450,7 +450,7 @@ export function TeacherOmrBatchDetailScreen() {
 
   if (!batchHeader && headerLoading) {
     return (
-      <Screen refreshing={headerLoading} onRefresh={() => { void reloadHeader(); }}>
+      <Screen refreshing={headerLoading} onRefresh={() => { reloadHeader().catch(() => {}); }}>
         <LoadingState label={content.common.labels.loading} />
       </Screen>
     );
@@ -488,7 +488,7 @@ export function TeacherOmrBatchDetailScreen() {
     null;
 
   const renderSubmissionItem = ({ item }: { item: SubmissionItem }) => (
-    <Pressable onPress={() => { void openSubmission(item.id); }}>
+    <Pressable onPress={() => { openSubmission(item.id).catch(() => {}); }}>
       <SurfaceCard
         style={[
           styles.submissionCard,
@@ -547,13 +547,13 @@ export function TeacherOmrBatchDetailScreen() {
       <FlatList
         data={submissions}
         refreshing={headerLoading || submissionsLoading}
-        onRefresh={() => { void reloadAll(); }}
+        onRefresh={() => { reloadAll().catch(() => {}); }}
         keyExtractor={(item) => item.id}
         renderItem={renderSubmissionItem}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.3}
         ListFooterComponent={renderFooter}
-        ListHeaderComponent={() => (
+        ListHeaderComponent={(
           <>
             <View
               style={[
@@ -610,12 +610,11 @@ export function TeacherOmrBatchDetailScreen() {
             <View
               style={[
                 styles.body,
+                styles.container,
                 {
                   paddingHorizontal: layout.horizontalPadding,
                   paddingTop: layout.sectionGap,
                   maxWidth: layout.contentMaxWidth,
-                  alignSelf: 'center',
-                  width: '100%',
                   gap: layout.sectionGap,
                 },
               ]}
@@ -660,7 +659,7 @@ export function TeacherOmrBatchDetailScreen() {
             retryLabel="Thử lại"
             onRetry={() => {
               if (selectedSubmissionId) {
-                void openSubmission(selectedSubmissionId);
+                openSubmission(selectedSubmissionId).catch(() => {});
               }
             }}
           />
@@ -819,6 +818,7 @@ export function TeacherOmrBatchDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  container: { alignSelf: 'center', width: '100%' },
   listContent: {
     paddingBottom: 40,
   },

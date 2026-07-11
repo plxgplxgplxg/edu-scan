@@ -98,7 +98,7 @@ export class ReportsController {
 
   @Get('jobs/:jobId/file')
   @ReportsSwagger.TaiFileBaoCaoTheoJob()
-  async downloadExportedFile(
+  downloadExportedFile(
     @Param('jobId') jobId: string,
     @CurrentUser() currentUser: AuthenticatedUser,
     @Res({ passthrough: true }) response: Response,

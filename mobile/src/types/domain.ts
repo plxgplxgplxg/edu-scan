@@ -1,4 +1,4 @@
-import type { DifficultyKey, StatusKey, UserRole } from './app';
+import type { StatusKey, UserRole } from './app';
 
 export interface DemoAccount {
   email: string;
@@ -118,60 +118,18 @@ export interface OmrBatchDetail extends OmrBatchSummary {
   submissions: OmrSubmissionSummary[];
 }
 
-export interface RemarkSummary {
-  id: string;
-  examTitle: string;
-  questionNumber: number;
-  reason: string;
-  status: StatusKey;
-  createdAt: string;
-  teacherComment?: string;
-  studentName?: string;
-  studentCode?: string;
-}
-
-export interface QuestionSummary {
-  id: string;
-  content: string;
-  subject: string;
-  difficulty: DifficultyKey;
-  tags: string[];
-}
-
-export interface ResultSummary {
-  id: string;
-  examTitle: string;
-  score: number;
-  maxScore: number;
-  totalCorrect: number;
-  totalQuestions: number;
-  status: StatusKey;
-  createdAt: string;
-}
-
-export interface ResultDetailRow {
-  questionNumber: number;
-  detectedAnswer: string | null;
-  finalAnswer: string | null;
-  correctAnswer: string | null;
-  isCorrect: boolean;
-  needsReview: boolean;
-  reviewReason?: string;
-}
-
 export interface NotificationItem {
   id: string;
-  type: 'assignment' | 'result' | 'remark' | 'system';
+  type: 'assignment' | 'result' | 'system';
   title: string;
   body: string;
   time: string;
   read: boolean;
-}
-
-export interface ProgressPoint {
-  date: string;
-  score: number;
-  examTitle: string;
+  routeIntent?:
+    | { route: 'StudentClassDetail'; classId: string; assignmentId?: string; mode?: 'submit' | 'readonly' }
+    | { route: 'TeacherClassDetail'; classId: string; assignmentId?: string }
+    | { route: 'TeacherOmrBatchDetail'; batchId: string }
+    | { route: 'SharedNotifications' };
 }
 
 export interface UserSummary {

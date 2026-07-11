@@ -4,22 +4,18 @@ export type TeacherTabParamList = {
   TeacherDashboard: undefined;
   TeacherClasses: undefined;
   TeacherOMR: undefined;
-  TeacherAssignments: undefined;
   SharedProfile: undefined;
 };
 
 export type StudentTabParamList = {
   StudentDashboard: undefined;
   StudentClasses: undefined;
-  StudentAssignments: undefined;
-  StudentResults: undefined;
   SharedProfile: undefined;
 };
 
 export type AdminTabParamList = {
   AdminDashboard: undefined;
   AdminUsers: undefined;
-  TeacherClasses: undefined;
   SharedProfile: undefined;
 };
 
@@ -33,28 +29,16 @@ export type RootStackParamList = {
   TeacherClassDetail: { classId?: string } | undefined;
   TeacherOmrExams: undefined;
   TeacherOmrBatchDetail: { batchId: string };
-  TeacherClassExams: undefined;
   TeacherOMR: undefined;
-  TeacherAssignments: undefined;
-  TeacherRemarks: undefined;
-  TeacherQuestions: undefined;
   TeacherOmrExamBuilder: { examId: string };
-  TeacherClassExamBuilder: { examId: string };
   StudentDashboard: undefined;
   StudentClasses: undefined;
-  StudentClassDetail: { classId?: string } | undefined;
-  StudentResults: undefined;
-  StudentResultDetail: { resultId?: string } | undefined;
-  StudentAssignments: undefined;
-  StudentRemarks:
-    | {
-        resultId?: string;
-        questionNumber?: number;
-      }
-    | undefined;
-  StudentProgress: undefined;
+  StudentClassDetail: { classId?: string; assignmentId?: string; mode?: 'submit' | 'readonly' } | undefined;
   AdminDashboard: undefined;
   AdminUsers: undefined;
   SharedProfile: undefined;
   SharedNotifications: undefined;
+  TeacherStatistics: undefined;
+  StudentStatistics: undefined;
+  AdminStatistics: undefined;
 };

@@ -6,7 +6,6 @@ import {
   Patch,
   Param,
   Post,
-  Request,
   UseGuards,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
@@ -20,8 +19,6 @@ import {
   RemoveExamQuestionAnswerDto,
   UpsertExamQuestionAnswerDto,
 } from '../dto/request/upsert-exam-question-answer.dto';
-import { CreateClassExamDto } from '../dto/request/create-class-exam.dto';
-import { UpsertClassExamQuestionDto } from '../dto/request/upsert-class-exam-question.dto';
 import { UpdateExamDto } from '../dto/request/update-exam.dto';
 import { ExamsService } from '../services/exams.service';
 
@@ -56,58 +53,6 @@ export class ExamsController {
     return this.examsService.listTeacherOmrExams(teacherId);
   }
 
-  @Post('class')
-  @Roles(Role.TEACHER)
-  async createClassExam(
-    @CurrentUser('id') teacherId: string,
-    @Body() createExamDto: CreateClassExamDto,
-  ) {
-    return this.examsService.createClassExam(teacherId, createExamDto);
-  }
-
-  @Get('class/my')
-  @Roles(Role.TEACHER, Role.STUDENT)
-  async listMyClassExams(@Request() req: { user: { id: string; role: Role } }) {
-    return this.examsService.listClassExams(req.user.id, req.user.role);
-  }
-
-  @Post('class/:id/questions')
-  @Roles(Role.TEACHER)
-  async upsertClassExamQuestion(
-    @Param('id') examId: string,
-    @CurrentUser('id') teacherId: string,
-    @Body() payload: UpsertClassExamQuestionDto,
-  ) {
-    return this.examsService.upsertClassExamQuestion(
-      examId,
-      teacherId,
-      payload,
-    );
-  }
-
-  @Delete('class/:id/questions')
-  @Roles(Role.TEACHER)
-  async removeClassExamQuestion(
-    @Param('id') examId: string,
-    @CurrentUser('id') teacherId: string,
-    @Body() payload: { questionId: string },
-  ) {
-    return this.examsService.removeClassExamQuestion(
-      examId,
-      teacherId,
-      payload.questionId,
-    );
-  }
-
-  @Post('class/:id/publish')
-  @Roles(Role.TEACHER)
-  async publishClassExam(
-    @Param('id') examId: string,
-    @CurrentUser('id') teacherId: string,
-  ) {
-    return this.examsService.publishClassExam(examId, teacherId);
-  }
-
   @Get('my')
   @Roles(Role.TEACHER)
   @ExamsSwagger.LayDanhSachDeThiCuaToi()
@@ -136,7 +81,7 @@ export class ExamsController {
     return this.examsService.updateExam(examId, teacherId, updateExamDto);
   }
 
-  @Post(':id/questions')
+  @Post(':id/answer-keys')
   @Roles(Role.TEACHER)
   async upsertExamQuestionAnswer(
     @Param('id') examId: string,
@@ -150,7 +95,7 @@ export class ExamsController {
     );
   }
 
-  @Delete(':id/questions')
+  @Delete(':id/answer-keys')
   @Roles(Role.TEACHER)
   async removeExamQuestionAnswer(
     @Param('id') examId: string,

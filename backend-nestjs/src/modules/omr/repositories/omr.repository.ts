@@ -311,7 +311,10 @@ export class OmrRepository {
     return this.prismaService.submission.count({ where: { batchId } });
   }
 
-  async countBatchSubmissionsByStudentMatched(batchId: string, matched: boolean) {
+  async countBatchSubmissionsByStudentMatched(
+    batchId: string,
+    matched: boolean,
+  ) {
     return this.prismaService.submission.count({
       where: {
         batchId,

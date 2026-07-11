@@ -1,5 +1,6 @@
+/* eslint-disable react/no-unstable-nested-components, no-void, react-native/no-inline-styles */
 import React, { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import {
   BookOpen,
   Clock,
@@ -12,10 +13,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   getClassDetail,
   listAssignments,
-  listClassExams,
   mapClassDetail,
   mapStudentAssignmentSummary,
-  submitClassExam,
 } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
 import { FilterChips } from '../../components/FilterChips';
@@ -38,7 +37,7 @@ import type { RootStackParamList } from '../../navigation/types';
 import { useAssignmentSubmission } from '../../features/assignments/application/useAssignmentSubmission';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-type TabKey = 'assignments' | 'exams' | 'info';
+type TabKey = 'assignments' | 'info';
 
 export function StudentClassDetailScreen() {
   const navigation = useNavigation<Nav>();
@@ -47,27 +46,29 @@ export function StudentClassDetailScreen() {
   const { accessToken } = useAuth();
   const layout = useResponsiveLayout();
   const classId = route.params?.classId;
+  const assignmentIdParam = route.params?.assignmentId;
+  const modeParam = route.params?.mode;
+  
   const [tab, setTab] = useState<TabKey>('assignments');
   const [showSubmit, setShowSubmit] = useState<string | null>(null);
+
   const { data, loading, error, reload } = useAsyncResource(
     async () => {
       if (!accessToken || !classId) {
         return null;
       }
 
-      const [classItem, assignments, exams] = await Promise.all([
+      const [classItem, assignments] = await Promise.all([
         getClassDetail(accessToken, classId),
         listAssignments(accessToken),
-        listClassExams(accessToken),
       ]);
 
       const classMap = new Map([[classItem.id, classItem]]);
       return {
         currentClass: mapClassDetail(classItem),
         assignments: assignments
-          .filter((item) => item.classes.some((entry) => entry.classId === classItem.id))
+          .filter((item) => item.classId === classItem.id)
           .map((item) => mapStudentAssignmentSummary(item, classMap)),
-        exams: exams.filter((item) => item.classes.some((entry) => entry.id === classItem.id)),
       };
     },
     [accessToken, classId],
@@ -77,7 +78,6 @@ export function StudentClassDetailScreen() {
     () => data?.assignments ?? [],
     [data?.assignments],
   );
-  const classExams = useMemo(() => data?.exams ?? [], [data?.exams]);
   const {
     selectedFile,
     submitting,
@@ -92,6 +92,20 @@ export function StudentClassDetailScreen() {
   const handleRefresh = () => {
     reload().catch(() => undefined);
   };
+
+  React.useEffect(() => {
+    if (data?.assignments && modeParam === 'submit' && assignmentIdParam) {
+      const assignment = data.assignments.find((a) => a.id === assignmentIdParam);
+      if (assignment) {
+        const expired = isExpired(assignment.deadline);
+        if (!assignment.submitted && (!expired || assignment.allowLate)) {
+          setShowSubmit(assignmentIdParam);
+        } else {
+          setShowSubmit(null);
+        }
+      }
+    }
+  }, [data, modeParam, assignmentIdParam]);
 
   if (!data && loading) {
     return (
@@ -155,7 +169,6 @@ export function StudentClassDetailScreen() {
           value={tab}
           items={[
             { id: 'assignments', label: `${content.common.tabs.assignments} (${String(classAssignments.length)})` },
-            { id: 'exams', label: `Đề thi (${String(classExams.length)})` },
             { id: 'info', label: content.student.classes.classInfoTitle },
           ]}
           onChange={setTab}
@@ -218,25 +231,6 @@ export function StudentClassDetailScreen() {
           </View>
         ) : null}
 
-        {tab === 'exams' ? (
-          <View style={styles.section}>
-            {classExams.map((item) => (
-              <SurfaceCard key={item.id} style={styles.assignmentCard}>
-                <AppText variant="body" weight="medium">{item.title}</AppText>
-                <AppText variant="caption" color={palette.mutedForeground}>{`Trạng thái: ${item.status}`}</AppText>
-                <PrimaryButton
-                  label="Nộp bài"
-                  onPress={async () => {
-                    if (!accessToken) return;
-                    await submitClassExam(accessToken, item.id, { answers: [] });
-                    await reload();
-                  }}
-                />
-              </SurfaceCard>
-            ))}
-          </View>
-        ) : null}
-
         {tab === 'info' ? (
           <View style={styles.section}>
             {[
@@ -276,8 +270,25 @@ export function StudentClassDetailScreen() {
           placeholder="Chưa có tệp nào được chọn"
           trailing={<Link size={16} color={palette.mutedForeground} />}
         />
+        {selectedFile ? (
+          <SurfaceCard style={styles.selectedFileCard}>
+            <View style={styles.flex}>
+              <AppText variant="body" weight="medium">
+                {selectedFile.name}
+              </AppText>
+              <AppText variant="caption" color={palette.mutedForeground}>
+                {`${selectedFile.type || 'application/octet-stream'} • ${selectedFile.size ? `${String(Math.max(1, Math.round(selectedFile.size / 1024)))} KB` : 'Không rõ dung lượng'}`}
+              </AppText>
+            </View>
+            <Pressable onPress={clearSelectedFile}>
+              <AppText variant="label" weight="semibold" color={palette.destructive}>
+                Xoá tệp
+              </AppText>
+            </Pressable>
+          </SurfaceCard>
+        ) : null}
         <AppText variant="caption" color={palette.mutedForeground} style={styles.sheetHint}>
-          {content.common.messages.assignmentUploadHint}
+          PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, JPG/PNG hoặc ZIP • tối đa 25MB
         </AppText>
         <PrimaryButton
           label="Chọn tệp"
@@ -298,14 +309,6 @@ export function StudentClassDetailScreen() {
             if (submitted) {
               setShowSubmit(null);
             }
-          }}
-        />
-        <PrimaryButton
-          label={content.common.buttons.cancel}
-          variant="soft"
-          onPress={() => {
-            clearSelectedFile();
-            setShowSubmit(null);
           }}
         />
         {submitError ? (
@@ -372,5 +375,10 @@ const styles = StyleSheet.create({
   },
   sheetHint: {
     marginVertical: appTheme.spacing.md,
+  },
+  selectedFileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: appTheme.spacing.md,
   },
 });

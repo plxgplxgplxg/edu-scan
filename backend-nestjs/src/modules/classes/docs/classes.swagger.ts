@@ -95,6 +95,22 @@ export const ClassesSwagger = {
       ApiStandardErrorResponses(400, 401, 403, 404, 500),
     );
   },
+  XoaLopHoc() {
+    return applyDecorators(
+      ApiBearerOperation({
+        summary: 'Xóa lớp học',
+        roles: [Role.TEACHER],
+        notes:
+          'Chỉ giáo viên phụ trách được xóa lớp. Service xóa có chủ ý bài tập, bài nộp, ghi danh và liên kết đề kiểm tra trắc nghiệm trong transaction trước khi xóa lớp.',
+      }),
+      ApiParam({ name: 'id', description: 'ID lớp học', format: 'uuid' }),
+      ApiWrappedOkResponse({
+        type: ClassResponseDto,
+        description: 'Xóa lớp học thành công.',
+      }),
+      ApiStandardErrorResponses(401, 403, 404, 500),
+    );
+  },
   ThemHocSinh() {
     return applyDecorators(
       ApiBearerOperation({

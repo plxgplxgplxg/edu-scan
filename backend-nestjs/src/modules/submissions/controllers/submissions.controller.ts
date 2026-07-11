@@ -14,7 +14,6 @@ import { JwtAuthGuard } from '../../../common/guards/auth/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/auth/roles.guard';
 import { SubmissionsSwagger } from '../docs/submissions.swagger';
 import { GetSubmissionsQueryDto } from '../dtos/get-submissions-query.dto';
-import { QueryMySubmissionsDto } from '../dtos/query-my-submissions.dto';
 import { UpdateSubmissionOverrideDto } from '../dtos/update-override.dto';
 import { UpdateSubmissionAnswersDto } from '../dtos/update-submission-answers.dto';
 import { SubmissionsService } from '../services/submissions.service';
@@ -33,23 +32,6 @@ export class SubmissionsController {
   @SubmissionsSwagger.LayDanhSachBaiLam()
   findAll(@Query() query: GetSubmissionsQueryDto) {
     return this.submissionsService.findAll(query);
-  }
-
-  @Get('me')
-  @Roles(Role.STUDENT)
-  @SubmissionsSwagger.LayDanhSachBaiLamCuaToi()
-  findMySubmissions(
-    @Request() req: AuthenticatedRequest,
-    @Query() query: QueryMySubmissionsDto,
-  ) {
-    return this.submissionsService.findMySubmissions(req.user, query);
-  }
-
-  @Get('me/progress')
-  @Roles(Role.STUDENT)
-  @SubmissionsSwagger.LayTienDoCuaToi()
-  getMyProgress(@Request() req: AuthenticatedRequest) {
-    return this.submissionsService.getMyProgress(req.user);
   }
 
   @Get(':id')

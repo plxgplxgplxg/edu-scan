@@ -12,7 +12,6 @@ import {
 } from 'class-validator';
 import { CreateAnswerKeyDto } from './create-answer-key.dto';
 import { CreateExamVariantDto } from './create-exam-variant.dto';
-import { MapExamQuestionDto } from './map-exam-question.dto';
 
 export class UpdateExamDto {
   @IsString()
@@ -24,6 +23,11 @@ export class UpdateExamDto {
   @Min(0.01)
   @IsOptional()
   maxScore?: number;
+
+  @IsNumber()
+  @Min(1)
+  @IsOptional()
+  questionCount?: number;
 
   @IsArray()
   @IsUUID('4', { each: true })
@@ -43,10 +47,4 @@ export class UpdateExamDto {
   @Type(() => CreateExamVariantDto)
   @IsOptional()
   variants?: CreateExamVariantDto[];
-
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => MapExamQuestionDto)
-  @IsOptional()
-  questionMap?: MapExamQuestionDto[];
 }

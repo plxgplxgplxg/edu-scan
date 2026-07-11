@@ -2,33 +2,35 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { Prisma, GradeStatus, SubmitStatus } from '@prisma/client';
 
+export type CreateAssignmentRecord = {
+  title: string;
+  description?: string;
+  deadline: Date;
+  allowLate: boolean;
+  latePenaltyPct: number;
+  maxScore: number;
+  teacherId: string;
+  classId: string;
+};
+
 @Injectable()
 export class AssignmentsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(
-    data: Omit<Prisma.AssignmentCreateInput, 'classes'> & {
-      teacherId: string;
-    },
-    classIds: string[],
-  ) {
+  async create(data: CreateAssignmentRecord) {
     return this.prisma.assignment.create({
       data: {
-        title: (data as any).title,
-        description: (data as any).description,
-        deadline: (data as any).deadline,
-        allowLate: (data as any).allowLate ?? false,
-        latePenaltyPct: (data as any).latePenaltyPct ?? 0,
-        maxScore: (data as any).maxScore ?? 10,
-        teacher: { connect: { id: (data as any).teacherId } },
-        classes: {
-          create: classIds.map((classId) => ({
-            class: { connect: { id: classId } },
-          })),
-        },
+        title: data.title,
+        description: data.description,
+        deadline: data.deadline,
+        allowLate: data.allowLate,
+        latePenaltyPct: data.latePenaltyPct,
+        maxScore: data.maxScore,
+        teacher: { connect: { id: data.teacherId } },
+        class: { connect: { id: data.classId } },
       },
       include: {
-        classes: { select: { classId: true } },
+        class: { select: { id: true, name: true } },
       },
     });
   }
@@ -37,7 +39,7 @@ export class AssignmentsRepository {
     return this.prisma.assignment.findMany({
       where: { teacherId },
       include: {
-        classes: { select: { classId: true } },
+        class: { select: { id: true, name: true } },
         _count: { select: { submits: true } },
       },
       orderBy: { createdAt: 'desc' },
@@ -47,16 +49,14 @@ export class AssignmentsRepository {
   async findAllByStudent(studentId: string) {
     return this.prisma.assignment.findMany({
       where: {
-        classes: {
-          some: {
-            class: {
-              enrollments: { some: { studentId } },
-            },
+        class: {
+          enrollments: {
+            some: { studentId },
           },
         },
       },
       include: {
-        classes: { select: { classId: true } },
+        class: { select: { id: true, name: true } },
         submits: {
           where: { studentId },
           select: {
@@ -75,7 +75,7 @@ export class AssignmentsRepository {
     return this.prisma.assignment.findUnique({
       where: { id },
       include: {
-        classes: { select: { classId: true } },
+        class: { select: { id: true, name: true } },
       },
     });
   }

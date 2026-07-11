@@ -4,7 +4,6 @@ import {
   IsInt,
   IsOptional,
   IsString,
-  IsUUID,
   MaxLength,
   Min,
 } from 'class-validator';
@@ -16,10 +15,6 @@ export class UpsertExamQuestionAnswerDto {
 
   @IsEnum(AnswerChoice)
   correctAnswer!: AnswerChoice;
-
-  @IsUUID('4')
-  @IsOptional()
-  questionId?: string;
 
   @IsString()
   @MaxLength(20)
