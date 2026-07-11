@@ -66,8 +66,8 @@ export function TeacherExamBuilderScreen() {
 
   const { data, loading, error, reload } = useAsyncResource(async () => {
     if (!accessToken || !examId) return null;
-    const exams = await listOmrExams(accessToken);
-    return exams.find((item) => item.id === examId) ?? null;
+    const examsData = await listOmrExams(accessToken);
+    return examsData.items.find((item) => item.id === examId) ?? null;
   }, [accessToken, examId, selectedTestCode]);
 
   // Sync with remote
@@ -279,7 +279,7 @@ export function TeacherExamBuilderScreen() {
               />
 
               <PrimaryButton
-                label="Tiếp tục cấu hình đáp án"
+                label="Tiếp tục"
                 onPress={() => setStep(3)}
                 icon={<ChevronRight size={20} color={palette.white} />}
                 style={{ marginTop: appTheme.spacing.lg }}
@@ -409,7 +409,6 @@ export function TeacherExamBuilderScreen() {
                       await updateExam(accessToken, examId, { 
                         title, 
                         maxScore: Number(maxScore) || 10,
-                        questionCount: Number(questionCount) || 10,
                         variants: localVariants 
                       });
                       await publishExam(accessToken, examId);

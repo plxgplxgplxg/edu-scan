@@ -19,6 +19,7 @@ import {
   SubmissionListItemResponseDto,
 } from '../dtos/response/submission-response.dto';
 import { UpdateSubmissionOverrideDto } from '../dtos/update-override.dto';
+import { UpdateSubmissionDetailDto } from '../dtos/update-submission-detail.dto';
 
 export const SubmissionsSwagger = {
   Controller() {
@@ -166,6 +167,21 @@ export const SubmissionsSwagger = {
       ApiWrappedOkResponse({
         type: SubmissionDetailResponseDto,
         description: 'Override bài làm thành công.',
+      }),
+      ApiStandardErrorResponses(400, 401, 403, 404, 500),
+    );
+  },
+  CapNhatChiTietBaiLam() {
+    return applyDecorators(
+      ApiBearerOperation({
+        summary: 'Cập nhật đáp án chi tiết của bài làm',
+        roles: [Role.ADMIN, Role.TEACHER],
+      }),
+      ApiParam({ name: 'id', description: 'ID bài làm', format: 'uuid' }),
+      ApiParam({ name: 'questionNumber', description: 'Số thứ tự câu hỏi' }),
+      ApiBody({ type: UpdateSubmissionDetailDto }),
+      ApiWrappedOkResponse({
+        description: 'Cập nhật chi tiết bài làm thành công.',
       }),
       ApiStandardErrorResponses(400, 401, 403, 404, 500),
     );

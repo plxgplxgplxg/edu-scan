@@ -73,6 +73,20 @@ export class ExamResponseDto {
   variants!: ExamVariantResponseDto[];
 }
 
+export class PaginatedExamResponseDto {
+  @ApiProperty({ type: [ExamResponseDto] })
+  data!: ExamResponseDto[];
+
+  @ApiProperty()
+  total!: number;
+
+  @ApiProperty()
+  page!: number;
+
+  @ApiProperty()
+  limit!: number;
+}
+
 export class DeleteExamResponseDto {
   @ApiProperty({ format: 'uuid' })
   id!: string;

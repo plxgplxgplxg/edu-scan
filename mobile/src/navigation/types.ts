@@ -28,7 +28,7 @@ export type RootStackParamList = {
   TeacherClasses: undefined;
   TeacherClassDetail: { classId?: string } | undefined;
   TeacherOmrExams: undefined;
-  TeacherOmrBatchDetail: { batchId: string };
+  TeacherOmrExamDetail: { examId: string };
   TeacherOMR: undefined;
   TeacherOmrExamBuilder: { examId: string };
   StudentDashboard: undefined;

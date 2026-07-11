@@ -5,29 +5,30 @@ import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Users, BookOpen, AlertCircle, Clock } from 'lucide-react-native';
 
-import { api } from '../../api/client';
-import { palette, spacing, typography, borderRadius } from '../../theme/tokens';
-import { PageHeader } from '../../components/shared/PageHeader';
-import { SurfaceCard } from '../../components/shared/SurfaceCard';
-import { EmptyState } from '../../components/shared/EmptyState';
+import { requestJson } from '../../api/http';
+import { useAuth } from '../../store/auth-store';
+import { palette, spacing, typography, radius } from '../../theme/tokens';
+import { PageHeader } from '../../components/PageHeader';
+import { SurfaceCard } from '../../components/SurfaceCard';
+import { EmptyState } from '../../components/EmptyState';
 
 export function TeacherStatisticsScreen() {
   const navigation = useNavigation();
   const [filter, setFilter] = useState<'month' | 'week' | 'all'>('month');
+  const { session } = useAuth();
+  const token = session?.accessToken || '';
 
   const { data: stats, isLoading: isLoadingStats } = useQuery({
     queryKey: ['teacherStats'],
     queryFn: async () => {
-      const res = await api.get('/stats/teacher');
-      return res.data;
+      return await requestJson<any>('/stats/teacher', { token });
     },
   });
 
   const { data: lateMissing, isLoading: isLoadingLate } = useQuery({
     queryKey: ['teacherLateMissing', filter],
     queryFn: async () => {
-      const res = await api.get(`/stats/teacher/late-missing?timeRange=${filter}`);
-      return res.data;
+      return await requestJson<any>(`/stats/teacher/late-missing?timeRange=${filter}`, { token });
     },
   });
 
@@ -173,7 +174,7 @@ const styles = StyleSheet.create({
   filterChip: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
+    borderRadius: 999,
     backgroundColor: palette.card,
     borderWidth: 1,
     borderColor: palette.border,

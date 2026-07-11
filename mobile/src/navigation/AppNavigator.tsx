@@ -1,8 +1,11 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createBottomTabNavigator, type BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { BookOpen, Home, ScanLine, User } from 'lucide-react-native';
+
+import { BottomNav } from '../components/BottomNav';
+import type { ModuleKey, UserRole } from '../types/app';
 
 import { useAuth } from '../store/auth-store';
 import type {
@@ -14,11 +17,10 @@ import type {
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { TeacherDashboardScreen } from '../screens/teacher/TeacherDashboardScreen';
 import { TeacherClassesScreen } from '../screens/teacher/TeacherClassesScreen';
-import { TeacherClassDetailScreen } from '../screens/teacher/TeacherClassDetailScreen';
 import { TeacherOmrExamsScreen } from '../screens/teacher/TeacherOmrExamsScreen';
 import { TeacherOmrScreen } from '../screens/teacher/TeacherOmrScreen';
+import { TeacherOmrExamDetailScreen } from '../screens/teacher/TeacherOmrExamDetailScreen';
 import { TeacherExamBuilderScreen } from '../screens/teacher/TeacherExamBuilderScreen';
-import { TeacherOmrBatchDetailScreen } from '../screens/teacher/TeacherOmrBatchDetailScreen';
 import { StudentDashboardScreen } from '../screens/student/StudentDashboardScreen';
 import { StudentClassesScreen } from '../screens/student/StudentClassesScreen';
 import { StudentClassDetailScreen } from '../screens/student/StudentClassDetailScreen';
@@ -36,22 +38,32 @@ const TeacherTab = createBottomTabNavigator<TeacherTabParamList>();
 const StudentTab = createBottomTabNavigator<StudentTabParamList>();
 const AdminTab = createBottomTabNavigator<AdminTabParamList>();
 
-const tabBarStyle = {
-  height: 72,
-  paddingTop: 8,
-  paddingBottom: 8,
-} as const;
-
 const screenOptions = {
   headerShown: false,
-  tabBarActiveTintColor: palette.primary,
-  tabBarInactiveTintColor: palette.mutedForeground,
-  tabBarStyle,
 };
+
+function CustomTabBar(props: BottomTabBarProps & { role: UserRole }) {
+  const currentScreen = props.state.routes[props.state.index].name as keyof RootStackParamList;
+  let currentModule: ModuleKey = 'home';
+  if (currentScreen.includes('Classes')) currentModule = 'classes';
+  if (currentScreen.includes('OMR')) currentModule = 'omr';
+  if (currentScreen.includes('Users')) currentModule = 'users';
+
+  return (
+    <BottomNav
+      role={props.role}
+      currentModule={currentModule}
+      currentScreen={currentScreen}
+    />
+  );
+}
 
 function TeacherTabsNavigator() {
   return (
-    <TeacherTab.Navigator screenOptions={screenOptions}>
+    <TeacherTab.Navigator 
+      screenOptions={screenOptions}
+      tabBar={props => <CustomTabBar {...props} role="TEACHER" />}
+    >
       <TeacherTab.Screen
         name="TeacherDashboard"
         component={TeacherDashboardScreen}
@@ -92,7 +104,10 @@ function TeacherTabsNavigator() {
 
 function StudentTabsNavigator() {
   return (
-    <StudentTab.Navigator screenOptions={screenOptions}>
+    <StudentTab.Navigator 
+      screenOptions={screenOptions}
+      tabBar={props => <CustomTabBar {...props} role="STUDENT" />}
+    >
       <StudentTab.Screen
         name="StudentDashboard"
         component={StudentDashboardScreen}
@@ -123,7 +138,10 @@ function StudentTabsNavigator() {
 
 function AdminTabsNavigator() {
   return (
-    <AdminTab.Navigator screenOptions={screenOptions}>
+    <AdminTab.Navigator 
+      screenOptions={screenOptions}
+      tabBar={props => <CustomTabBar {...props} role="ADMIN" />}
+    >
       <AdminTab.Screen
         name="AdminDashboard"
         component={AdminDashboardScreen}
@@ -175,8 +193,8 @@ export function AppNavigator() {
             />
             <Stack.Screen name="TeacherOmrExams" component={TeacherOmrExamsScreen} />
             <Stack.Screen
-              name="TeacherOmrBatchDetail"
-              component={TeacherOmrBatchDetailScreen}
+              name="TeacherOmrExamDetail"
+              component={TeacherOmrExamDetailScreen}
             />
             <Stack.Screen
               name="TeacherOmrExamBuilder"

@@ -291,4 +291,17 @@ export class AssignmentsService {
 
     return dto.fileUrl.trim();
   }
+
+  async deleteAssignment(assignmentId: string, teacherId: string) {
+    const assignment = await this.assignmentsRepository.findById(assignmentId);
+    if (!assignment) {
+      throw new NotFoundException('Assignment not found.');
+    }
+    if (assignment.teacherId !== teacherId) {
+      throw new ForbiddenException(
+        'You do not have permission to delete this assignment.',
+      );
+    }
+    return this.assignmentsRepository.delete(assignmentId);
+  }
 }

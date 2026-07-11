@@ -16,6 +16,7 @@ import { SubmissionsSwagger } from '../docs/submissions.swagger';
 import { GetSubmissionsQueryDto } from '../dtos/get-submissions-query.dto';
 import { UpdateSubmissionOverrideDto } from '../dtos/update-override.dto';
 import { UpdateSubmissionAnswersDto } from '../dtos/update-submission-answers.dto';
+import { UpdateSubmissionDetailDto } from '../dtos/update-submission-detail.dto';
 import { SubmissionsService } from '../services/submissions.service';
 
 type RequestUser = { id: string; role: string };
@@ -58,5 +59,23 @@ export class SubmissionsController {
     @Body() dto: UpdateSubmissionAnswersDto,
   ) {
     return this.submissionsService.updateSubmissionAnswers(id, dto);
+  }
+
+  @Patch(':id/details/:questionNumber')
+  @Roles(Role.ADMIN, Role.TEACHER)
+  @SubmissionsSwagger.CapNhatChiTietBaiLam()
+  updateSubmissionDetail(
+    @Param('id') id: string,
+    @Param('questionNumber') questionNumber: string,
+    @Body() dto: UpdateSubmissionDetailDto,
+  ) {
+    return this.submissionsService.updateSubmissionAnswers(id, {
+      answers: [
+        {
+          questionNumber: parseInt(questionNumber, 10),
+          finalAnswer: dto.finalAnswer,
+        },
+      ],
+    });
   }
 }

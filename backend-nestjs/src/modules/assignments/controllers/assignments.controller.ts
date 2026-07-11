@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Delete,
   Req,
   UploadedFile,
   UseGuards,
@@ -91,5 +92,11 @@ export class AssignmentsController {
     @Req() req: AssignmentRequest,
   ) {
     return this.assignmentsService.gradeSubmit(id, submitId, req.user.id, dto);
+  }
+
+  @Delete(':id')
+  @Roles(Role.TEACHER)
+  delete(@Param('id') id: string, @Req() req: AssignmentRequest) {
+    return this.assignmentsService.deleteAssignment(id, req.user.id);
   }
 }

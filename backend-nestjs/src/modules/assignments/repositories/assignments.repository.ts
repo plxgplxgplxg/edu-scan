@@ -121,4 +121,10 @@ export class AssignmentsRepository {
       data,
     });
   }
+
+  async delete(id: string) {
+    return this.prisma.assignment.delete({
+      where: { id },
+    });
+  }
 }

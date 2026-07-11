@@ -14,7 +14,9 @@ import { UpdateExamDto } from '../dto/request/update-exam.dto';
 import {
   DeleteExamResponseDto,
   ExamResponseDto,
+  PaginatedExamResponseDto,
 } from '../dto/response/exam-response.dto';
+import { ApiQuery } from '@nestjs/swagger';
 
 export const ExamsSwagger = {
   Controller() {
@@ -42,9 +44,11 @@ export const ExamsSwagger = {
         summary: 'Lấy danh sách đề thi của giáo viên',
         roles: [Role.TEACHER],
       }),
+      ApiQuery({ name: 'page', required: false, type: Number }),
+      ApiQuery({ name: 'limit', required: false, type: Number }),
+      ApiQuery({ name: 'keyword', required: false, type: String }),
       ApiWrappedOkResponse({
-        type: ExamResponseDto,
-        isArray: true,
+        type: PaginatedExamResponseDto,
         description: 'Lấy danh sách đề thi thành công.',
       }),
       ApiStandardErrorResponses(401, 403, 500),
@@ -97,6 +101,24 @@ export const ExamsSwagger = {
         description: 'Xóa đề thi thành công.',
       }),
       ApiStandardErrorResponses(400, 401, 403, 404, 500),
+    );
+  },
+  LayDanhSachBaiLamCuaDeThi() {
+    return applyDecorators(
+      ApiBearerOperation({
+        summary: 'Lấy danh sách bài làm của đề thi',
+        roles: [Role.TEACHER],
+      }),
+      ApiParam({ name: 'id', description: 'ID đề thi', format: 'uuid' }),
+      ApiQuery({ name: 'page', required: false, type: Number }),
+      ApiQuery({ name: 'limit', required: false, type: Number }),
+      ApiQuery({ name: 'keyword', required: false, type: String }),
+      ApiQuery({ name: 'sortScore', required: false, enum: ['asc', 'desc'] }),
+      ApiQuery({ name: 'variantCode', required: false, type: String }),
+      ApiWrappedOkResponse({
+        description: 'Lấy danh sách bài làm thành công.',
+      }),
+      ApiStandardErrorResponses(401, 403, 404, 500),
     );
   },
 };

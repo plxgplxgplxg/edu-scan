@@ -5,20 +5,22 @@ import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BookOpen, CheckCircle, AlertCircle, Clock } from 'lucide-react-native';
 
-import { api } from '../../api/client';
+import { requestJson } from '../../api/http';
+import { useAuth } from '../../store/auth-store';
 import { palette, spacing, typography } from '../../theme/tokens';
-import { PageHeader } from '../../components/shared/PageHeader';
-import { SurfaceCard } from '../../components/shared/SurfaceCard';
-import { EmptyState } from '../../components/shared/EmptyState';
+import { PageHeader } from '../../components/PageHeader';
+import { SurfaceCard } from '../../components/SurfaceCard';
+import { EmptyState } from '../../components/EmptyState';
 
 export function StudentStatisticsScreen() {
   const navigation = useNavigation();
+  const { session } = useAuth();
+  const token = session?.accessToken || '';
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['studentStats'],
     queryFn: async () => {
-      const res = await api.get('/stats/student');
-      return res.data;
+      return await requestJson<any>('/stats/student', { token });
     },
   });
 

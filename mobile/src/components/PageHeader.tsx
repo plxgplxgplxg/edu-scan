@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View, Animated, Platform } from 'react-native';
 import { ArrowLeft, Bell } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -33,6 +33,7 @@ interface PageHeaderProps {
   actionBadge?: string | number;
   footer?: React.ReactNode;
   leadingVisual?: React.ReactNode;
+  scrollY?: Animated.Value;
 }
 
 export function PageHeader({
@@ -50,6 +51,7 @@ export function PageHeader({
   footer,
   leadingVisual,
   gradient,
+  scrollY,
 }: PageHeaderProps) {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
@@ -58,21 +60,71 @@ export function PageHeader({
   const extraTopInset = layout.isCompact ? 32 : 40 - 8;
 
   const headerGradient = gradient || [appTheme.palette.primary, '#8B5CF6', appTheme.palette.tertiary];
+  
+  const animatedScrollY = scrollY || new Animated.Value(0);
+  const minHeight = insets.top + 56;
+  const maxHeight = minHeight + (layout.isCompact ? 60 : 80);
+
+  const headerHeight = animatedScrollY.interpolate({
+    inputRange: [0, 60],
+    outputRange: [maxHeight, minHeight],
+    extrapolate: 'clamp',
+  });
+
+  const contentOpacity = animatedScrollY.interpolate({
+    inputRange: [0, 40],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
+  const headerOpacity = animatedScrollY.interpolate({
+    inputRange: [0, 60],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
+  const glassOpacity = animatedScrollY.interpolate({
+    inputRange: [0, 60],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
+  const titleScale = animatedScrollY.interpolate({
+    inputRange: [0, 60],
+    outputRange: [1, 0.85],
+    extrapolate: 'clamp',
+  });
+
+  const titleTranslateY = animatedScrollY.interpolate({
+    inputRange: [0, 60],
+    outputRange: [0, -10],
+    extrapolate: 'clamp',
+  });
 
   return (
-    <GradientBackground
-      colors={headerGradient}
-      style={[
-        styles.gradient,
-        {
-          paddingTop: insets.top + layout.sectionGap + extraTopInset,
+    <Animated.View style={[styles.container, { height: metrics?.length || footer ? undefined : headerHeight }]}>
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: headerOpacity }]}>
+        <GradientBackground
+          colors={headerGradient}
+          style={[
+            styles.gradient,
+            {
+              flex: 1,
+              borderBottomLeftRadius: layout.heroRadius,
+              borderBottomRightRadius: layout.heroRadius,
+            },
+          ]}
+        />
+      </Animated.View>
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: glassOpacity, backgroundColor: 'rgba(255,255,255,0.85)', borderBottomLeftRadius: layout.heroRadius, borderBottomRightRadius: layout.heroRadius }]} />
+      
+      <View
+        style={{
+          paddingTop: insets.top + (layout.isCompact ? 8 : 16),
           paddingHorizontal: layout.horizontalPadding,
-          paddingBottom: layout.isCompact ? 20 : 24,
-          borderBottomLeftRadius: layout.heroRadius, // Not squircle here because it's a full width block
-          borderBottomRightRadius: layout.heroRadius,
-        },
-      ]}
-    >
+          paddingBottom: layout.isCompact ? 12 : 16,
+        }}
+      >
       <View
         style={[
           styles.bubbleLeft,
@@ -130,11 +182,13 @@ export function PageHeader({
             {leadingVisual}
           </View>
         ) : null}
-        <View style={styles.headerCopy}>
+        <Animated.View style={[styles.headerCopy, { transform: [{ scale: titleScale }, { translateY: titleTranslateY }] }]}>
           {overline ? (
-            <AppText variant="body" weight="semibold" color="rgba(255,255,255,0.78)">
-              {overline}
-            </AppText>
+            <Animated.View style={{ opacity: contentOpacity }}>
+              <AppText variant="body" weight="semibold" color="rgba(255,255,255,0.78)">
+                {overline}
+              </AppText>
+            </Animated.View>
           ) : null}
           <AppText
             variant="title"
@@ -148,17 +202,19 @@ export function PageHeader({
             {title}
           </AppText>
           {subtitle ? (
-            <AppText
-              variant="body"
-              color="rgba(255,255,255,0.70)"
-              numberOfLines={3}
-              adjustsFontSizeToFit
-              minimumFontScale={0.82}
-            >
-              {subtitle}
-            </AppText>
+            <Animated.View style={{ opacity: contentOpacity }}>
+              <AppText
+                variant="body"
+                color="rgba(255,255,255,0.70)"
+                numberOfLines={3}
+                adjustsFontSizeToFit
+                minimumFontScale={0.82}
+              >
+                {subtitle}
+              </AppText>
+            </Animated.View>
           ) : null}
-        </View>
+        </Animated.View>
         <View style={[styles.actions, layout.isSmall ? styles.actionsWrap : null]}>
           {showNotificationButton ? (
             <Pressable
@@ -258,12 +314,16 @@ export function PageHeader({
         </View>
       ) : null}
 
-      {footer ? <View style={styles.footer}>{footer}</View> : null}
-    </GradientBackground>
+      {footer ? <Animated.View style={[styles.footer, { opacity: contentOpacity }]}>{footer}</Animated.View> : null}
+      </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    zIndex: 10,
+  },
   gradient: {
     overflow: 'hidden',
   },

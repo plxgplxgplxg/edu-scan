@@ -1,7 +1,37 @@
-import { IsOptional, IsString, IsEnum } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsOptional, IsString, IsEnum, IsInt, Min } from 'class-validator';
 import { SubmissionStatus, TestCodeResolutionStatus } from '@prisma/client';
 
+export enum SortOrder {
+  ASC = 'asc',
+  DESC = 'desc',
+}
+
 export class GetSubmissionsQueryDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  limit?: number = 10;
+
+  @IsOptional()
+  @IsString()
+  keyword?: string;
+
+  @IsOptional()
+  @IsEnum(SortOrder)
+  sortScore?: SortOrder;
+
+  @IsOptional()
+  @IsString()
+  variantCode?: string;
+
   @IsOptional()
   @IsString()
   examId?: string;

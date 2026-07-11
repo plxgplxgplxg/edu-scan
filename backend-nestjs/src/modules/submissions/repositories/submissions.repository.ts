@@ -6,22 +6,59 @@ import { Prisma } from '@prisma/client';
 export class SubmissionsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(filter: Prisma.SubmissionWhereInput) {
-    return this.prisma.submission.findMany({
-      where: filter,
-      include: {
-        student: {
-          select: { id: true, name: true, studentCode: true },
+  async findAll(query: any) {
+    const { page = 1, limit = 10, keyword, sortScore, variantCode, examId, classId, batchId, studentId, status, testCodeResolutionStatus } = query;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.SubmissionWhereInput = {
+      ...(examId && { examId }),
+      ...(classId && { classId }),
+      ...(batchId && { batchId }),
+      ...(studentId && { studentId }),
+      ...(status && { status }),
+      ...(testCodeResolutionStatus && { testCodeResolutionStatus }),
+      ...(variantCode && { resolvedTestCode: variantCode }),
+    };
+
+    if (keyword) {
+      where.OR = [
+        { student: { name: { contains: keyword, mode: 'insensitive' } } },
+        { studentCode: { contains: keyword, mode: 'insensitive' } },
+      ];
+    }
+
+    const orderBy: Prisma.SubmissionOrderByWithRelationInput[] = [];
+    if (sortScore) {
+      orderBy.push({ score: sortScore });
+    } else {
+      orderBy.push({ createdAt: 'desc' });
+    }
+
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.submission.findMany({
+        where,
+        include: {
+          student: {
+            select: { id: true, name: true, studentCode: true },
+          },
+          batch: {
+            select: { id: true, status: true },
+          },
+          exam: {
+            select: { id: true, title: true, maxScore: true },
+          },
+          resolvedVariant: {
+            select: { id: true, testCode: true },
+          },
         },
-        batch: {
-          select: { id: true, status: true },
-        },
-        exam: {
-          select: { id: true, title: true, maxScore: true },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy,
+        skip,
+        take: limit,
+      }),
+      this.prisma.submission.count({ where }),
+    ]);
+
+    return { data, total, page, limit };
   }
 
   async findOneWithDetails(id: string) {

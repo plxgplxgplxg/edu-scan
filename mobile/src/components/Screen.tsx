@@ -4,6 +4,7 @@ import {
   ScrollView,
   StyleSheet,
   View,
+  Animated,
   type ScrollViewProps,
   type StyleProp,
   type ViewStyle,
@@ -63,12 +64,20 @@ export function Screen({
     : 0;
   const { refreshControl: customRefreshControl, ...restScrollViewProps } = scrollViewProps ?? {};
 
+  const scrollY = React.useRef(new Animated.Value(0)).current;
+
+  const headerChildWithScroll = headerChild
+    ? React.cloneElement(headerChild as React.ReactElement<any>, { scrollY })
+    : null;
+
   const content = scrollable ? (
-    <ScrollView
+    <Animated.ScrollView
       bounces
       showsVerticalScrollIndicator={false}
       contentInsetAdjustmentBehavior="never"
       keyboardShouldPersistTaps="handled"
+      onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
+      scrollEventThrottle={16}
       contentContainerStyle={[
         styles.content,
         !withoutBottomInset ? { paddingBottom: bottomInset } : null,
@@ -87,7 +96,7 @@ export function Screen({
       {...restScrollViewProps}
     >
       {contentChildren}
-    </ScrollView>
+    </Animated.ScrollView>
   ) : (
     <View
       style={[
@@ -105,7 +114,7 @@ export function Screen({
       edges={omitTopInset ? ['left', 'right'] : ['top', 'left', 'right']}
       style={[styles.safeArea, style]}
     >
-      {headerChild}
+      {headerChildWithScroll}
       {content}
       {overlayChildren}
     </SafeAreaView>

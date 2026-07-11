@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
@@ -20,13 +21,19 @@ import {
   UpsertExamQuestionAnswerDto,
 } from '../dto/request/upsert-exam-question-answer.dto';
 import { UpdateExamDto } from '../dto/request/update-exam.dto';
+import { GetExamsQueryDto } from '../dto/request/get-exams-query.dto';
 import { ExamsService } from '../services/exams.service';
+import { SubmissionsService } from '../../submissions/services/submissions.service';
+import { GetSubmissionsQueryDto } from '../../submissions/dtos/get-submissions-query.dto';
 
 @ExamsSwagger.Controller()
 @Controller('exams')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ExamsController {
-  constructor(private readonly examsService: ExamsService) {}
+  constructor(
+    private readonly examsService: ExamsService,
+    private readonly submissionsService: SubmissionsService,
+  ) {}
 
   @Post()
   @Roles(Role.TEACHER)
@@ -49,15 +56,21 @@ export class ExamsController {
 
   @Get('omr/my')
   @Roles(Role.TEACHER)
-  async listMyOmrExams(@CurrentUser('id') teacherId: string) {
-    return this.examsService.listTeacherOmrExams(teacherId);
+  async listMyOmrExams(
+    @CurrentUser('id') teacherId: string,
+    @Query() query: GetExamsQueryDto,
+  ) {
+    return this.examsService.listTeacherOmrExams(teacherId, query);
   }
 
   @Get('my')
   @Roles(Role.TEACHER)
   @ExamsSwagger.LayDanhSachDeThiCuaToi()
-  async listTeacherExams(@CurrentUser('id') teacherId: string) {
-    return this.examsService.listTeacherExams(teacherId);
+  async listTeacherExams(
+    @CurrentUser('id') teacherId: string,
+    @Query() query: GetExamsQueryDto,
+  ) {
+    return this.examsService.listTeacherExams(teacherId, query);
   }
 
   @Get(':id')
@@ -126,5 +139,15 @@ export class ExamsController {
     @CurrentUser('id') teacherId: string,
   ) {
     return this.examsService.deleteExam(examId, teacherId);
+  }
+
+  @Get(':id/submissions')
+  @Roles(Role.TEACHER)
+  @ExamsSwagger.LayDanhSachBaiLamCuaDeThi()
+  async getExamSubmissions(
+    @Param('id') examId: string,
+    @Query() query: GetSubmissionsQueryDto,
+  ) {
+    return this.submissionsService.findAll({ ...query, examId });
   }
 }

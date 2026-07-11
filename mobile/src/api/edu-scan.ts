@@ -249,6 +249,15 @@ export type TeacherExamView = {
   classNames: string[];
   hasSubmissions: boolean;
   questionCount: number;
+  createdAt?: string;
+};
+
+export type PaginatedExamPageApi = {
+  items: ExamApi[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 };
 
 export type ReportExportJob = {
@@ -324,6 +333,13 @@ export async function joinClassByCode(token: string, code: string) {
   return requestJson<ClassApi>(`/classes/join/${encodeURIComponent(code)}`, {
     method: 'POST',
     token,
+  });
+}
+
+export async function deleteAssignment(token: string, assignmentId: string) {
+  return requestJson<{ id: string }>(`/assignments/${assignmentId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
   });
 }
 
@@ -407,8 +423,10 @@ export async function listExams(token: string) {
   return requestJson<ExamApi[]>('/exams/my', { token });
 }
 
-export async function listOmrExams(token: string) {
-  return requestJson<ExamApi[]>('/exams/omr/my', { token });
+export async function listOmrExams(token: string, page = 1, limit = 20, keyword?: string) {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (keyword) params.set('keyword', keyword);
+  return requestJson<PaginatedExamPageApi>(`/exams/omr/my?${params.toString()}`, { token });
 }
 
 export async function createExam(
@@ -559,6 +577,25 @@ export async function getOmrBatchSubmissions(
   );
 }
 
+export async function getExamSubmissions(
+  token: string,
+  examId: string,
+  page: number,
+  keyword?: string,
+  variantCode?: string,
+  sortScore?: 'asc' | 'desc',
+) {
+  const params = new URLSearchParams({ page: String(page), limit: '20' });
+  if (keyword) params.set('keyword', keyword);
+  if (variantCode) params.set('variantCode', variantCode);
+  if (sortScore) params.set('sortScore', sortScore);
+
+  return requestJson<OmrBatchSubmissionsPageApi>(
+    `/exams/${encodeURIComponent(examId)}/submissions?${params.toString()}`,
+    { token },
+  );
+}
+
 export async function getOmrSubmissionDetail(
   token: string,
   submissionId: string,
@@ -605,6 +642,22 @@ export async function updateSubmissionAnswers(
       method: 'PATCH',
       token,
       body: { answers },
+    },
+  );
+}
+
+export async function updateSubmissionDetail(
+  token: string,
+  submissionId: string,
+  questionNumber: number,
+  finalAnswer: 'A' | 'B' | 'C' | 'D' | null,
+) {
+  return requestJson<SubmissionDetailApi>(
+    `/submissions/${encodeURIComponent(submissionId)}/details/${questionNumber}`,
+    {
+      method: 'PATCH',
+      token,
+      body: { finalAnswer },
     },
   );
 }
@@ -789,6 +842,7 @@ export function mapExamSummary(item: ExamApi): TeacherExamView {
     hasSubmissions: false,
     status: item.status,
     questionCount: item.variants[0]?.answerKeys.length ?? 0,
+    createdAt: (item as any).createdAt,
   };
 }
 

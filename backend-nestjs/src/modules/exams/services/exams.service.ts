@@ -8,11 +8,13 @@ import { CreateExamDto } from '../dto/request/create-exam.dto';
 import {
   DeleteExamResponseDto,
   ExamResponseDto,
+  PaginatedExamResponseDto,
   toExamListResponseDto,
   toExamResponseDto,
 } from '../dto/response/exam-response.dto';
 import { UpdateExamDto } from '../dto/request/update-exam.dto';
 import { ExamsRepository } from '../repositories/exams.repository';
+import { GetExamsQueryDto } from '../dto/request/get-exams-query.dto';
 
 const DEFAULT_VARIANT_TEST_CODE = 'DEFAULT';
 const DRAFT_VARIANT_TEST_CODE = 'DEFAULT';
@@ -56,14 +58,27 @@ export class ExamsService {
     return toExamResponseDto(exam);
   }
 
-  async listTeacherOmrExams(teacherId: string): Promise<ExamResponseDto[]> {
-    const exams = await this.examsRepository.listTeacherExams(teacherId);
-    return exams.map(toExamListResponseDto);
+  async listTeacherOmrExams(
+    teacherId: string,
+    query: GetExamsQueryDto,
+  ): Promise<PaginatedExamResponseDto> {
+    return this.listTeacherExams(teacherId, query);
   }
 
-  async listTeacherExams(teacherId: string): Promise<ExamResponseDto[]> {
-    const exams = await this.examsRepository.listTeacherExams(teacherId);
-    return exams.map(toExamListResponseDto);
+  async listTeacherExams(
+    teacherId: string,
+    query: GetExamsQueryDto,
+  ): Promise<PaginatedExamResponseDto> {
+    const { data, total } = await this.examsRepository.listTeacherExams(
+      teacherId,
+      query,
+    );
+    return {
+      data: data.map(toExamListResponseDto),
+      total,
+      page: query.page || 1,
+      limit: query.limit || 10,
+    };
   }
 
   async getTeacherExamById(

@@ -1,6 +1,6 @@
 /* eslint-disable react/no-unstable-nested-components, no-void, react-native/no-inline-styles */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, View, Switch } from 'react-native';
 import {
   BookOpen,
   CheckCircle,
@@ -18,6 +18,7 @@ import {
   addStudentToClass,
   createClassReportExportJob,
   createAssignment,
+  deleteAssignment,
   deleteClass,
   downloadClassReportExportFile,
   getAssignmentSubmits,
@@ -90,6 +91,7 @@ export function TeacherClassDetailScreen() {
     title: '',
     description: '',
     deadline: '',
+    allowLate: false,
     maxScore: '10',
     latePenaltyPct: '10',
   });
@@ -282,6 +284,31 @@ export function TeacherClassDetailScreen() {
     );
   };
 
+  const confirmDeleteAssignment = (assignment: AssignmentSummary) => {
+    Alert.alert(
+      'Xoá bài tập',
+      `Bạn có chắc muốn xoá bài tập "${assignment.title}"? Mọi bài nộp và điểm số sẽ bị xoá vĩnh viễn.`,
+      [
+        { text: content.common.buttons.cancel, style: 'cancel' },
+        {
+          text: 'Xoá',
+          style: 'destructive',
+          onPress: () => {
+            if (!accessToken) return;
+            setSubmitting(true);
+            setSubmitError(null);
+            deleteAssignment(accessToken, assignment.id)
+              .then(() => reload())
+              .catch((err) => {
+                setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+              })
+              .finally(() => setSubmitting(false));
+          },
+        },
+      ]
+    );
+  };
+
   const tabItems = useMemo(
     () => [
       { id: 'students' as const, label: `${content.common.tabs.students} (${String(classStudents.length)})` },
@@ -456,6 +483,13 @@ export function TeacherClassDetailScreen() {
                         {`${String(item.maxScore)} ${content.common.labels.scoreUnit}`}
                       </AppText>
                     </View>
+                    <Pressable
+                      onPress={() => confirmDeleteAssignment(item)}
+                      style={{ marginLeft: 8 }}
+                      hitSlop={8}
+                    >
+                      <Trash2 size={16} color={palette.destructive} />
+                    </Pressable>
                   </View>
                   <View style={styles.assignmentMeta}>
                     <View style={styles.inlineMeta}>
@@ -642,8 +676,27 @@ export function TeacherClassDetailScreen() {
             onChangeText={value =>
               setAssignmentForm(current => ({ ...current, deadline: value }))
             }
-            placeholder={content.common.placeholders.dateTime}
+            placeholder={content.common.placeholders.dateTime + " (VD: 2026-07-20T10:00:00)"}
           />
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <AppText variant="label" weight="semibold">Cho phép nộp muộn</AppText>
+            <Switch
+              value={assignmentForm.allowLate}
+              onValueChange={value => setAssignmentForm(current => ({ ...current, allowLate: value }))}
+              trackColor={{ true: palette.primary, false: palette.muted }}
+            />
+          </View>
+          {assignmentForm.allowLate && (
+            <TextInputField
+              label="% Trừ điểm nộp muộn"
+              value={assignmentForm.latePenaltyPct}
+              onChangeText={value =>
+                setAssignmentForm(current => ({ ...current, latePenaltyPct: value }))
+              }
+              keyboardType="numeric"
+              placeholder="Ví dụ: 10"
+            />
+          )}
           <TextInputField
             label={content.common.form.maxScore}
             value={assignmentForm.maxScore}
@@ -669,8 +722,8 @@ export function TeacherClassDetailScreen() {
                   description: assignmentForm.description.trim() || undefined,
                   deadline: new Date(assignmentForm.deadline).toISOString(),
                   maxScore: Number(assignmentForm.maxScore),
-                  allowLate: Number(assignmentForm.latePenaltyPct) > 0,
-                  latePenaltyPct: Number(assignmentForm.latePenaltyPct),
+                  allowLate: assignmentForm.allowLate,
+                  latePenaltyPct: assignmentForm.allowLate ? Number(assignmentForm.latePenaltyPct) : 0,
                   classId: currentClass.id,
                 });
                 setShowCreateAssignment(false);
@@ -678,6 +731,7 @@ export function TeacherClassDetailScreen() {
                   title: '',
                   description: '',
                   deadline: '',
+                  allowLate: false,
                   maxScore: '10',
                   latePenaltyPct: '10',
                 });

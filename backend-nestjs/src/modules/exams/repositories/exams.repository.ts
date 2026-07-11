@@ -135,14 +135,36 @@ export class ExamsRepository {
     });
   }
 
-  async listTeacherExams(teacherId: string): Promise<ExamLightweight[]> {
-    return this.prismaService.exam.findMany({
-      where: { teacherId },
-      include: examListInclude,
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+  async listTeacherExams(
+    teacherId: string,
+    params?: {
+      page?: number;
+      limit?: number;
+      keyword?: string;
+    },
+  ): Promise<{ data: ExamLightweight[]; total: number }> {
+    const { page = 1, limit = 10, keyword } = params || {};
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.ExamWhereInput = {
+      teacherId,
+      ...(keyword ? { title: { contains: keyword, mode: 'insensitive' } } : {}),
+    };
+
+    const [data, total] = await this.prismaService.$transaction([
+      this.prismaService.exam.findMany({
+        where,
+        include: examListInclude,
+        orderBy: {
+          createdAt: 'desc',
+        },
+        skip,
+        take: limit,
+      }),
+      this.prismaService.exam.count({ where }),
+    ]);
+
+    return { data, total };
   }
 
   async findTeacherExamById(
