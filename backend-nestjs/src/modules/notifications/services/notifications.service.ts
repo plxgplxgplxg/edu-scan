@@ -237,27 +237,22 @@ export class NotificationsProcessor {
     });
     if (!batch) return;
 
-    const matchedSubmissions = batch.submissions.filter(
-      (s) => !!s.studentId && s.score !== null,
-    );
-
-    if (matchedSubmissions.length > 0) {
-      await this.notificationsService.createManyDeduped(
-        matchedSubmissions.map((sub) => ({
-          type: 'OMR_BATCH_COMPLETED',
-          recipientId: sub.studentId!,
-          roleTarget: Role.STUDENT,
-          entityId: batch.examId,
+    await this.notificationsService.createManyDeduped([
+      {
+        type: 'OMR_BATCH_COMPLETED',
+        recipientId: batch.teacherId,
+        roleTarget: Role.TEACHER,
+        entityId: batch.examId,
+        batchId: batch.id,
+        routeIntent: {
+          route: 'TeacherOmrBatchDetail',
           batchId: batch.id,
-          routeIntent: {
-            route: 'StudentDashboard',
-          },
-          title: `Đã có điểm bài kiểm tra: ${batch.exam.title}`,
-          body: `Bạn đạt ${sub.score} điểm.`,
-          dedupeKey: `omr-batch-completed:${batch.id}:${sub.studentId}`,
-        })),
-      );
-    }
+        },
+        title: `Đã chấm xong: ${batch.exam.title}`,
+        body: `Đã xử lý ${batch.processedFiles}/${batch.totalFiles} bài, bấm để xem kết quả.`,
+        dedupeKey: `omr-batch-completed:${batch.id}:${batch.teacherId}`,
+      },
+    ]);
   }
 
   private async getStudentsWithoutSubmit(

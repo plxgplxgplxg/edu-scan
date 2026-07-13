@@ -80,4 +80,3 @@ volumes:
 networks:
   eduscan-network:
     driver: bridge
-

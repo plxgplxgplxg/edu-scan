@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
-import { Role, Prisma, User } from '@prisma/client';
+import { Role, Prisma, SubmissionStatus, User } from '@prisma/client';
 
 @Injectable()
 export class StatisticsService {
@@ -52,20 +52,84 @@ export class StatisticsService {
     });
 
     const totalOmrSubmissions = await this.prisma.submission.count({
-      where: { exam: { teacherId } },
+      where: {
+        exam: { teacherId },
+        status: SubmissionStatus.GRADED,
+      },
     });
 
-    const classesData = await this.prisma.class.findMany({
-      where: { teacherId },
-      include: { _count: { select: { enrollments: true } } },
-    });
-    const studentsPerClass = classesData.map(c => ({ className: c.name, count: c._count.enrollments }));
+    const [classesData, studentCountsByClass, examsData, gradedSubmissionsByExam] =
+      await this.prisma.$transaction([
+        this.prisma.class.findMany({
+          where: { teacherId },
+          select: {
+            id: true,
+            name: true,
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        }),
+        this.prisma.classEnrollment.groupBy({
+          by: ['classId'],
+          orderBy: {
+            classId: 'asc',
+          },
+          where: {
+            class: { teacherId },
+          },
+          _count: {
+            _all: true,
+          },
+        }),
+        this.prisma.exam.findMany({
+          where: { teacherId },
+          select: {
+            id: true,
+            title: true,
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        }),
+        this.prisma.submission.groupBy({
+          by: ['examId'],
+          orderBy: {
+            examId: 'asc',
+          },
+          where: {
+            exam: { teacherId },
+            status: SubmissionStatus.GRADED,
+          },
+          _count: {
+            _all: true,
+          },
+        }),
+      ]);
 
-    const examsData = await this.prisma.exam.findMany({
-      where: { teacherId },
-      include: { _count: { select: { submissions: true } } },
-    });
-    const submissionsPerExam = examsData.map(e => ({ examTitle: e.title, count: e._count.submissions }));
+    const groupedStudentCounts = studentCountsByClass as Array<{
+      classId: string;
+      _count: { _all: number };
+    }>;
+    const studentCountLookup = new Map(
+      groupedStudentCounts.map((item) => [item.classId, item._count._all]),
+    );
+    const studentsPerClass = classesData.map((classItem) => ({
+      className: classItem.name,
+      count: studentCountLookup.get(classItem.id) ?? 0,
+    }));
+
+    const groupedSubmissionCounts = gradedSubmissionsByExam as Array<{
+      examId: string;
+      _count: { _all: number };
+    }>;
+    const gradedSubmissionLookup = new Map(
+      groupedSubmissionCounts.map((item) => [item.examId, item._count._all]),
+    );
+    const submissionsPerExam = examsData.map((examItem) => ({
+      examTitle: examItem.title,
+      count: gradedSubmissionLookup.get(examItem.id) ?? 0,
+    }));
 
     return {
       totalClasses,

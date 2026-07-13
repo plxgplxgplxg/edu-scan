@@ -1,4 +1,5 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
+import type { NativeFile } from '../features/shared/domain/native-file';
 
 export type TeacherTabParamList = {
   TeacherDashboard: undefined;
@@ -35,8 +36,12 @@ export type RootStackParamList = {
   TeacherClassDetail: { classId?: string } | undefined;
   TeacherOmrExams: undefined;
   TeacherOmrExamDetail: { examId: string };
+  TeacherOmrBatchDetail: { batchId: string };
   TeacherOMR: undefined;
   TeacherOmrExamBuilder: { examId: string };
+  TeacherOmrUpload: { examId: string; initialFiles?: NativeFile[] };
+  TeacherOmrCamera: { examId: string };
+  TeacherOmrProcessing: { examId: string; totalFiles: number };
   StudentDashboard: undefined;
   StudentClasses: undefined;
   StudentClassDetail: { classId?: string; assignmentId?: string; mode?: 'submit' | 'readonly' } | undefined;

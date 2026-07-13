@@ -256,34 +256,44 @@ export function TeacherOmrExamDetailScreen() {
 
       {/* Upload Modal */}
       <ModalSheet visible={showUpload} onClose={() => setShowUpload(false)}>
-        <AppText variant="headline" weight="bold" style={{ marginBottom: appTheme.spacing.lg }}>Tải ảnh phiếu OMR lên</AppText>
-        {showSourceOptions ? (
-          <View style={styles.inlineSourceContainer}>
-            <Pressable style={styles.inlineSourceButton} onPress={() => { setShowSourceOptions(false); void pickFiles(); }}>
-              <FolderOpen size={24} color={palette.primary} />
-              <AppText variant="caption" weight="semibold" color={palette.primary}>Tệp</AppText>
-            </Pressable>
-            <View style={styles.inlineDivider} />
-            <Pressable style={styles.inlineSourceButton} onPress={() => { setShowSourceOptions(false); void pickFiles(); }}>
-              <ImageIcon size={24} color={palette.primary} />
-              <AppText variant="caption" weight="semibold" color={palette.primary}>Ảnh</AppText>
-            </Pressable>
-            <View style={styles.inlineDivider} />
-            <Pressable style={styles.inlineSourceCancelButton} onPress={() => setShowSourceOptions(false)}>
-              <AppText variant="caption" weight="semibold" color={palette.mutedForeground}>Hủy</AppText>
-            </Pressable>
-          </View>
-        ) : (
-          <Pressable onPress={() => setShowSourceOptions(true)}>
-            <SurfaceCard style={styles.dropZone}>
-              <ImageIcon size={40} color={palette.primary} />
-              <AppText variant="body" weight="medium" style={styles.center}>Nhấn để chọn ảnh OMR</AppText>
-            </SurfaceCard>
+        <AppText variant="headline" weight="bold" style={{ marginBottom: 4 }}>Chấm bài kiểm tra</AppText>
+        <AppText variant="body" color={palette.mutedForeground} style={{ marginBottom: appTheme.spacing.xl }}>Chọn cách bạn muốn nhận diện phiếu OMR</AppText>
+        
+        <View style={{ gap: 16 }}>
+          <Pressable 
+            onPress={() => { setShowUpload(false); navigation.navigate('TeacherOmrCamera', { examId }); }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 16, padding: 16, backgroundColor: palette.white, borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB' }}
+          >
+            <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: 'rgba(216, 75, 203, 1)', alignItems: 'center', justifyContent: 'center' }}>
+              <ScanLine size={24} color={palette.white} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <AppText variant="body" weight="bold">Quét bài bằng camera</AppText>
+              <AppText variant="caption" color={palette.mutedForeground}>Tự động chụp khi phiếu ổn định</AppText>
+            </View>
+            <ChevronRight size={20} color={palette.mutedForeground} />
           </Pressable>
-        )}
-        <TextInputField label="Tên tệp/ảnh" value={selectedFiles.length ? selectedFiles.map(i => i.name).join(', ') : ''} editable={false} placeholder="Chưa có ảnh nào được chọn" />
-        <PrimaryButton label="Bắt đầu quét" icon={<ScanLine size={18} color={palette.white} />} loading={submitting} onPress={handleStartScan} style={{ marginTop: appTheme.spacing.lg }} />
-        {submitError ? <AppText variant="caption" color={palette.destructive}>{submitError}</AppText> : null}
+
+          <Pressable 
+            onPress={async () => {
+              setShowUpload(false);
+              const pickedFiles = await pickFiles();
+              if (pickedFiles?.length) {
+                navigation.navigate('TeacherOmrUpload', { examId, initialFiles: pickedFiles });
+              }
+            }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 16, padding: 16, backgroundColor: palette.white, borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB' }}
+          >
+            <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: '#F3E8FF', alignItems: 'center', justifyContent: 'center' }}>
+              <ImageIcon size={24} color={palette.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <AppText variant="body" weight="bold">Tải ảnh lên hàng loạt</AppText>
+              <AppText variant="caption" color={palette.mutedForeground}>Chọn nhiều ảnh từ thư viện</AppText>
+            </View>
+            <ChevronRight size={20} color={palette.mutedForeground} />
+          </Pressable>
+        </View>
       </ModalSheet>
       
       {selectedSubmissionId && <SubmissionDetailModal submissionId={selectedSubmissionId} onClose={() => { setSelectedSubmissionId(null); reload(); }} />}

@@ -23,6 +23,7 @@ export function useOmrUpload({
       setSelectedFiles(files);
       setSubmitError(null);
     }
+    return files;
   };
 
   const submit = async (examId: string) => {

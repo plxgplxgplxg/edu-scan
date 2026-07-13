@@ -121,7 +121,20 @@ function prepareSchema(databaseWasCreated) {
 }
 
 async function main() {
-  const databaseWasCreated = await ensureDatabaseExists();
+  let databaseWasCreated = false;
+
+  try {
+    databaseWasCreated = await ensureDatabaseExists();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(
+      `[prepare-db] Skipping database existence check: ${message}`,
+    );
+    console.warn(
+      '[prepare-db] Falling back to Prisma migrations/validation against DATABASE_URL',
+    );
+  }
+
   prepareSchema(databaseWasCreated);
 }
 

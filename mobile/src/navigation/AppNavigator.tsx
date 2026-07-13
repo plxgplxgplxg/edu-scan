@@ -21,7 +21,11 @@ import { TeacherClassDetailScreen } from '../screens/teacher/TeacherClassDetailS
 import { TeacherOmrExamsScreen } from '../screens/teacher/TeacherOmrExamsScreen';
 import { TeacherOmrScreen } from '../screens/teacher/TeacherOmrScreen';
 import { TeacherOmrExamDetailScreen } from '../screens/teacher/TeacherOmrExamDetailScreen';
+import { TeacherOmrBatchDetailScreen } from '../screens/teacher/TeacherOmrBatchDetailScreen';
 import { TeacherExamBuilderScreen } from '../screens/teacher/TeacherExamBuilderScreen';
+import { TeacherOmrUploadScreen } from '../screens/teacher/TeacherOmrUploadScreen';
+import { TeacherOmrCameraScreen } from '../screens/teacher/TeacherOmrCameraScreen';
+import { TeacherOmrProcessingScreen } from '../screens/teacher/TeacherOmrProcessingScreen';
 import { StudentDashboardScreen } from '../screens/student/StudentDashboardScreen';
 import { StudentClassesScreen } from '../screens/student/StudentClassesScreen';
 import { StudentClassDetailScreen } from '../screens/student/StudentClassDetailScreen';
@@ -250,9 +254,16 @@ export function AppNavigator() {
               component={TeacherOmrExamDetailScreen}
             />
             <Stack.Screen
+              name="TeacherOmrBatchDetail"
+              component={TeacherOmrBatchDetailScreen}
+            />
+            <Stack.Screen
               name="TeacherOmrExamBuilder"
               component={TeacherExamBuilderScreen}
             />
+            <Stack.Screen name="TeacherOmrUpload" component={TeacherOmrUploadScreen} />
+            <Stack.Screen name="TeacherOmrCamera" component={TeacherOmrCameraScreen} />
+            <Stack.Screen name="TeacherOmrProcessing" component={TeacherOmrProcessingScreen} />
           </>
         ) : null}
 

@@ -129,7 +129,8 @@ export interface NotificationItem {
     | { route: 'StudentClassDetail'; classId: string; assignmentId?: string; mode?: 'submit' | 'readonly' }
     | { route: 'TeacherClassDetail'; classId: string; assignmentId?: string }
     | { route: 'TeacherOmrBatchDetail'; batchId: string }
-    | { route: 'SharedNotifications' };
+    | { route: 'SharedNotifications' }
+    | { route: 'StudentDashboard' };
 }
 
 export interface UserSummary {

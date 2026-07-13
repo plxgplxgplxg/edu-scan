@@ -95,6 +95,7 @@ type ExamApi = {
   id: string;
   title: string;
   maxScore: number;
+  questionCount?: number;
   status: 'DRAFT' | 'PUBLISHED';
   classes: Array<{
     id: string;
@@ -1079,4 +1080,3 @@ export async function getTeacherClassStats(token: string, classId: string) {
     { token }
   );
 }
-
