@@ -51,7 +51,7 @@ export class StatisticsService {
       where: { teacherId },
     });
 
-    const totalOmrSubmissions = await this.prisma.omrSubmission.count({
+    const totalOmrSubmissions = await this.prisma.submission.count({
       where: { exam: { teacherId } },
     });
 
