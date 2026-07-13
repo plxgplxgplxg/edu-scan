@@ -17,6 +17,7 @@ import type {
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { TeacherDashboardScreen } from '../screens/teacher/TeacherDashboardScreen';
 import { TeacherClassesScreen } from '../screens/teacher/TeacherClassesScreen';
+import { TeacherClassDetailScreen } from '../screens/teacher/TeacherClassDetailScreen';
 import { TeacherOmrExamsScreen } from '../screens/teacher/TeacherOmrExamsScreen';
 import { TeacherOmrScreen } from '../screens/teacher/TeacherOmrScreen';
 import { TeacherOmrExamDetailScreen } from '../screens/teacher/TeacherOmrExamDetailScreen';
@@ -54,6 +55,7 @@ function CustomTabBar(props: BottomTabBarProps & { role: UserRole }) {
       role={props.role}
       currentModule={currentModule}
       currentScreen={currentScreen}
+      navigation={props.navigation}
     />
   );
 }

@@ -40,7 +40,7 @@ export function StudentStatisticsScreen() {
       <SafeAreaView style={styles.container}>
         <PageHeader title="Thống kê học tập" onBack={() => navigation.goBack()} />
         <EmptyState
-          icon={BookOpen}
+          icon={<BookOpen size={24} color={palette.primary} />}
           title="Không thể tải dữ liệu"
           description="Đã xảy ra lỗi khi lấy thống kê"
           actionLabel="Thử lại"

@@ -1,17 +1,13 @@
 /* eslint-disable react/no-unstable-nested-components, no-void, react-native/no-inline-styles */
-import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View, Alert } from 'react-native';
-import { ArrowLeft, Copy, Pencil, Plus, Trash2, ChevronRight } from 'lucide-react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { Pressable, ScrollView, StyleSheet, TextInput, View, Alert, Dimensions } from 'react-native';
+import { ArrowLeft, Check } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import {
-  listOmrExams,
-  publishExam,
-  updateExam,
-} from '../../api/edu-scan';
+import { listOmrExams, publishExam, updateExam, createOmrExam } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
-import { ModalSheet } from '../../components/ModalSheet';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ErrorState, LoadingState } from '../../components/RequestState';
 import { Screen } from '../../components/Screen';
@@ -22,12 +18,13 @@ import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
+import { GradientBackground } from '../../components/GradientBackground';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 type AnswerKeyItem = {
   questionNumber: number;
-  correctAnswer: 'A' | 'B' | 'C' | 'D';
+  correctAnswer: string;
 };
 
 type VariantState = {
@@ -35,467 +32,646 @@ type VariantState = {
   answerKeys: AnswerKeyItem[];
 };
 
+const STEPS = [
+  { id: 1, title: 'Thông tin' },
+  { id: 2, title: 'Cấu trúc' },
+  { id: 3, title: 'Đáp án' },
+  { id: 4, title: 'Xác nhận' },
+];
+
 export function TeacherExamBuilderScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<any>();
   const examId = route.params?.examId as string | undefined;
   const { accessToken } = useAuth();
   const layout = useResponsiveLayout();
+  const insets = useSafeAreaInsets();
 
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<number>(1);
 
   // Step 1 states
   const [title, setTitle] = useState('');
-  const [maxScore, setMaxScore] = useState('10');
-  const [questionCount, setQuestionCount] = useState('10');
+  const [note, setNote] = useState('');
 
-  const [localVariants, setLocalVariants] = useState<VariantState[]>([]);
+  // Step 2 states
+  const [questionCount, setQuestionCount] = useState(20);
+  const [optionsCount, setOptionsCount] = useState(4);
+  const [template, setTemplate] = useState('40');
+  const [testCodesString, setTestCodesString] = useState('001');
+
+  // Step 3 states
+  const [variants, setVariants] = useState<VariantState[]>([]);
   const [selectedTestCode, setSelectedTestCode] = useState<string>('');
-  
-  const [questionNumber, setQuestionNumber] = useState('1');
-  const [correctAnswer, setCorrectAnswer] = useState<'A' | 'B' | 'C' | 'D'>('A');
+  const [quickInput, setQuickInput] = useState('');
+
   const [busy, setBusy] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // For adding a new test code
-  const [showAddCode, setShowAddCode] = useState(false);
-  const [newCodeInput, setNewCodeInput] = useState('');
-
-  // For copying answers
-  const [showCopyCode, setShowCopyCode] = useState(false);
-
-  const { data, loading, error, reload } = useAsyncResource(async () => {
+  const { data, loading, error } = useAsyncResource(async () => {
     if (!accessToken || !examId) return null;
     const examsData = await listOmrExams(accessToken);
     return examsData.items.find((item) => item.id === examId) ?? null;
-  }, [accessToken, examId, selectedTestCode]);
+  }, [accessToken, examId]);
 
-  // Sync with remote
   useEffect(() => {
     if (data) {
       setTitle(data.title ?? '');
-      setMaxScore(String(data.maxScore ?? 10));
-      setQuestionCount(String((data as any).questionCount ?? 10));
-
+      setQuestionCount((data as any).questionCount ?? 20);
       if (data.variants && data.variants.length > 0) {
-        setLocalVariants(data.variants.map((v) => ({
+        setTestCodesString(data.variants.map(v => v.testCode).join(', '));
+        setVariants(data.variants.map((v) => ({
           testCode: v.testCode,
           answerKeys: [...v.answerKeys].sort((a, b) => a.questionNumber - b.questionNumber),
         })));
-        if (!selectedTestCode || !data.variants.find(v => v.testCode === selectedTestCode)) {
-          setSelectedTestCode(data.variants[0].testCode);
-        }
+        setSelectedTestCode(data.variants[0].testCode);
       } else {
-        setLocalVariants([{ testCode: '001', answerKeys: [] }]);
+        setTestCodesString('001');
+        setVariants([{ testCode: '001', answerKeys: [] }]);
         setSelectedTestCode('001');
       }
     }
-  }, [data, selectedTestCode]);
+  }, [data]);
 
-  const parsedQuestionNumber = Math.max(1, Number(questionNumber) || 1);
-  const currentVariantIndex = localVariants.findIndex(v => v.testCode === selectedTestCode);
-  const currentVariant = currentVariantIndex >= 0 ? localVariants[currentVariantIndex] : null;
-  const answerKeys = currentVariant?.answerKeys ?? [];
-
-  const adjustQuestionNumber = (delta: number) => {
-    const next = Math.max(1, parsedQuestionNumber + delta);
-    setQuestionNumber(String(next));
+  const handleNextToStep3 = () => {
+    const codes = testCodesString.split(',').map(c => c.trim()).filter(c => c);
+    if (codes.length === 0) {
+      setSubmitError('Vui lòng nhập ít nhất 1 mã đề');
+      return;
+    }
+    setSubmitError(null);
+    
+    const newVariants = codes.map(code => {
+      const existing = variants.find(v => v.testCode === code);
+      return existing ? existing : { testCode: code, answerKeys: [] };
+    });
+    setVariants(newVariants);
+    if (!newVariants.find(v => v.testCode === selectedTestCode)) {
+      setSelectedTestCode(newVariants[0].testCode);
+    }
+    setStep(3);
   };
 
-  const saveToBackend = async (variantsToSave: VariantState[]) => {
-    if (!accessToken || !examId) return;
+  const handleNextToStep4 = () => {
+    for (const v of variants) {
+      if (v.answerKeys.length !== questionCount) {
+        setSubmitError(`Mã đề ${v.testCode} chưa đủ đáp án (${v.answerKeys.length}/${questionCount})`);
+        return;
+      }
+    }
+    setSubmitError(null);
+    setStep(4);
+  };
+
+  const handleSubmit = async () => {
+    if (!accessToken) return;
     setBusy(true);
     setSubmitError(null);
     try {
-      await updateExam(accessToken, examId, {
-        title,
-        maxScore: Number(maxScore) || 10,
-        questionCount: Number(questionCount) || 10,
-        variants: variantsToSave,
-      });
-      await reload();
+      let targetExamId = examId;
+      if (!targetExamId) {
+        const created = await createOmrExam(accessToken, {
+          title: title || 'Đề thi mới',
+          maxScore: 10,
+        });
+        targetExamId = created.id;
+      }
+      await updateExam(accessToken, targetExamId, {
+        title: title || 'Đề thi mới',
+        maxScore: 10,
+        questionCount,
+        variants,
+      } as any);
+      await publishExam(accessToken, targetExamId);
+      navigation.goBack();
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra khi lưu');
+      setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
     } finally {
       setBusy(false);
     }
   };
 
-  const handleUpsertAnswer = () => {
-    if (currentVariantIndex < 0) return;
-    const updatedVariants = [...localVariants];
-    const existingIndex = updatedVariants[currentVariantIndex].answerKeys.findIndex(a => a.questionNumber === parsedQuestionNumber);
+  const currentVariant = variants.find(v => v.testCode === selectedTestCode);
+  const currentAnswers = currentVariant?.answerKeys || [];
+  
+  const handleQuickInputApply = () => {
+    if (!currentVariant) return;
+    const cleanStr = quickInput.replace(/[^a-eA-E]/g, '').toUpperCase();
+    const newAnswers = [...currentVariant.answerKeys];
     
-    if (existingIndex >= 0) {
-      updatedVariants[currentVariantIndex].answerKeys[existingIndex].correctAnswer = correctAnswer;
-    } else {
-      updatedVariants[currentVariantIndex].answerKeys.push({
-        questionNumber: parsedQuestionNumber,
-        correctAnswer,
-      });
-      updatedVariants[currentVariantIndex].answerKeys.sort((a, b) => a.questionNumber - b.questionNumber);
-    }
-    
-    setLocalVariants(updatedVariants);
-    setQuestionNumber(String(parsedQuestionNumber + 1));
-  };
-
-  const handleRemoveAnswer = (qNum: number) => {
-    if (currentVariantIndex < 0) return;
-    const updatedVariants = [...localVariants];
-    updatedVariants[currentVariantIndex].answerKeys = updatedVariants[currentVariantIndex].answerKeys.filter(a => a.questionNumber !== qNum);
-    setLocalVariants(updatedVariants);
-  };
-
-  const handleAddTestCode = () => {
-    const code = newCodeInput.trim().toUpperCase();
-    if (!code) return;
-    if (localVariants.find(v => v.testCode === code)) {
-      setSubmitError('Mã đề đã tồn tại');
-      return;
-    }
-    const updated = [...localVariants, { testCode: code, answerKeys: [] }];
-    setLocalVariants(updated);
-    setSelectedTestCode(code);
-    setShowAddCode(false);
-    setNewCodeInput('');
-  };
-
-  const handleRemoveTestCode = (code: string) => {
-    if (localVariants.length <= 1) {
-      setSubmitError('Phải có ít nhất 1 mã đề');
-      return;
-    }
-    const updated = localVariants.filter(v => v.testCode !== code);
-    setLocalVariants(updated);
-    if (selectedTestCode === code) {
-      setSelectedTestCode(updated[0].testCode);
-    }
-  };
-
-  const handleCopyAnswers = (fromCode: string) => {
-    if (currentVariantIndex < 0) return;
-    const source = localVariants.find(v => v.testCode === fromCode);
-    if (!source) return;
-    
-    const updatedVariants = [...localVariants];
-    updatedVariants[currentVariantIndex].answerKeys = [...source.answerKeys];
-    setLocalVariants(updatedVariants);
-    setShowCopyCode(false);
-  };
-
-  const checkValidation = () => {
-    const expectedCount = Number(questionCount) || 10;
-    for (const variant of localVariants) {
-      if (variant.answerKeys.length !== expectedCount) {
-        return `Mã đề ${variant.testCode} chưa đủ đáp án (${variant.answerKeys.length}/${expectedCount})`;
+    for (let i = 0; i < cleanStr.length && i < questionCount; i++) {
+      const qNum = i + 1;
+      const char = cleanStr[i];
+      const existingIdx = newAnswers.findIndex(a => a.questionNumber === qNum);
+      if (existingIdx >= 0) {
+        newAnswers[existingIdx].correctAnswer = char;
+      } else {
+        newAnswers.push({ questionNumber: qNum, correctAnswer: char });
       }
     }
-    return null;
+    newAnswers.sort((a, b) => a.questionNumber - b.questionNumber);
+    
+    const updated = variants.map(v => v.testCode === selectedTestCode ? { ...v, answerKeys: newAnswers } : v);
+    setVariants(updated);
+    setQuickInput('');
   };
 
-  if (!examId) {
-    return (
-      <Screen>
-        <ErrorState
-          message="Không tìm thấy examId"
-          retryLabel="Thử lại"
-          onRetry={() => navigation.goBack()}
-        />
-      </Screen>
-    );
-  }
+  const toggleAnswer = (qNum: number, ans: string) => {
+    if (!currentVariant) return;
+    const newAnswers = [...currentVariant.answerKeys];
+    const existingIdx = newAnswers.findIndex(a => a.questionNumber === qNum);
+    if (existingIdx >= 0) {
+      if (newAnswers[existingIdx].correctAnswer === ans) {
+        newAnswers.splice(existingIdx, 1);
+      } else {
+        newAnswers[existingIdx].correctAnswer = ans;
+      }
+    } else {
+      newAnswers.push({ questionNumber: qNum, correctAnswer: ans });
+    }
+    newAnswers.sort((a, b) => a.questionNumber - b.questionNumber);
+    const updated = variants.map(v => v.testCode === selectedTestCode ? { ...v, answerKeys: newAnswers } : v);
+    setVariants(updated);
+  };
+
+  const getOptionsArray = () => {
+    const arr = ['A', 'B', 'C', 'D', 'E'];
+    return arr.slice(0, optionsCount);
+  };
 
   return (
-    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
-      <ScrollView>
-        <View style={[styles.container, { paddingHorizontal: layout.horizontalPadding, paddingTop: layout.sectionGap, paddingBottom: 100, maxWidth: layout.contentMaxWidth, alignSelf: 'center', width: '100%' }]}>
-          <Pressable style={styles.backRow} onPress={() => step > 1 ? setStep((step - 1) as any) : navigation.goBack()}>
-            <ArrowLeft size={16} color={palette.mutedForeground} />
-            <AppText variant="label" color={palette.mutedForeground}>{step > 1 ? 'Quay lại bước trước' : 'Quay lại'}</AppText>
+    <Screen bleedTop withoutBottomInset style={{ backgroundColor: palette.background }}>
+      <GradientBackground colors={['#9b51e0', '#f472b6']} style={styles.header}>
+        <View style={[styles.headerTop, { paddingTop: insets.top + 16 }]}>
+          <Pressable onPress={() => step > 1 ? setStep(step - 1) : navigation.goBack()} style={styles.backButton}>
+            <ArrowLeft size={24} color={palette.white} />
           </Pressable>
+          <AppText variant="title" weight="bold" color={palette.white}>Tạo đề thi</AppText>
+        </View>
 
-          <View style={styles.stepperContainer}>
-            <View style={[styles.stepItem, step >= 1 ? styles.stepActive : null]}>
-              <AppText variant="caption" weight="bold" color={step >= 1 ? palette.primary : palette.mutedForeground}>1. Thông tin</AppText>
+        <View style={styles.stepperWrap}>
+          {STEPS.map((s) => {
+            const isActive = step === s.id;
+            const isPast = step > s.id;
+            return (
+              <View key={s.id} style={styles.stepContainer}>
+                <View style={[styles.stepLine, isActive || isPast ? styles.stepLineActive : null]} />
+                <AppText variant="caption" weight={isActive ? 'bold' : 'normal'} color={isActive || isPast ? palette.white : 'rgba(255,255,255,0.6)'} style={{ marginTop: 6 }}>
+                  {s.title}
+                </AppText>
+              </View>
+            );
+          })}
+        </View>
+      </GradientBackground>
+
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        {loading && <LoadingState label="Đang tải..." />}
+        {error && <ErrorState message={error} retryLabel="Thử lại" onRetry={() => void reload()} />}
+        
+        {step === 1 && (
+          <View style={styles.stepSection}>
+            <TextInputField
+              label="Tên đề thi *"
+              placeholder="VD: Kiểm tra 15 phút — Chương 1"
+              value={title}
+              onChangeText={setTitle}
+            />
+            <TextInputField
+              label="Ghi chú"
+              placeholder="Ghi chú thêm..."
+              value={note}
+              onChangeText={setNote}
+              multiline
+              numberOfLines={4}
+              style={{ minHeight: 100, textAlignVertical: 'top' }}
+            />
+          </View>
+        )}
+
+        {step === 2 && (
+          <View style={styles.stepSection}>
+            <AppText variant="label" weight="semibold">Tổng số câu hỏi</AppText>
+            <View style={styles.counterRow}>
+              <Pressable style={styles.counterBtn} onPress={() => setQuestionCount(Math.max(1, questionCount - 1))}>
+                <AppText variant="title" weight="bold">-</AppText>
+              </Pressable>
+              <View style={styles.counterValue}>
+                <AppText variant="headline" weight="bold" color={palette.primary}>{questionCount}</AppText>
+                <AppText variant="caption" color={palette.mutedForeground}>câu hỏi</AppText>
+              </View>
+              <Pressable style={styles.counterBtn} onPress={() => setQuestionCount(questionCount + 1)}>
+                <AppText variant="title" weight="bold">+</AppText>
+              </Pressable>
             </View>
-            <View style={styles.stepDivider} />
-            <View style={[styles.stepItem, step >= 2 ? styles.stepActive : null]}>
-              <AppText variant="caption" weight="bold" color={step >= 2 ? palette.primary : palette.mutedForeground}>2. Mã đề</AppText>
+
+            <AppText variant="label" weight="semibold" style={{ marginTop: 16 }}>Số lựa chọn mỗi câu</AppText>
+            <View style={styles.optionsRow}>
+              {[2, 3, 4, 5].map(num => (
+                <Pressable
+                  key={num}
+                  style={[styles.optionBtn, optionsCount === num ? styles.optionBtnActive : null]}
+                  onPress={() => setOptionsCount(num)}
+                >
+                  <AppText variant="body" weight="bold" color={optionsCount === num ? palette.white : palette.foreground}>{num}</AppText>
+                </Pressable>
+              ))}
             </View>
-            <View style={styles.stepDivider} />
-            <View style={[styles.stepItem, step >= 3 ? styles.stepActive : null]}>
-              <AppText variant="caption" weight="bold" color={step >= 3 ? palette.primary : palette.mutedForeground}>3. Đáp án</AppText>
+
+            <TextInputField
+              label="Các mã đề (ngăn cách bởi dấu phẩy)"
+              placeholder="VD: 201, 202, 301"
+              value={testCodesString}
+              onChangeText={setTestCodesString}
+              style={{ marginTop: 16 }}
+            />
+
+            <AppText variant="label" weight="semibold" style={{ marginTop: 16 }}>Mẫu phiếu trả lời</AppText>
+            <View style={{ gap: 12 }}>
+              {[
+                { id: '40', title: '40 câu — 1 cột', desc: 'Phổ biến cho kiểm tra 15 phút' },
+                { id: '60', title: '60 câu — 2 cột', desc: 'Dành cho đề thi giữa/cuối kỳ' },
+              ].map(tpl => (
+                <Pressable key={tpl.id} style={[styles.templateCard, template === tpl.id ? styles.templateCardActive : null]} onPress={() => setTemplate(tpl.id)}>
+                  <View style={styles.templateIcon} />
+                  <View style={{ flex: 1 }}>
+                    <AppText variant="body" weight="bold">{tpl.title}</AppText>
+                    <AppText variant="caption" color={palette.mutedForeground}>{tpl.desc}</AppText>
+                  </View>
+                  {template === tpl.id && <Check size={20} color={palette.primary} />}
+                </Pressable>
+              ))}
             </View>
           </View>
+        )}
 
-          {loading ? <LoadingState label="Đang tải..." /> : null}
-          {error ? <ErrorState message={error} retryLabel="Thử lại" onRetry={() => void reload()} /> : null}
-
-          {/* STEP 1 */}
-          {step === 1 && (
-            <View style={{ gap: appTheme.spacing.md }}>
-              <AppText variant="title" weight="bold">Thông tin chung</AppText>
-              <TextInputField label="Tên đề thi" value={title} onChangeText={setTitle} />
-              <TextInputField label="Thang điểm (VD: 10)" value={maxScore} onChangeText={setMaxScore} keyboardType="numeric" />
-              <TextInputField label="Số câu hỏi" value={questionCount} onChangeText={setQuestionCount} keyboardType="numeric" />
-              
-              <PrimaryButton
-                label="Tiếp tục"
-                onPress={() => setStep(2)}
-                icon={<ChevronRight size={20} color={palette.white} />}
-                style={{ marginTop: appTheme.spacing.lg }}
-              />
-            </View>
-          )}
-
-          {/* STEP 2 */}
-          {step === 2 && (
-            <View style={{ gap: appTheme.spacing.md }}>
-              <AppText variant="title" weight="bold">Danh sách mã đề</AppText>
-              
-              <View style={{ gap: 8 }}>
-                {localVariants.map((v) => (
-                  <SurfaceCard key={v.testCode} style={styles.rowSpace}>
-                    <AppText variant="body" weight="semibold">Mã: {v.testCode}</AppText>
-                    <Pressable onPress={() => {
-                      Alert.alert('Xóa mã đề', `Xóa mã đề ${v.testCode}?`, [
-                        { text: 'Hủy', style: 'cancel' },
-                        { text: 'Xóa', style: 'destructive', onPress: () => handleRemoveTestCode(v.testCode) },
-                      ]);
-                    }}>
-                      <Trash2 size={16} color={palette.destructive} />
-                    </Pressable>
-                  </SurfaceCard>
+        {step === 3 && (
+          <View style={styles.stepSection}>
+            <View style={styles.codesScrollWrap}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.codesScroll}>
+                {variants.map(v => (
+                  <Pressable 
+                    key={v.testCode} 
+                    style={[styles.codeChip, selectedTestCode === v.testCode ? styles.codeChipActive : null]}
+                    onPress={() => setSelectedTestCode(v.testCode)}
+                  >
+                    <AppText variant="body" weight="bold" color={selectedTestCode === v.testCode ? palette.white : palette.primary}>
+                      Đề {v.testCode}
+                    </AppText>
+                    {v.answerKeys.length === questionCount && <Check size={14} color={selectedTestCode === v.testCode ? palette.white : palette.success} style={{ marginLeft: 4 }} />}
+                  </Pressable>
                 ))}
-              </View>
-
-              <PrimaryButton
-                label="Thêm mã đề"
-                onPress={() => setShowAddCode(true)}
-                icon={<Plus size={20} color={palette.foreground} />}
-                style={{ backgroundColor: palette.secondary }}
-                textStyle={{ color: palette.foreground }}
-              />
-
-              <PrimaryButton
-                label="Tiếp tục"
-                onPress={() => setStep(3)}
-                icon={<ChevronRight size={20} color={palette.white} />}
-                style={{ marginTop: appTheme.spacing.lg }}
-              />
+              </ScrollView>
             </View>
-          )}
 
-          {/* STEP 3 */}
-          {step === 3 && (
-            <View style={{ gap: appTheme.spacing.md }}>
-              <AppText variant="title" weight="bold">Cấu hình Đáp án</AppText>
-              
-              <View>
-                <AppText variant="label" weight="semibold" style={{ marginBottom: 8 }}>Chọn mã đề</AppText>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsWrap}>
-                  {localVariants.map((v) => (
-                    <Pressable
-                      key={v.testCode}
-                      style={[styles.chip, selectedTestCode === v.testCode ? styles.chipSelected : null]}
-                      onPress={() => setSelectedTestCode(v.testCode)}
-                    >
-                      <AppText variant="body" weight="semibold" color={selectedTestCode === v.testCode ? palette.white : palette.foreground}>
-                        {v.testCode}
-                      </AppText>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              </View>
-
-              {currentVariant && (
-                <SurfaceCard style={styles.card}>
-                  <View style={styles.rowSpace}>
-                    <AppText variant="label" weight="semibold">Câu số</AppText>
-                    {localVariants.length > 1 && (
-                      <Pressable style={styles.copyButton} onPress={() => setShowCopyCode(true)}>
-                        <Copy size={14} color={palette.primary} />
-                        <AppText variant="caption" color={palette.primary}>Copy từ mã khác</AppText>
-                      </Pressable>
-                    )}
-                  </View>
-
-                  <View style={styles.numberRow}>
-                    <Pressable style={styles.numberButton} onPress={() => adjustQuestionNumber(-1)}>
-                      <AppText variant="headline" weight="bold" style={styles.numberSign}>-</AppText>
-                    </Pressable>
-                    <View style={styles.numberInputWrap}>
-                      <TextInput
-                        value={questionNumber}
-                        onChangeText={setQuestionNumber}
-                        keyboardType="numeric"
-                        placeholder="1"
-                        placeholderTextColor={palette.mutedForeground}
-                        selectionColor={palette.primary}
-                        style={styles.numberInput}
-                      />
-                    </View>
-                    <Pressable style={styles.numberButton} onPress={() => adjustQuestionNumber(1)}>
-                      <AppText variant="headline" weight="bold" style={styles.numberSign}>+</AppText>
-                    </Pressable>
-                  </View>
-
-                  <AppText variant="label" weight="semibold">Đáp án đúng</AppText>
-                  <View style={styles.answerRow}>
-                    {(['A', 'B', 'C', 'D'] as const).map((item) => (
-                      <Pressable key={item} style={[styles.answerOption, correctAnswer === item ? styles.answerActive : null]} onPress={() => setCorrectAnswer(item)}>
-                        <AppText variant="body" weight="semibold" color={correctAnswer === item ? palette.white : palette.foreground}>{item}</AppText>
-                      </Pressable>
-                    ))}
-                  </View>
-
-                  <PrimaryButton
-                    label="Lưu câu hỏi"
-                    onPress={handleUpsertAnswer}
-                  />
-                </SurfaceCard>
-              )}
-
-              <View style={styles.card}>
-                {answerKeys.map((item) => (
-                  <SurfaceCard key={item.questionNumber} style={styles.rowCard}>
-                    <View style={styles.rowSpace}>
-                      <AppText variant="body" weight="semibold">
-                        Câu {item.questionNumber} - {item.correctAnswer}
-                      </AppText>
-                      <View style={styles.actionsRow}>
-                        <Pressable
-                          onPress={() => {
-                            setQuestionNumber(String(item.questionNumber));
-                            setCorrectAnswer(item.correctAnswer);
-                          }}
-                        >
-                          <Pencil size={16} color={palette.primary} />
-                        </Pressable>
-                        <Pressable onPress={() => handleRemoveAnswer(item.questionNumber)}>
-                          <Trash2 size={16} color={palette.destructive} />
-                        </Pressable>
-                      </View>
-                    </View>
-                  </SurfaceCard>
-                ))}
-              </View>
-
-              <View style={{ gap: appTheme.spacing.md, marginTop: appTheme.spacing.lg }}>
-                {submitError ? <AppText variant="caption" color={palette.destructive}>{submitError}</AppText> : null}
-                
-                <PrimaryButton
-                  label="Lưu bản nháp"
-                  loading={busy}
-                  onPress={() => saveToBackend(localVariants)}
-                  style={{ backgroundColor: palette.secondary }}
-                  textStyle={{ color: palette.foreground }}
+            <SurfaceCard style={styles.quickInputCard}>
+              <AppText variant="label" weight="semibold" color={palette.white}>Nhập nhanh chuỗi đáp án</AppText>
+              <View style={styles.quickInputRow}>
+                <TextInput
+                  style={styles.quickInput}
+                  placeholder="VD: ABCDABCD..."
+                  placeholderTextColor="rgba(255,255,255,0.6)"
+                  value={quickInput}
+                  onChangeText={setQuickInput}
+                  autoCapitalize="characters"
                 />
+                <Pressable style={styles.quickApplyBtn} onPress={handleQuickInputApply}>
+                  <AppText variant="body" weight="bold" color={palette.primary}>Áp dụng</AppText>
+                </Pressable>
+              </View>
+            </SurfaceCard>
 
-                <PrimaryButton
-                  label="Phát hành đề"
-                  loading={busy}
-                  onPress={async () => {
-                    const errorMsg = checkValidation();
-                    if (errorMsg) {
-                      setSubmitError(errorMsg);
-                      return;
-                    }
-                    if (!accessToken) return;
-                    setBusy(true);
-                    setSubmitError(null);
-                    try {
-                      await updateExam(accessToken, examId, { 
-                        title, 
-                        maxScore: Number(maxScore) || 10,
-                        variants: localVariants 
-                      });
-                      await publishExam(accessToken, examId);
-                      navigation.goBack();
-                    } catch (err) {
-                      setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
-                    } finally {
-                      setBusy(false);
-                    }
-                  }}
-                  style={{ backgroundColor: palette.success }}
-                />
+            <View style={styles.progressRow}>
+              <AppText variant="caption" color={palette.mutedForeground}>Đã điền {currentAnswers.length}/{questionCount} câu</AppText>
+              <View style={styles.progressBar}>
+                <View style={[styles.progressFill, { width: `${(currentAnswers.length / questionCount) * 100}%` }]} />
               </View>
             </View>
-          )}
 
-        </View>
+            <View style={styles.questionsList}>
+              {Array.from({ length: questionCount }).map((_, i) => {
+                const qNum = i + 1;
+                const ansObj = currentAnswers.find(a => a.questionNumber === qNum);
+                const selectedAns = ansObj?.correctAnswer;
+                return (
+                  <View key={qNum} style={styles.qRow}>
+                    <AppText variant="body" weight="bold" style={styles.qNumLabel}>{qNum}.</AppText>
+                    <View style={styles.qOptionsWrap}>
+                      {getOptionsArray().map(opt => {
+                        const isSelected = selectedAns === opt;
+                        return (
+                          <Pressable 
+                            key={opt} 
+                            style={[styles.qOptionBox, isSelected ? styles.qOptionBoxSelected : null]}
+                            onPress={() => toggleAnswer(qNum, opt)}
+                          >
+                            <AppText variant="body" weight="bold" color={isSelected ? palette.white : palette.foreground}>{opt}</AppText>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {step === 4 && (
+          <View style={styles.stepSection}>
+            <SurfaceCard style={styles.summaryCard}>
+              <GradientBackground colors={['#9b51e0', '#f472b6']} style={styles.summaryTop}>
+                <AppText variant="caption" color="rgba(255,255,255,0.8)">Đề thi mới</AppText>
+                <AppText variant="title" weight="bold" color={palette.white} style={{ marginTop: 4 }}>{title || 'Chưa đặt tên'}</AppText>
+                <AppText variant="body" color="rgba(255,255,255,0.8)" style={{ marginTop: 4 }}>{variants.length} mã đề</AppText>
+              </GradientBackground>
+              <View style={styles.summaryStats}>
+                <View style={styles.statBox}>
+                  <AppText variant="headline" weight="bold" color={palette.primary}>{questionCount}</AppText>
+                  <AppText variant="caption" color={palette.mutedForeground}>Câu hỏi</AppText>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statBox}>
+                  <AppText variant="headline" weight="bold" color={palette.primary}>{optionsCount}</AppText>
+                  <AppText variant="caption" color={palette.mutedForeground}>Lựa chọn</AppText>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statBox}>
+                  <AppText variant="headline" weight="bold" color={palette.primary}>{questionCount}</AppText>
+                  <AppText variant="caption" color={palette.mutedForeground}>Đáp án</AppText>
+                </View>
+              </View>
+            </SurfaceCard>
+          </View>
+        )}
       </ScrollView>
 
-      {/* Modal Add Code */}
-      <ModalSheet visible={showAddCode} onClose={() => setShowAddCode(false)}>
-        <AppText variant="headline" weight="bold" style={{ marginBottom: 16 }}>Thêm mã đề mới</AppText>
-        <TextInputField
-          label="Mã đề"
-          placeholder="VD: 101, 102..."
-          value={newCodeInput}
-          onChangeText={setNewCodeInput}
-          autoCapitalize="characters"
-        />
-        <PrimaryButton
-          label="Thêm"
-          onPress={handleAddTestCode}
-          style={{ marginTop: 16 }}
-        />
-      </ModalSheet>
-
-      {/* Modal Copy Answers */}
-      <ModalSheet visible={showCopyCode} onClose={() => setShowCopyCode(false)}>
-        <AppText variant="headline" weight="bold" style={{ marginBottom: 16 }}>Sao chép đáp án</AppText>
-        <AppText variant="body" color={palette.mutedForeground} style={{ marginBottom: 16 }}>
-          Chọn mã đề để sao chép đáp án vào mã {selectedTestCode}
-        </AppText>
-        <View style={{ gap: 8 }}>
-          {localVariants.filter(v => v.testCode !== selectedTestCode).map(v => (
-            <Pressable
-              key={v.testCode}
-              style={styles.copyItem}
-              onPress={() => handleCopyAnswers(v.testCode)}
-            >
-              <AppText variant="body" weight="semibold">Mã đề: {v.testCode}</AppText>
-              <AppText variant="caption" color={palette.mutedForeground}>{v.answerKeys.length} câu</AppText>
-            </Pressable>
-          ))}
-        </View>
-        <PrimaryButton
-          label="Hủy"
-          onPress={() => setShowCopyCode(false)}
-          style={{ marginTop: 16, backgroundColor: palette.secondary }}
-          textStyle={{ color: palette.foreground }}
-        />
-      </ModalSheet>
+      <View style={styles.bottomBar}>
+        {submitError ? <AppText variant="caption" color={palette.destructive} style={{ marginBottom: 8, textAlign: 'center' }}>{submitError}</AppText> : null}
+        {step < 4 ? (
+          <PrimaryButton 
+            label="Tiếp tục" 
+            onPress={() => {
+              if (step === 1) {
+                if (!title.trim()) {
+                  setSubmitError('Vui lòng nhập tên đề thi');
+                  return;
+                }
+                setSubmitError(null);
+                setStep(2);
+              } else if (step === 2) {
+                handleNextToStep3();
+              } else if (step === 3) {
+                handleNextToStep4();
+              }
+            }} 
+          />
+        ) : (
+          <PrimaryButton 
+            label="Hoàn tất & Phát hành" 
+            onPress={handleSubmit} 
+            loading={busy}
+          />
+        )}
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { gap: appTheme.spacing.md },
-  backRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  stepperContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: appTheme.spacing.sm },
-  stepItem: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 16, backgroundColor: palette.secondary },
-  stepActive: { backgroundColor: palette.primary + '1A' },
-  stepDivider: { flex: 1, height: 1, backgroundColor: palette.border, marginHorizontal: 8 },
-  card: { gap: appTheme.spacing.sm },
-  chipsWrap: { flexDirection: 'row', gap: appTheme.spacing.sm, paddingVertical: 4 },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: appTheme.radius.md, paddingHorizontal: appTheme.spacing.md, paddingVertical: appTheme.spacing.sm, borderWidth: 1, borderColor: palette.border, backgroundColor: palette.card },
-  chipSelected: { backgroundColor: palette.primary, borderColor: palette.primary },
-  copyButton: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 4, borderRadius: 4, backgroundColor: palette.primary + '1A' },
-  answerRow: { flexDirection: 'row', gap: appTheme.spacing.sm },
-  answerOption: { flex: 1, borderRadius: appTheme.radius.md, borderWidth: 1, borderColor: palette.border, paddingVertical: appTheme.spacing.sm, alignItems: 'center' },
-  answerActive: { backgroundColor: palette.primary, borderColor: palette.primary },
-  numberRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: appTheme.spacing.md },
-  numberButton: { width: 46, height: 46, borderRadius: appTheme.radius.md, borderWidth: 1, borderColor: palette.border, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.secondary },
-  numberSign: { lineHeight: 24, textAlign: 'center' },
-  numberInputWrap: { width: 120, height: 46, borderRadius: appTheme.radius.md, borderWidth: 1, borderColor: palette.border, backgroundColor: palette.inputBackground, justifyContent: 'center', paddingHorizontal: appTheme.spacing.md },
-  numberInput: { height: 46, paddingVertical: 0, color: palette.foreground, fontSize: appTheme.typography.sizes.xl, fontFamily: appTheme.typography.family, textAlign: 'center' },
-  rowCard: { gap: 6 },
-  rowSpace: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  actionsRow: { flexDirection: 'row', alignItems: 'center', gap: appTheme.spacing.md },
-  copyItem: { padding: 12, borderRadius: appTheme.radius.md, borderWidth: 1, borderColor: palette.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  header: {
+    paddingBottom: 16,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 24,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  stepperWrap: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  stepContainer: {
+    flex: 1,
+  },
+  stepLine: {
+    height: 4,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 2,
+  },
+  stepLineActive: {
+    backgroundColor: '#FFFFFF',
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 120,
+  },
+  stepSection: {
+    gap: 16,
+  },
+  counterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: palette.white,
+    borderRadius: 16,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  counterBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: palette.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  counterValue: {
+    alignItems: 'center',
+  },
+  optionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  optionBtn: {
+    flex: 1,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: palette.white,
+    borderWidth: 1,
+    borderColor: palette.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optionBtnActive: {
+    backgroundColor: palette.primary,
+    borderColor: palette.primary,
+  },
+  templateCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: palette.white,
+    borderWidth: 1,
+    borderColor: palette.border,
+    gap: 16,
+  },
+  templateCardActive: {
+    borderColor: palette.primary,
+    backgroundColor: palette.primary + '0A',
+  },
+  templateIcon: {
+    width: 40,
+    height: 56,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: palette.primary,
+    backgroundColor: palette.white,
+  },
+  codesScrollWrap: {
+    marginHorizontal: -16,
+  },
+  codesScroll: {
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  codeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 24,
+    backgroundColor: palette.secondary,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  codeChipActive: {
+    backgroundColor: palette.primary,
+    borderColor: palette.primary,
+  },
+  quickInputCard: {
+    backgroundColor: '#b966e6',
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 0,
+    gap: 12,
+  },
+  quickInputRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  quickInput: {
+    flex: 1,
+    height: 48,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    color: palette.white,
+    fontFamily: appTheme.typography.family,
+    fontSize: 16,
+  },
+  quickApplyBtn: {
+    height: 48,
+    paddingHorizontal: 24,
+    backgroundColor: palette.white,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  progressBar: {
+    flex: 1,
+    height: 6,
+    backgroundColor: palette.border,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: palette.primary,
+  },
+  questionsList: {
+    gap: 12,
+  },
+  qRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  qNumLabel: {
+    width: 30,
+    color: palette.mutedForeground,
+  },
+  qOptionsWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  qOptionBox: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qOptionBoxSelected: {
+    backgroundColor: palette.primary,
+    borderColor: palette.primary,
+  },
+  summaryCard: {
+    padding: 0,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  summaryTop: {
+    padding: 24,
+  },
+  summaryStats: {
+    flexDirection: 'row',
+    padding: 16,
+    backgroundColor: palette.white,
+  },
+  statBox: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: palette.border,
+    marginVertical: 4,
+  },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: palette.white,
+    padding: 16,
+    paddingBottom: 32,
+    borderTopWidth: 1,
+    borderTopColor: palette.border,
+  },
 });

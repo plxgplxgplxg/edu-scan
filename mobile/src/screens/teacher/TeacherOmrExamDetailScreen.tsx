@@ -128,9 +128,9 @@ export function TeacherOmrExamDetailScreen() {
             <Pressable key={sub.id} onPress={() => setSelectedSubmissionId(sub.id)}>
               <SurfaceCard style={styles.subCard}>
                 <View style={{ flex: 1, gap: 4 }}>
-                  <AppText variant="body" weight="bold">{sub.studentName || 'Chưa nhận diện'}</AppText>
+                  <AppText variant="body" weight="bold">SBD: {sub.studentCode || 'Chưa nhận diện'}</AppText>
                   <AppText variant="caption" color={palette.mutedForeground}>
-                    Mã HS: {sub.studentCode || '?'} • Đề: {sub.resolvedTestCode || '?'}
+                    Mã đề: {sub.resolvedTestCode || '?'}
                   </AppText>
                 </View>
                 <View style={{ alignItems: 'flex-end', gap: 4 }}>
@@ -257,10 +257,10 @@ function SubmissionDetailModal({ submissionId, onClose }: { submissionId: string
             {sub && (
               <>
                 <SurfaceCard style={{ gap: appTheme.spacing.md }}>
-                  <AppText variant="headline" weight="bold">{sub.studentName ?? 'Unknown'}</AppText>
+                  <AppText variant="headline" weight="bold">SBD: {sub.studentCode || 'Chưa nhận diện'}</AppText>
                   <View style={styles.rowSpace}>
                     <AppText variant="body" color={palette.mutedForeground}>Điểm:</AppText>
-                    <AppText variant="title" weight="bold" color={palette.primary}>{sub.score}/{sub.maxScore}</AppText>
+                    <AppText variant="title" weight="bold" color={palette.primary}>{sub.score?.calculatedScore ?? sub.score?.totalCorrect ?? '-'}/{sub.score?.maxScore ?? '-'}</AppText>
                   </View>
                   <View style={styles.rowSpace}>
                     <AppText variant="body" color={palette.mutedForeground}>Mã đề:</AppText>
@@ -268,10 +268,10 @@ function SubmissionDetailModal({ submissionId, onClose }: { submissionId: string
                   </View>
                 </SurfaceCard>
 
-                {sub.annotatedImageUrl && (
+                {(sub.imageUrl || sub.annotatedImageUrl || sub.processedImageUrl) && (
                   <SurfaceCard>
-                    <AppText variant="body" weight="bold" style={{ marginBottom: 8 }}>Ảnh đã nhận diện</AppText>
-                    <Image source={{ uri: sub.annotatedImageUrl }} style={{ width: '100%', height: 300, resizeMode: 'contain' }} />
+                    <AppText variant="body" weight="bold" style={{ marginBottom: 8 }}>Hình ảnh bài thi</AppText>
+                    <Image source={{ uri: (sub.imageUrl || sub.annotatedImageUrl || sub.processedImageUrl) as string }} style={{ width: '100%', height: 400, resizeMode: 'contain' }} />
                   </SurfaceCard>
                 )}
 

@@ -42,16 +42,19 @@ interface BottomNavProps {
   role: UserRole;
   currentModule?: ModuleKey;
   currentScreen: keyof RootStackParamList;
+  navigation?: any;
 }
 
 export function BottomNav({
   role,
   currentModule = 'home',
   currentScreen,
+  navigation: propNavigation,
 }: BottomNavProps) {
   const insets = useSafeAreaInsets();
   const layout = useResponsiveLayout();
-  const navigation = useNavigation<Nav>();
+  const contextNavigation = useNavigation<Nav>();
+  const navigation = propNavigation || contextNavigation;
   const { content } = useAuth();
   const module = roleModules[role][currentModule] ?? roleModules[role].home;
 

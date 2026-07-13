@@ -40,7 +40,7 @@ export function AdminStatisticsScreen() {
       <SafeAreaView style={styles.container}>
         <PageHeader title="Thống kê hệ thống" onBack={() => navigation.goBack()} />
         <EmptyState
-          icon={Users}
+          icon={<Users size={24} color={palette.primary} />}
           title="Không thể tải dữ liệu"
           description="Đã xảy ra lỗi khi lấy thống kê"
           actionLabel="Thử lại"

@@ -59,7 +59,7 @@ export function PageHeader({
   const useCompactMetrics = layout.isCompact && (metrics?.length ?? 0) > 2;
   const extraTopInset = layout.isCompact ? 32 : 40 - 8;
 
-  const headerGradient = gradient || [appTheme.palette.primary, '#8B5CF6', appTheme.palette.tertiary];
+  const headerGradient = gradient || [appTheme.palette.primary, appTheme.palette.tertiary];
   
   const animatedScrollY = scrollY || new Animated.Value(0);
   const minHeight = insets.top + 56;

@@ -7,6 +7,10 @@ import { AuthProvider, useAuth } from '../store/auth-store';
 import { AppNavigator } from '../navigation/AppNavigator';
 import { ToastProvider } from './ToastProvider';
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient();
+
 function AppShell() {
   const { role } = useAuth();
 
@@ -24,14 +28,16 @@ function AppShell() {
 
 export default function AppRoot() {
   return (
-    <SafeAreaProvider>
-      <AuthProvider>
-        <NotificationsProvider>
-          <ToastProvider>
-            <AppShell />
-          </ToastProvider>
-        </NotificationsProvider>
-      </AuthProvider>
-    </SafeAreaProvider>
+    <QueryClientProvider client={queryClient}>
+      <SafeAreaProvider>
+        <AuthProvider>
+          <NotificationsProvider>
+            <ToastProvider>
+              <AppShell />
+            </ToastProvider>
+          </NotificationsProvider>
+        </AuthProvider>
+      </SafeAreaProvider>
+    </QueryClientProvider>
   );
 }

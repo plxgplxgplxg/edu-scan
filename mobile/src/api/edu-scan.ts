@@ -118,6 +118,9 @@ type SubmissionDetailApi = {
   examId: string;
   status: 'GRADED' | 'NEEDS_REVIEW' | 'FAILED';
   createdAt: string;
+  imageUrl: string | null;
+  studentCode: string | null;
+  resolvedTestCode: string | null;
   score: {
     totalCorrect: number;
     maxScore: number;
@@ -253,7 +256,7 @@ export type TeacherExamView = {
 };
 
 export type PaginatedExamPageApi = {
-  items: ExamApi[];
+  data: ExamApi[];
   total: number;
   page: number;
   limit: number;

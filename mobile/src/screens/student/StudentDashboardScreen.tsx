@@ -86,19 +86,38 @@ export function StudentDashboardScreen() {
   return (
     <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
       <PageHeader
-        overline={content.student.dashboard.greeting}
         title={profileName}
         subtitle={`${content.roles.STUDENT} • ${content.student.dashboard.subtitle}`}
+        overline={content.student.dashboard.greeting}
         gradient={primaryHeroGradient}
         showNotificationButton
         actionBadge={unreadCount || undefined}
         onNotificationPress={() => navigation.navigate('SharedNotifications')}
-        avatarLabel={getInitials(profileName)}
-        metrics={[
-          { label: content.student.dashboard.metrics.classes, value: String(metrics.classCount) },
-          { label: content.student.dashboard.metrics.assignments, value: String(metrics.pendingAssignments) },
-          { label: content.common.labels.today, value: content.common.labels.active },
-        ]}
+        leadingVisual={
+          <View
+            style={[
+              styles.initialsCard,
+              {
+                width: '100%',
+                height: '100%',
+                borderRadius: layout.heroRadius - 6,
+              },
+            ]}
+          >
+            <AppText variant="title" weight="bold" color={appTheme.palette.white}>
+              {getInitials(profileName)}
+            </AppText>
+          </View>
+        }
+        footer={
+          <View style={styles.headerFooter}>
+            <View style={[styles.metricsCard, layout.isCompact ? styles.metricsCardStack : null]}>
+              <MetricBlock label={content.student.dashboard.metrics.classes} value={String(metrics.classCount)} light />
+              <MetricBlock label={content.student.dashboard.metrics.assignments} value={String(metrics.pendingAssignments)} light />
+              <MetricBlock label={content.common.labels.today} value={content.common.labels.active} light />
+            </View>
+          </View>
+        }
       />
 
       <View
@@ -180,7 +199,60 @@ export function StudentDashboardScreen() {
   );
 }
 
+function MetricBlock({
+  label,
+  value,
+  light = false,
+}: {
+  label: string;
+  value: string;
+  light?: boolean;
+}) {
+  return (
+    <View style={styles.metricBlock}>
+      <AppText 
+        variant="headline" 
+        weight="bold" 
+        color={light ? appTheme.palette.white : appTheme.palette.foreground}
+        style={{ fontFamily: appTheme.typography.displayFamily }}
+      >
+        {value}
+      </AppText>
+      <AppText variant="label" color={light ? 'rgba(255,255,255,0.7)' : appTheme.palette.mutedForeground}>
+        {label}
+      </AppText>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  initialsCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: appTheme.palette.glassFill,
+  },
+  headerFooter: {
+    gap: appTheme.spacing.lg,
+  },
+  metricsCard: {
+    backgroundColor: appTheme.palette.glassFill,
+    borderRadius: appTheme.radius.lg,
+    padding: appTheme.spacing.lg,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    borderWidth: 1,
+    borderColor: appTheme.palette.glassBorder,
+  },
+  metricsCardStack: {
+    flexWrap: 'wrap',
+    rowGap: appTheme.spacing.md,
+  },
+  metricBlock: {
+    alignItems: 'center',
+    gap: 4,
+    flex: 1,
+    minWidth: 90,
+  },
   section: {
     gap: appTheme.spacing.lg,
   },

@@ -22,8 +22,8 @@ import { useResponsiveLayout } from '../../theme/responsive';
 import { primaryHeroGradient } from '../../theme/header';
 import type { RootStackParamList } from '../../navigation/types';
 import { getInitials } from '../../utils/string';
-import { listAssignments, listClasses, listExams } from '../../api/edu-scan';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
+import { requestJson } from '../../api/http';
 import { useNotifications } from '../../features/notifications/application/notifications-provider';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -40,47 +40,45 @@ const moduleIcons = {
   stats: <BarChart2 size={24} color={appTheme.palette.white} />,
 };
 
+function MetricBlock({
+  label,
+  value,
+  light = false,
+}: {
+  label: string;
+  value: string;
+  light?: boolean;
+}) {
+  return (
+    <View style={styles.metricBlock}>
+      <AppText 
+        variant="headline" 
+        weight="bold" 
+        color={light ? appTheme.palette.white : appTheme.palette.foreground}
+        style={{ fontFamily: appTheme.typography.displayFamily }}
+      >
+        {value}
+      </AppText>
+      <AppText variant="label" color={light ? 'rgba(255,255,255,0.7)' : appTheme.palette.mutedForeground}>
+        {label}
+      </AppText>
+    </View>
+  );
+}
+
 export function TeacherDashboardScreen() {
   const navigation = useNavigation<Nav>();
   const content = useAppContent();
   const { accessToken, profileName } = useAuth();
   const layout = useResponsiveLayout();
-  const { unreadCount } = useNotifications();
+
   const { data, loading, error, reload } = useAsyncResource(
     async () => {
-      if (!accessToken) {
-        return {
-          classCount: 0,
-          examCount: 0,
-          attentionAssignments: [] as Array<{ id: string; title: string; missing: number; deadline: string }>,
-        };
-      }
-
-      const [classes, exams, assignments] = await Promise.all([
-        listClasses(accessToken),
-        listExams(accessToken),
-        listAssignments(accessToken),
-      ]);
-      const classesById = new Map(classes.map((item) => [item.id, item]));
-
+      if (!accessToken) return null;
+      const stats = await requestJson<any>('/stats/teacher', { token: accessToken });
       return {
-        classCount: classes.length,
-        examCount: exams.length,
-        attentionAssignments: assignments
-          .map((assignment) => {
-            const classItem = classesById.get(assignment.classId);
-            const totalStudents = classItem?.enrollments.length ?? 0;
-            const submitCount = assignment._count?.submits ?? 0;
-            return {
-              id: assignment.id,
-              title: assignment.title,
-              deadline: assignment.deadline,
-              missing: Math.max(totalStudents - submitCount, 0),
-            };
-          })
-          .filter((item) => item.missing > 0)
-          .sort((a, b) => Date.parse(a.deadline) - Date.parse(b.deadline))
-          .slice(0, 3),
+        classCount: stats.totalClasses ?? 0,
+        examCount: stats.totalExams ?? 0,
       };
     },
     [accessToken],
@@ -89,25 +87,39 @@ export function TeacherDashboardScreen() {
   const metrics = data ?? {
     classCount: 0,
     examCount: 0,
-    attentionAssignments: [] as Array<{ id: string; title: string; missing: number; deadline: string }>,
   };
 
   return (
     <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
       <PageHeader
-        overline={content.teacher.dashboard.greeting}
         title={profileName}
         subtitle={`${content.roles.TEACHER} • ${content.teacher.dashboard.subtitle}`}
+        overline={content.teacher.dashboard.greeting}
         gradient={primaryHeroGradient}
-        showNotificationButton
-        actionBadge={unreadCount || undefined}
-        onNotificationPress={() => navigation.navigate('SharedNotifications')}
-        avatarLabel={getInitials(profileName)}
-        metrics={[
-          { label: content.teacher.dashboard.metrics.classes, value: String(metrics.classCount) },
-          { label: content.teacher.dashboard.metrics.exams, value: String(metrics.examCount) },
-          { label: content.common.labels.active, value: content.teacher.dashboard.metrics.checks },
-        ]}
+        leadingVisual={
+          <View
+            style={[
+              styles.initialsCard,
+              {
+                width: '100%',
+                height: '100%',
+                borderRadius: layout.heroRadius - 6,
+              },
+            ]}
+          >
+            <AppText variant="title" weight="bold" color={appTheme.palette.white}>
+              {getInitials(profileName)}
+            </AppText>
+          </View>
+        }
+        footer={
+          <View style={styles.headerFooter}>
+            <View style={[styles.metricsCard, layout.isCompact ? styles.metricsCardStack : null]}>
+              <MetricBlock label={content.teacher.dashboard.metrics.classes} value={String(metrics.classCount)} light />
+              <MetricBlock label={content.teacher.dashboard.metrics.exams} value={String(metrics.examCount)} light />
+            </View>
+          </View>
+        }
       />
 
       <View
@@ -157,28 +169,7 @@ export function TeacherDashboardScreen() {
             />
           ))}
         </View>
-        <SurfaceCard style={styles.attentionCard}>
-          <AppText variant="body" weight="semibold">
-            Bài tập cần chú ý
-          </AppText>
-          {metrics.attentionAssignments.map((item) => (
-            <View key={item.id} style={styles.assignmentRow}>
-              <View style={styles.flex}>
-                <AppText variant="body" weight="medium">
-                  {item.title}
-                </AppText>
-                <AppText variant="caption" color={appTheme.palette.mutedForeground}>
-                  {`${String(item.missing)} học sinh chưa nộp`}
-                </AppText>
-              </View>
-            </View>
-          ))}
-          {!metrics.attentionAssignments.length ? (
-            <AppText variant="caption" color={appTheme.palette.mutedForeground}>
-              Không có bài tập cần chú ý
-            </AppText>
-          ) : null}
-        </SurfaceCard>
+
         {loading ? <LoadingState label={content.common.labels.loading} /> : null}
         {error ? (
           <ErrorState
@@ -194,6 +185,33 @@ export function TeacherDashboardScreen() {
 }
 
 const styles = StyleSheet.create({
+  initialsCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: appTheme.palette.glassFill,
+  },
+  headerFooter: {
+    gap: appTheme.spacing.lg,
+  },
+  metricsCard: {
+    backgroundColor: appTheme.palette.glassFill,
+    borderRadius: appTheme.radius.lg,
+    padding: appTheme.spacing.lg,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    borderWidth: 1,
+    borderColor: appTheme.palette.glassBorder,
+  },
+  metricsCardStack: {
+    flexWrap: 'wrap',
+    rowGap: appTheme.spacing.md,
+  },
+  metricBlock: {
+    alignItems: 'center',
+    gap: 4,
+    flex: 1,
+    minWidth: 90,
+  },
   section: {
     gap: appTheme.spacing.lg,
   },

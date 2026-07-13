@@ -23,6 +23,7 @@ import { AppText } from '../../components/AppText';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
+import { primaryHeroGradient } from '../../theme/header';
 import { getInitials } from '../../utils/string';
 import {
   listAssignments,
@@ -91,7 +92,7 @@ export function ProfileScreen() {
   const roleGradients = useMemo(
     () =>
       ({
-        TEACHER: [appTheme.palette.primary, appTheme.palette.tertiary],
+        TEACHER: primaryHeroGradient,
         STUDENT: [appTheme.palette.info, '#5CB6FF'],
         ADMIN: [appTheme.palette.success, appTheme.palette.quaternary],
       })[role ?? 'TEACHER'],

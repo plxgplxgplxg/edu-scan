@@ -113,7 +113,7 @@ export function TeacherStatisticsScreen() {
           ))
         ) : (
           <EmptyState
-            icon={Users}
+            icon={<Users size={24} color={palette.primary} />}
             title="Tuyệt vời!"
             description="Không có học sinh nào thiếu hoặc trễ bài trong khoảng thời gian này."
           />

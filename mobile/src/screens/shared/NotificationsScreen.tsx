@@ -72,8 +72,6 @@ export function NotificationsScreen() {
             : undefined
         }
         gradient={primaryHeroGradient}
-        showNotificationButton
-        actionBadge={unreadCount}
         onBack={() => {
           if (role === 'TEACHER') {
             navigation.navigate('TeacherTabs', { screen: 'TeacherDashboard' });
