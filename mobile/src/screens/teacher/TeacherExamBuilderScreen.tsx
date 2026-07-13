@@ -70,7 +70,7 @@ export function TeacherExamBuilderScreen() {
   const { data, loading, error } = useAsyncResource(async () => {
     if (!accessToken || !examId) return null;
     const examsData = await listOmrExams(accessToken);
-    return examsData.items.find((item) => item.id === examId) ?? null;
+    return examsData.data.find((item) => item.id === examId) ?? null;
   }, [accessToken, examId]);
 
   useEffect(() => {

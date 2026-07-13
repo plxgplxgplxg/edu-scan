@@ -86,6 +86,7 @@ export function StudentDashboardScreen() {
   return (
     <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
       <PageHeader
+        hideBackButton={true}
         title={profileName}
         subtitle={`${content.roles.STUDENT} • ${content.student.dashboard.subtitle}`}
         overline={content.student.dashboard.greeting}

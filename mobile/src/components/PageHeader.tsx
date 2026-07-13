@@ -34,6 +34,7 @@ interface PageHeaderProps {
   footer?: React.ReactNode;
   leadingVisual?: React.ReactNode;
   scrollY?: Animated.Value;
+  hideBackButton?: boolean;
 }
 
 export function PageHeader({
@@ -41,6 +42,7 @@ export function PageHeader({
   subtitle,
   backLabel,
   onBack,
+  hideBackButton,
   showNotificationButton,
   onNotificationPress,
   avatarLabel,
@@ -62,47 +64,40 @@ export function PageHeader({
   const headerGradient = gradient || [appTheme.palette.primary, appTheme.palette.tertiary];
   
   const animatedScrollY = scrollY || new Animated.Value(0);
-  const minHeight = insets.top + 56;
-  const maxHeight = minHeight + (layout.isCompact ? 60 : 80);
-
-  const headerHeight = animatedScrollY.interpolate({
-    inputRange: [0, 60],
-    outputRange: [maxHeight, minHeight],
-    extrapolate: 'clamp',
-  });
+  const hasBackButton = !hideBackButton && (backLabel || onBack || navigation.canGoBack());
 
   const contentOpacity = animatedScrollY.interpolate({
     inputRange: [0, 40],
-    outputRange: [1, 0],
+    outputRange: [1, 1],
     extrapolate: 'clamp',
   });
 
   const headerOpacity = animatedScrollY.interpolate({
-    inputRange: [0, 60],
-    outputRange: [1, 0],
+    inputRange: [-100, 0, 60],
+    outputRange: [1, 1, 1],
     extrapolate: 'clamp',
   });
 
   const glassOpacity = animatedScrollY.interpolate({
-    inputRange: [0, 60],
-    outputRange: [0, 1],
+    inputRange: [-100, 0, 60],
+    outputRange: [0, 0, 0],
     extrapolate: 'clamp',
   });
 
   const titleScale = animatedScrollY.interpolate({
     inputRange: [0, 60],
-    outputRange: [1, 0.85],
+    outputRange: [1, 1],
     extrapolate: 'clamp',
   });
 
   const titleTranslateY = animatedScrollY.interpolate({
     inputRange: [0, 60],
-    outputRange: [0, -10],
+    outputRange: [0, 0],
     extrapolate: 'clamp',
   });
 
   return (
-    <Animated.View style={[styles.container, { height: metrics?.length || footer ? undefined : headerHeight }]}>
+    <Animated.View style={[styles.container, { overflow: 'hidden' }]}>
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: headerOpacity }]}>
         <GradientBackground
           colors={headerGradient}
@@ -149,7 +144,7 @@ export function PageHeader({
           },
         ]}
       />
-      {backLabel ? (
+      {hasBackButton ? (
         <Pressable 
           onPress={onBack ?? navigation.goBack} 
           style={styles.backButton}
@@ -157,63 +152,78 @@ export function PageHeader({
         >
           <ArrowLeft size={16} color={appTheme.palette.white} />
           <AppText variant="label" color={appTheme.palette.white}>
-            {backLabel}
+            {backLabel || 'Quay lại'}
           </AppText>
         </Pressable>
       ) : null}
 
-      <View
+      <Animated.View
         style={[
           styles.headerRow,
           layout.isSmall ? styles.headerRowStack : null,
+          { transform: [{ translateY: titleTranslateY }] }
         ]}
       >
-        {leadingVisual ? (
-          <View
-            style={[
-              styles.leadingVisual,
-              {
-                width: layout.headerVisualSize,
-                height: layout.headerVisualSize,
-                borderRadius: layout.heroRadius - 4, // squircle
-              },
-            ]}
-          >
-            {leadingVisual}
+        <Animated.View
+          style={[
+            {
+              flex: 1,
+              flexDirection: 'row',
+              alignItems: 'flex-start',
+              gap: 12,
+              transformOrigin: 'left center',
+              transform: [{ scale: titleScale }]
+            },
+            layout.isSmall ? styles.headerRowStack : null,
+          ]}
+        >
+          {leadingVisual ? (
+            <View
+              style={[
+                styles.leadingVisual,
+                {
+                  width: layout.headerVisualSize,
+                  height: layout.headerVisualSize,
+                  borderRadius: layout.heroRadius - 4, // squircle
+                },
+              ]}
+            >
+              {leadingVisual}
+            </View>
+          ) : null}
+          <View style={styles.headerCopy}>
+            {overline ? (
+              <Animated.View style={{ opacity: contentOpacity }}>
+                <AppText variant="body" weight="semibold" color="rgba(255,255,255,0.78)">
+                  {overline}
+                </AppText>
+              </Animated.View>
+            ) : null}
+            <AppText
+              variant="title"
+              weight="heavy"
+              color={appTheme.palette.white}
+              numberOfLines={2}
+              adjustsFontSizeToFit
+              minimumFontScale={0.72}
+              style={{ fontFamily: appTheme.typography.displayFamily }}
+            >
+              {title}
+            </AppText>
+            {subtitle ? (
+              <Animated.View style={{ opacity: contentOpacity }}>
+                <AppText
+                  variant="body"
+                  color="rgba(255,255,255,0.70)"
+                  numberOfLines={3}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.82}
+                >
+                  {subtitle}
+                </AppText>
+              </Animated.View>
+            ) : null}
           </View>
-        ) : null}
-        <Animated.View style={[styles.headerCopy, { transform: [{ scale: titleScale }, { translateY: titleTranslateY }] }]}>
-          {overline ? (
-            <Animated.View style={{ opacity: contentOpacity }}>
-              <AppText variant="body" weight="semibold" color="rgba(255,255,255,0.78)">
-                {overline}
-              </AppText>
-            </Animated.View>
-          ) : null}
-          <AppText
-            variant="title"
-            weight="heavy"
-            color={appTheme.palette.white}
-            numberOfLines={2}
-            adjustsFontSizeToFit
-            minimumFontScale={0.72}
-            style={{ fontFamily: appTheme.typography.displayFamily }}
-          >
-            {title}
-          </AppText>
-          {subtitle ? (
-            <Animated.View style={{ opacity: contentOpacity }}>
-              <AppText
-                variant="body"
-                color="rgba(255,255,255,0.70)"
-                numberOfLines={3}
-                adjustsFontSizeToFit
-                minimumFontScale={0.82}
-              >
-                {subtitle}
-              </AppText>
-            </Animated.View>
-          ) : null}
         </Animated.View>
         <View style={[styles.actions, layout.isSmall ? styles.actionsWrap : null]}>
           {showNotificationButton ? (
@@ -269,7 +279,7 @@ export function PageHeader({
             </View>
           ) : null}
         </View>
-      </View>
+      </Animated.View>
 
       {metrics?.length ? (
         <View

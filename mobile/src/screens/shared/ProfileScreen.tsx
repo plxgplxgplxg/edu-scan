@@ -149,6 +149,7 @@ export function ProfileScreen() {
   return (
     <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
       <PageHeader
+        hideBackButton
         title={profileName}
         subtitle={email}
         overline={content.shared.profile.title}
@@ -175,29 +176,6 @@ export function ProfileScreen() {
               <AppText variant="label" weight="semibold" color={palette.white}>
                 {role ? content.roles[role] : content.roles.TEACHER}
               </AppText>
-            </View>
-            <View style={[styles.metricsCard, layout.isCompact ? styles.metricsCardStack : null]}>
-                {role === 'TEACHER' ? (
-                <>
-                  <MetricBlock label={content.teacher.dashboard.metrics.classes} value={String((data as { classes?: number } | null)?.classes ?? 0)} light />
-                  <MetricBlock label={content.teacher.dashboard.metrics.exams} value={String((data as { exams?: number } | null)?.exams ?? 0)} light />
-                  <MetricBlock label={content.shared.profile.teacherOmrCount} value={String((data as { omrBatches?: number } | null)?.omrBatches ?? 0)} light />
-                </>
-              ) : null}
-              {role === 'STUDENT' ? (
-                <>
-                  <MetricBlock
-                    label={content.student.dashboard.metrics.classes}
-                    value={String((data as { classes?: number } | null)?.classes ?? 0)}
-                    light
-                  />
-                  <MetricBlock
-                    label={content.student.dashboard.metrics.assignments}
-                    value={String((data as { assignments?: number } | null)?.assignments ?? 0)}
-                    light
-                  />
-                </>
-              ) : null}
             </View>
           </View>
         )}

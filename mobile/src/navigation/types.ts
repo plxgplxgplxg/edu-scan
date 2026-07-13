@@ -5,18 +5,24 @@ export type TeacherTabParamList = {
   TeacherClasses: undefined;
   TeacherOMR: undefined;
   SharedProfile: undefined;
+  SharedNotifications: undefined;
+  TeacherStatistics: undefined;
 };
 
 export type StudentTabParamList = {
   StudentDashboard: undefined;
   StudentClasses: undefined;
   SharedProfile: undefined;
+  SharedNotifications: undefined;
+  StudentStatistics: undefined;
 };
 
 export type AdminTabParamList = {
   AdminDashboard: undefined;
   AdminUsers: undefined;
   SharedProfile: undefined;
+  SharedNotifications: undefined;
+  AdminStatistics: undefined;
 };
 
 export type RootStackParamList = {

@@ -2,7 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator, type BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { BookOpen, Home, ScanLine, User } from 'lucide-react-native';
+import { BookOpen, Home, ScanLine, User, Bell } from 'lucide-react-native';
 
 import { BottomNav } from '../components/BottomNav';
 import type { ModuleKey, UserRole } from '../types/app';
@@ -100,6 +100,23 @@ function TeacherTabsNavigator() {
           tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
         }}
       />
+      <TeacherTab.Screen
+        name="SharedNotifications"
+        component={NotificationsScreen}
+        options={{
+          title: 'Thông báo',
+          tabBarIcon: ({ color, size }) => <Bell color={color} size={size} />,
+        }}
+      />
+      <TeacherTab.Screen
+        name="TeacherStatistics"
+        component={TeacherStatisticsScreen}
+        options={{
+          title: 'Thống kê',
+          tabBarIcon: ({ color, size }) => <BookOpen color={color} size={size} />,
+          tabBarButton: () => null,
+        }}
+      />
     </TeacherTab.Navigator>
   );
 }
@@ -132,6 +149,23 @@ function StudentTabsNavigator() {
         options={{
           title: 'Hồ sơ',
           tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
+        }}
+      />
+      <StudentTab.Screen
+        name="SharedNotifications"
+        component={NotificationsScreen}
+        options={{
+          title: 'Thông báo',
+          tabBarIcon: ({ color, size }) => <Bell color={color} size={size} />,
+        }}
+      />
+      <StudentTab.Screen
+        name="StudentStatistics"
+        component={StudentStatisticsScreen}
+        options={{
+          title: 'Thống kê',
+          tabBarIcon: ({ color, size }) => <BookOpen color={color} size={size} />,
+          tabBarButton: () => null,
         }}
       />
     </StudentTab.Navigator>
@@ -168,6 +202,23 @@ function AdminTabsNavigator() {
           tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
         }}
       />
+      <AdminTab.Screen
+        name="SharedNotifications"
+        component={NotificationsScreen}
+        options={{
+          title: 'Thông báo',
+          tabBarIcon: ({ color, size }) => <Bell color={color} size={size} />,
+        }}
+      />
+      <AdminTab.Screen
+        name="AdminStatistics"
+        component={AdminStatisticsScreen}
+        options={{
+          title: 'Thống kê',
+          tabBarIcon: ({ color, size }) => <BookOpen color={color} size={size} />,
+          tabBarButton: () => null,
+        }}
+      />
     </AdminTab.Navigator>
   );
 }
@@ -202,14 +253,6 @@ export function AppNavigator() {
               name="TeacherOmrExamBuilder"
               component={TeacherExamBuilderScreen}
             />
-            <Stack.Screen
-              name="SharedNotifications"
-              component={NotificationsScreen}
-            />
-            <Stack.Screen
-              name="TeacherStatistics"
-              component={TeacherStatisticsScreen}
-            />
           </>
         ) : null}
 
@@ -220,28 +263,12 @@ export function AppNavigator() {
               name="StudentClassDetail"
               component={StudentClassDetailScreen}
             />
-            <Stack.Screen
-              name="SharedNotifications"
-              component={NotificationsScreen}
-            />
-            <Stack.Screen
-              name="StudentStatistics"
-              component={StudentStatisticsScreen}
-            />
           </>
         ) : null}
 
         {role === 'ADMIN' ? (
           <>
             <Stack.Screen name="AdminTabs" component={AdminTabsNavigator} />
-            <Stack.Screen
-              name="SharedNotifications"
-              component={NotificationsScreen}
-            />
-            <Stack.Screen
-              name="AdminStatistics"
-              component={AdminStatisticsScreen}
-            />
           </>
         ) : null}
       </Stack.Navigator>

@@ -42,7 +42,7 @@ export function TeacherExamsScreen() {
       }
 
       const [examsData, classes] = await Promise.all([listOmrExams(accessToken), listClasses(accessToken)]);
-      return { exams: examsData.items.map(mapExamSummary), classes };
+      return { exams: examsData.data.map(mapExamSummary), classes };
     },
     [accessToken],
   );

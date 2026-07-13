@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Users, BookOpen, GraduationCap } from 'lucide-react-native';
 
 import { requestJson } from '../../api/http';
@@ -26,18 +25,18 @@ export function AdminStatisticsScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <PageHeader title="Thống kê hệ thống" onBack={() => navigation.goBack()} />
         <View style={styles.center}>
           <ActivityIndicator size="large" color={palette.primary} />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (error || !data) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <PageHeader title="Thống kê hệ thống" onBack={() => navigation.goBack()} />
         <EmptyState
           icon={<Users size={24} color={palette.primary} />}
@@ -46,14 +45,14 @@ export function AdminStatisticsScreen() {
           actionLabel="Thử lại"
           onAction={refetch}
         />
-      </SafeAreaView>
+      </View>
     );
   }
 
   const { overview, classes } = data;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <PageHeader title="Thống kê hệ thống" onBack={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.sectionTitle}>Tổng quan</Text>
@@ -92,7 +91,7 @@ export function AdminStatisticsScreen() {
           <Text style={styles.emptyText}>Chưa có lớp học nào.</Text>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

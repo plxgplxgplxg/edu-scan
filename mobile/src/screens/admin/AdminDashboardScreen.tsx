@@ -72,6 +72,7 @@ export function AdminDashboardScreen() {
   return (
     <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
       <PageHeader
+        hideBackButton={true}
         overline={content.admin.dashboard.title}
         title={content.meta.appName}
         subtitle={content.admin.dashboard.subtitle}

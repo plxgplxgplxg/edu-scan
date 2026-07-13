@@ -457,6 +457,10 @@ export async function createOmrExam(
     body: payload,
   });
 }
+export async function getExamDetail(token: string, examId: string) {
+  return requestJson<ExamApi>(`/exams/${encodeURIComponent(examId)}`, { token });
+}
+
 
 export async function updateExam(
   token: string,

@@ -6,7 +6,7 @@ import { Role, Prisma, User } from '@prisma/client';
 export class StatisticsService {
   constructor(private prisma: PrismaService) {}
 
-  async getTeacherStats(teacherId: string) {
+  async getTeacherStats(teacherId: string, timeRange?: string) {
     const totalClasses = await this.prisma.class.count({
       where: { teacherId },
     });
@@ -18,21 +18,23 @@ export class StatisticsService {
     });
     const totalUniqueStudents = uniqueStudentsResult.length;
 
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-
-    const endOfMonth = new Date();
-    endOfMonth.setMonth(endOfMonth.getMonth() + 1);
-    endOfMonth.setDate(0);
-    endOfMonth.setHours(23, 59, 59, 999);
+    const startOfRange = new Date();
+    if (timeRange === 'week') {
+      startOfRange.setDate(startOfRange.getDate() - startOfRange.getDay());
+      startOfRange.setHours(0, 0, 0, 0);
+    } else if (timeRange === 'month') {
+      startOfRange.setDate(1);
+      startOfRange.setHours(0, 0, 0, 0);
+    } else {
+      startOfRange.setFullYear(2000); // effectively all time
+    }
 
     const now = new Date();
 
     const activeAssignmentsThisMonth = await this.prisma.assignment.count({
       where: {
         teacherId,
-        createdAt: { gte: startOfMonth, lte: endOfMonth },
+        createdAt: { gte: startOfRange },
         deadline: { gt: now },
       },
     });
@@ -40,16 +42,40 @@ export class StatisticsService {
     const expiredAssignmentsThisMonth = await this.prisma.assignment.count({
       where: {
         teacherId,
-        createdAt: { gte: startOfMonth, lte: endOfMonth },
+        createdAt: { gte: startOfRange },
         deadline: { lte: now },
       },
     });
+
+    const totalExams = await this.prisma.exam.count({
+      where: { teacherId },
+    });
+
+    const totalOmrSubmissions = await this.prisma.omrSubmission.count({
+      where: { exam: { teacherId } },
+    });
+
+    const classesData = await this.prisma.class.findMany({
+      where: { teacherId },
+      include: { _count: { select: { enrollments: true } } },
+    });
+    const studentsPerClass = classesData.map(c => ({ className: c.name, count: c._count.enrollments }));
+
+    const examsData = await this.prisma.exam.findMany({
+      where: { teacherId },
+      include: { _count: { select: { submissions: true } } },
+    });
+    const submissionsPerExam = examsData.map(e => ({ examTitle: e.title, count: e._count.submissions }));
 
     return {
       totalClasses,
       totalUniqueStudents,
       activeAssignmentsThisMonth,
       expiredAssignmentsThisMonth,
+      totalExams,
+      totalOmrSubmissions,
+      studentsPerClass,
+      submissionsPerExam,
     };
   }
 
@@ -196,9 +222,9 @@ export class StatisticsService {
 
   async getTeacherLateMissingStudents(
     teacherId: string,
-    query: { classId?: string; timeRange?: string },
+    query: { classId?: string; timeRange?: string; page?: number; limit?: number },
   ) {
-    const { classId, timeRange } = query;
+    const { classId, timeRange, page = 1, limit = 10 } = query;
     const now = new Date();
     const startDate = new Date();
 
@@ -273,6 +299,18 @@ export class StatisticsService {
       }))
       .sort((a, b) => b.totalIssues - a.totalIssues);
 
-    return result;
+    const total = result.length;
+    const skip = (page - 1) * limit;
+    const paginatedData = result.slice(skip, skip + limit);
+
+    return {
+      data: paginatedData,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 }

@@ -1,90 +1,92 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Users, BookOpen, AlertCircle, Clock } from 'lucide-react-native';
+import { Users, AlertCircle, Clock, BarChart2 } from 'lucide-react-native';
 
 import { requestJson } from '../../api/http';
 import { useAuth } from '../../store/auth-store';
-import { palette, spacing, typography, radius } from '../../theme/tokens';
+import { appTheme, palette } from '../../theme/tokens';
 import { PageHeader } from '../../components/PageHeader';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { EmptyState } from '../../components/EmptyState';
+import { AppText } from '../../components/AppText';
+
+function HorizontalBarChart({ data, color }: { data: { label: string, value: number }[], color: string }) {
+  if (!data || data.length === 0) return <AppText color={palette.mutedForeground} style={{ marginVertical: 8 }}>Chưa có dữ liệu</AppText>;
+  const maxValue = Math.max(...data.map(d => d.value), 1);
+  return (
+    <View style={{ gap: 12, marginVertical: 8 }}>
+      {data.map((item, index) => (
+        <View key={index} style={{ gap: 4 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <AppText variant="caption" color={palette.foreground} style={{ flex: 1 }} numberOfLines={1}>{item.label}</AppText>
+            <AppText variant="caption" color={palette.primary} weight="bold">{item.value}</AppText>
+          </View>
+          <View style={{ height: 12, backgroundColor: palette.card, borderRadius: 6, overflow: 'hidden' }}>
+            <View style={{ height: '100%', width: `${(item.value / maxValue) * 100}%`, backgroundColor: color, borderRadius: 6 }} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
 
 export function TeacherStatisticsScreen() {
   const navigation = useNavigation();
   const [filter, setFilter] = useState<'month' | 'week' | 'all'>('month');
-  const { session } = useAuth();
-  const token = session?.accessToken || '';
+  const { accessToken: token } = useAuth();
 
   const { data: stats, isLoading: isLoadingStats } = useQuery({
-    queryKey: ['teacherStats'],
+    queryKey: ['teacherStats', filter],
     queryFn: async () => {
-      return await requestJson<any>('/stats/teacher', { token });
+      return await requestJson<any>(`/stats/teacher?timeRange=${filter}`, { token: token || '' });
     },
   });
 
-  const { data: lateMissing, isLoading: isLoadingLate } = useQuery({
-    queryKey: ['teacherLateMissing', filter],
+  const [page, setPage] = React.useState(1);
+  const [allLateMissing, setAllLateMissing] = React.useState<any[]>([]);
+
+  const { data: lateMissingData, isLoading: isLoadingLate, isFetching: isFetchingLate } = useQuery({
+    queryKey: ['teacherLateMissing', filter, page],
     queryFn: async () => {
-      return await requestJson<any>(`/stats/teacher/late-missing?timeRange=${filter}`, { token });
+      return await requestJson<any>(`/stats/teacher/late-missing?timeRange=${filter}&page=${page}&limit=10`, { token: token || '' });
     },
   });
 
-  const isLoading = isLoadingStats || isLoadingLate;
+  React.useEffect(() => {
+    if (lateMissingData?.data) {
+      if (page === 1) {
+        setAllLateMissing(lateMissingData.data);
+      } else {
+        setAllLateMissing(prev => [...prev, ...lateMissingData.data]);
+      }
+    }
+  }, [lateMissingData, page]);
 
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <PageHeader title="Thống kê giảng dạy" onBack={() => navigation.goBack()} />
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={palette.primary} />
-        </View>
-      </SafeAreaView>
-    );
-  }
+  React.useEffect(() => {
+    setPage(1);
+  }, [filter]);
+
+  const headerMetrics = stats ? [
+    { value: String(stats.totalClasses || 0), label: 'Lớp học' },
+    { value: String(stats.totalExams || 0), label: 'Đề kiểm tra' },
+    { value: String(stats.totalOmrSubmissions || 0), label: 'Bài đã chấm' },
+  ] : undefined;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <PageHeader title="Thống kê giảng dạy" onBack={() => navigation.goBack()} />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.sectionTitle}>Tổng quan</Text>
-        
-        {stats && (
-          <View style={styles.grid}>
-            <SurfaceCard style={styles.statCard}>
-              <BookOpen color={palette.primary} size={24} />
-              <Text style={styles.statValue}>{stats.totalClasses}</Text>
-              <Text style={styles.statLabel}>Lớp học</Text>
-            </SurfaceCard>
-            
-            <SurfaceCard style={styles.statCard}>
-              <Users color={palette.info} size={24} />
-              <Text style={styles.statValue}>{stats.totalUniqueStudents}</Text>
-              <Text style={styles.statLabel}>Học sinh</Text>
-            </SurfaceCard>
-          </View>
-        )}
-
-        {stats && (
-          <View style={styles.grid}>
-            <SurfaceCard style={styles.statCard}>
-              <Clock color={palette.warning} size={24} />
-              <Text style={styles.statValue}>{stats.activeAssignmentsThisMonth}</Text>
-              <Text style={styles.statLabel}>Bài đang mở</Text>
-            </SurfaceCard>
-
-            <SurfaceCard style={styles.statCard}>
-              <AlertCircle color={palette.destructive} size={24} />
-              <Text style={styles.statValue}>{stats.expiredAssignmentsThisMonth}</Text>
-              <Text style={styles.statLabel}>Bài hết hạn (tháng)</Text>
-            </SurfaceCard>
-          </View>
-        )}
-
+    <View style={styles.container}>
+      <PageHeader 
+        title="Thống kê giảng dạy" 
+        onBack={() => navigation.goBack()} 
+        metrics={headerMetrics}
+      />
+      <ScrollView 
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]} 
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Học sinh trễ/thiếu bài</Text>
+          <AppText variant="headline" style={styles.sectionTitle}>Tổng quan</AppText>
           <View style={styles.filterGroup}>
             {(['week', 'month', 'all'] as const).map(f => (
               <TouchableOpacity
@@ -92,34 +94,105 @@ export function TeacherStatisticsScreen() {
                 style={[styles.filterChip, filter === f && styles.filterChipActive]}
                 onPress={() => setFilter(f)}
               >
-                <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
+                <AppText variant="caption" style={[styles.filterText, filter === f && styles.filterTextActive]}>
                   {f === 'week' ? 'Tuần' : f === 'month' ? 'Tháng' : 'Tất cả'}
-                </Text>
+                </AppText>
               </TouchableOpacity>
             ))}
           </View>
         </View>
+        
+        {isLoadingStats && (
+          <View style={[styles.center, { height: 200 }]}>
+            <ActivityIndicator size="large" color={palette.primary} />
+          </View>
+        )}
 
-        {lateMissing && lateMissing.length > 0 ? (
-          lateMissing.map((student: any) => (
-            <SurfaceCard key={student.id} style={styles.studentCard}>
-              <View>
-                <Text style={styles.studentName}>{student.name} ({student.studentCode})</Text>
-                <Text style={styles.studentSub}>
-                  Thiếu: {student.missingCount} • Trễ: {student.lateCount}
-                </Text>
+        {stats && (
+          <>
+            <View style={styles.grid}>
+              <SurfaceCard style={styles.statCard}>
+                <Clock color={palette.warning} size={24} />
+                <AppText variant="title" style={styles.statValue}>{stats.activeAssignmentsThisMonth}</AppText>
+                <AppText variant="caption" style={styles.statLabel}>Bài đang mở</AppText>
+              </SurfaceCard>
+
+              <SurfaceCard style={styles.statCard}>
+                <AlertCircle color={palette.destructive} size={24} />
+                <AppText variant="title" style={styles.statValue}>{stats.expiredAssignmentsThisMonth}</AppText>
+                <AppText variant="caption" style={styles.statLabel}>Bài hết hạn (tháng)</AppText>
+              </SurfaceCard>
+            </View>
+
+            <AppText variant="headline" style={[styles.sectionTitle, { marginTop: 16 }]}>Biểu đồ học tập</AppText>
+            <SurfaceCard style={{ marginTop: 8, padding: 16 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <Users color={palette.primary} size={20} />
+                <AppText variant="body" weight="bold" color={palette.foreground}>Số học sinh theo lớp</AppText>
               </View>
+              <HorizontalBarChart 
+                data={(stats.studentsPerClass || []).map((s: any) => ({ label: s.className, value: s.count }))} 
+                color={palette.primary} 
+              />
             </SurfaceCard>
-          ))
+
+            <SurfaceCard style={{ marginTop: 12, padding: 16 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <BarChart2 color={palette.secondary} size={20} />
+                <AppText variant="body" weight="bold" color={palette.foreground}>Số bài chấm theo đề</AppText>
+              </View>
+              <HorizontalBarChart 
+                data={(stats.submissionsPerExam || []).map((s: any) => ({ label: s.examTitle, value: s.count }))} 
+                color={palette.secondary} 
+              />
+            </SurfaceCard>
+          </>
+        )}
+
+        <View style={[styles.sectionHeader, { marginTop: 24 }]}>
+          <AppText variant="headline" style={styles.sectionTitle}>
+            Học sinh trễ/thiếu bài {lateMissingData?.meta?.total !== undefined ? `(${lateMissingData.meta.total} học sinh)` : ''}
+          </AppText>
+        </View>
+
+        {isLoadingLate && page === 1 ? (
+          <ActivityIndicator size="small" color={palette.primary} style={{ marginTop: 24 }} />
+        ) : allLateMissing && allLateMissing.length > 0 ? (
+          <>
+            {allLateMissing.map((student: any) => (
+              <SurfaceCard key={student.id} style={styles.studentCard}>
+                <View>
+                  <AppText variant="body" weight="bold" style={styles.studentName}>{student.name} ({student.studentCode})</AppText>
+                  <AppText variant="caption" style={styles.studentSub}>
+                    Thiếu: {student.missingCount} • Trễ: {student.lateCount}
+                  </AppText>
+                </View>
+              </SurfaceCard>
+            ))}
+            {lateMissingData?.meta?.totalPages > page && (
+              <TouchableOpacity
+                style={{ padding: 12, alignItems: 'center', marginTop: 8 }}
+                onPress={() => setPage(p => p + 1)}
+                disabled={isFetchingLate}
+              >
+                {isFetchingLate ? (
+                  <ActivityIndicator size="small" color={palette.primary} />
+                ) : (
+                  <AppText variant="body" color={palette.primary} weight="bold">Tải thêm</AppText>
+                )}
+              </TouchableOpacity>
+            )}
+          </>
         ) : (
-          <EmptyState
-            icon={<Users size={24} color={palette.primary} />}
-            title="Tuyệt vời!"
-            description="Không có học sinh nào thiếu hoặc trễ bài trong khoảng thời gian này."
-          />
+          <View style={{ alignItems: 'center', marginTop: 16 }}>
+            <EmptyState
+              icon={<Users size={24} color={palette.primary} />}
+              title="Tuyệt vời! Không có học sinh trễ bài."
+            />
+          </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -129,51 +202,48 @@ const styles = StyleSheet.create({
     backgroundColor: palette.background,
   },
   center: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
   scrollContent: {
-    padding: spacing.md,
+    padding: appTheme.spacing.md,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: spacing.md,
-    marginBottom: spacing.md,
+    marginTop: appTheme.spacing.xl,
+    marginBottom: appTheme.spacing.md,
   },
   sectionTitle: {
-    ...typography.h3,
     color: palette.foreground,
   },
   grid: {
     flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
+    gap: appTheme.spacing.sm,
+    marginBottom: appTheme.spacing.sm,
+    marginTop: 8,
   },
   statCard: {
     flex: 1,
     alignItems: 'center',
-    padding: spacing.md,
+    padding: appTheme.spacing.md,
   },
   statValue: {
-    ...typography.h2,
     color: palette.foreground,
-    marginTop: spacing.sm,
+    marginTop: appTheme.spacing.sm,
   },
   statLabel: {
-    ...typography.caption,
     color: palette.mutedForeground,
     marginTop: 4,
   },
   filterGroup: {
     flexDirection: 'row',
-    gap: spacing.xs,
+    gap: appTheme.spacing.xs,
   },
   filterChip: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingHorizontal: appTheme.spacing.sm,
+    paddingVertical: appTheme.spacing.xs,
     borderRadius: 999,
     backgroundColor: palette.card,
     borderWidth: 1,
@@ -184,26 +254,22 @@ const styles = StyleSheet.create({
     borderColor: palette.primary,
   },
   filterText: {
-    ...typography.caption,
     color: palette.mutedForeground,
   },
   filterTextActive: {
-    color: palette.primaryForeground,
+    color: palette.white,
     fontWeight: '600',
   },
   studentCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: appTheme.spacing.sm,
   },
   studentName: {
-    ...typography.body,
-    fontWeight: '600',
     color: palette.foreground,
   },
   studentSub: {
-    ...typography.caption,
     color: palette.destructive,
     marginTop: 4,
   },

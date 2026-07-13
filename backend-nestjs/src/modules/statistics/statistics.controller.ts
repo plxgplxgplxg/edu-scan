@@ -15,9 +15,12 @@ export class StatisticsController {
 
   @Get('teacher')
   @Roles(Role.TEACHER)
-  async getTeacherStats(@CurrentUser() currentUser: AuthenticatedUser) {
+  async getTeacherStats(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Query('timeRange') timeRange?: string,
+  ) {
     assertUserRole(currentUser, [Role.TEACHER]);
-    return this.statisticsService.getTeacherStats(currentUser.id);
+    return this.statisticsService.getTeacherStats(currentUser.id, timeRange);
   }
 
   @Get('student')
@@ -59,11 +62,18 @@ export class StatisticsController {
     @CurrentUser() currentUser: AuthenticatedUser,
     @Query('classId') classId?: string,
     @Query('timeRange') timeRange?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     assertUserRole(currentUser, [Role.TEACHER]);
     return this.statisticsService.getTeacherLateMissingStudents(
       currentUser.id,
-      { classId, timeRange },
+      { 
+        classId, 
+        timeRange,
+        page: page ? parseInt(page, 10) : undefined,
+        limit: limit ? parseInt(limit, 10) : undefined,
+      },
     );
   }
 }

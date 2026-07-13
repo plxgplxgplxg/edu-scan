@@ -92,6 +92,7 @@ export function TeacherDashboardScreen() {
   return (
     <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
       <PageHeader
+        hideBackButton={true}
         title={profileName}
         subtitle={`${content.roles.TEACHER} • ${content.teacher.dashboard.subtitle}`}
         overline={content.teacher.dashboard.greeting}

@@ -64,7 +64,7 @@ export function NotificationsScreen() {
   return (
     <Screen refreshing={loading} onRefresh={handleRefresh}>
       <PageHeader
-        backLabel={content.common.buttons.backToHome}
+        hideBackButton
         title={content.shared.notifications.title}
         subtitle={
           unreadCount
@@ -72,17 +72,6 @@ export function NotificationsScreen() {
             : undefined
         }
         gradient={primaryHeroGradient}
-        onBack={() => {
-          if (role === 'TEACHER') {
-            navigation.navigate('TeacherTabs', { screen: 'TeacherDashboard' });
-          }
-          if (role === 'STUDENT') {
-            navigation.navigate('StudentTabs', { screen: 'StudentDashboard' });
-          }
-          if (role === 'ADMIN') {
-            navigation.navigate('AdminTabs', { screen: 'AdminDashboard' });
-          }
-        }}
       />
 
       <View
