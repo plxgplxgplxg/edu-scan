@@ -25,8 +25,6 @@ def test_process_response_to_proto_keeps_optional_fields():
             OmrAnswerResponse(
                 questionNumber=1,
                 detectedAnswer="A",
-                correctAnswer="A",
-                isCorrect=True,
                 needsReview=False,
             )
         ],
@@ -43,8 +41,7 @@ def test_process_response_to_proto_keeps_optional_fields():
     assert proto_response.student_code == "20224871"
     assert proto_response.test_id == "123"
     assert proto_response.answers[0].detected_answer == "A"
-    assert proto_response.answers[0].correct_answer == "A"
-    assert proto_response.answers[0].is_correct is True
+    assert proto_response.answers[0].needs_review is False
     assert proto_response.artifacts.processed_image_path == "/tmp/processed.png"
 
 

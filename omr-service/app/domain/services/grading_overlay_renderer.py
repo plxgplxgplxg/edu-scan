@@ -21,11 +21,13 @@ class GradingOverlayRenderer:
             bubble_boxes = answer.get("bubbleBoxes") or {}
             detected_answer = answer.get("detectedAnswer")
             correct_answer = answer.get("correctAnswer")
+            mark_status = answer.get("markStatus")
             review_reason = answer.get("reviewReason")
             needs_review = bool(answer.get("needsReview"))
             question_number = int(answer["questionNumber"])
 
             color = self._resolve_color(
+                mark_status=mark_status,
                 needs_review=needs_review,
                 detected_answer=detected_answer,
                 correct_answer=correct_answer,
@@ -52,10 +54,17 @@ class GradingOverlayRenderer:
     def _resolve_color(
         self,
         *,
+        mark_status: object,
         needs_review: bool,
         detected_answer: object,
         correct_answer: object,
     ) -> tuple[int, int, int]:
+        if mark_status == "CORRECT":
+            return self.CORRECT_COLOR
+        if mark_status == "WRONG":
+            return self.WRONG_COLOR
+        if mark_status == "REVIEW":
+            return self.REVIEW_COLOR
         if needs_review:
             return self.REVIEW_COLOR
         if detected_answer and correct_answer and detected_answer == correct_answer:

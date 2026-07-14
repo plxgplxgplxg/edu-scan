@@ -176,14 +176,13 @@ def test_render_grade_overlay_updates_artifacts(tmp_path):
     response = orchestrator.render_grade_overlay(
         OmrGradeOverlayRequest(
             resultJsonPath=str(result_path),
-            answerKey=[{"questionNumber": 1, "correctAnswer": "A"}],
+            marks=[{"questionNumber": 1, "status": "CORRECT"}],
         )
     )
 
     assert response.artifacts.annotatedImagePath is not None
     updated_payload = json.loads(result_path.read_text(encoding="utf-8"))
-    assert updated_payload["answers"][0]["correctAnswer"] == "A"
-    assert updated_payload["answers"][0]["isCorrect"] is True
+    assert updated_payload["answers"][0]["markStatus"] == "CORRECT"
 
 
 def test_process_keeps_legacy_two_step_flow(monkeypatch, tmp_path):

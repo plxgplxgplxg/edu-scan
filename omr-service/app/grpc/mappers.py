@@ -26,12 +26,13 @@ def grade_overlay_request_from_proto(
 ) -> OmrGradeOverlayRequest:
     return OmrGradeOverlayRequest(
         resultJsonPath=request.result_json_path,
-        answerKey=[
+        marks=[
             {
                 "questionNumber": item.question_number,
-                "correctAnswer": item.correct_answer,
+                "status": omr_service_pb2.OmrMarkStatus.Name(item.status),
             }
-            for item in request.answer_key
+            for item in request.marks
+            if item.status != omr_service_pb2.OMR_MARK_STATUS_UNSPECIFIED
         ],
     )
 
@@ -87,10 +88,6 @@ def answer_response_to_proto(
 
     if answer.detectedAnswer is not None:
         proto_answer.detected_answer = answer.detectedAnswer
-    if answer.correctAnswer is not None:
-        proto_answer.correct_answer = answer.correctAnswer
-    if answer.isCorrect is not None:
-        proto_answer.is_correct = answer.isCorrect
     if answer.reviewReason is not None:
         proto_answer.review_reason = answer.reviewReason
 

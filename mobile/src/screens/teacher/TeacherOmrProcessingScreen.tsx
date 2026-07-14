@@ -1,32 +1,49 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft, CheckCircle2, Circle } from 'lucide-react-native';
+import { ArrowLeft, CheckCircle2, Circle, XCircle } from 'lucide-react-native';
 import { AppText } from '../../components/AppText';
 import { Screen } from '../../components/Screen';
 import { palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
+import { getOmrBatchHeader } from '../../api/edu-scan';
+import { useAuth } from '../../store/auth-store';
 
 export function TeacherOmrProcessingScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const layout = useResponsiveLayout();
+  const { accessToken } = useAuth();
+  
   const totalFiles = route.params?.totalFiles as number || 0;
+  const examId = route.params?.examId as string;
+  const batchId = route.params?.batchId as string;
   
   const [processed, setProcessed] = useState(0);
+  const [successCount, setSuccessCount] = useState(0);
+  const [failedCount, setFailedCount] = useState(0);
 
-  // MOCK SSE: We will just fake the progress for UI purposes right now
   useEffect(() => {
-    let current = 0;
-    const interval = setInterval(() => {
-      current++;
-      setProcessed(current);
-      if (current >= totalFiles) {
-        clearInterval(interval);
+    if (!accessToken || !batchId) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const batch = await getOmrBatchHeader(accessToken, batchId);
+        setProcessed(batch.processedFiles);
+        setSuccessCount(batch.successCount);
+        setFailedCount(batch.failedCount);
+
+        if (batch.status === 'COMPLETED' || batch.status === 'PARTIAL_FAILED' || batch.status === 'FAILED') {
+          clearInterval(interval);
+          navigation.replace('TeacherOmrExamDetail', { examId });
+        }
+      } catch (err) {
+        console.error('Lỗi khi kiểm tra trạng thái OMR:', err);
       }
-    }, 1000);
+    }, 2000);
+
     return () => clearInterval(interval);
-  }, [totalFiles]);
+  }, [accessToken, batchId, examId, navigation]);
 
   return (
     <Screen>
@@ -50,18 +67,26 @@ export function TeacherOmrProcessingScreen() {
         </View>
 
         <ScrollView style={{ width: '100%' }} showsVerticalScrollIndicator={false}>
-          {Array.from({ length: totalFiles }).map((_, i) => (
-            <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16, paddingHorizontal: 16, backgroundColor: palette.white, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', marginBottom: 12 }}>
-              {i < processed ? (
-                <CheckCircle2 size={20} color={palette.success} />
-              ) : (
-                <Circle size={20} color={palette.mutedForeground} />
-              )}
-              <AppText variant="body" color={i < processed ? palette.foreground : palette.mutedForeground}>
-                Ảnh #{i + 1} — {i < processed ? 'nhận diện thành công' : 'đang chờ xử lý...'}
-              </AppText>
-            </View>
-          ))}
+          {Array.from({ length: totalFiles }).map((_, i) => {
+            const isProcessed = i < processed;
+            const isSuccess = i < successCount;
+            const isFailed = isProcessed && !isSuccess;
+
+            return (
+              <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16, paddingHorizontal: 16, backgroundColor: palette.white, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', marginBottom: 12 }}>
+                {isSuccess ? (
+                  <CheckCircle2 size={20} color={palette.success} />
+                ) : isFailed ? (
+                  <XCircle size={20} color={palette.destructive} />
+                ) : (
+                  <Circle size={20} color={palette.mutedForeground} />
+                )}
+                <AppText variant="body" color={isProcessed ? (isFailed ? palette.destructive : palette.foreground) : palette.mutedForeground}>
+                  Ảnh #{i + 1} — {isSuccess ? 'nhận diện thành công' : isFailed ? 'nhận diện thất bại' : 'đang chờ xử lý...'}
+                </AppText>
+              </View>
+            );
+          })}
         </ScrollView>
       </View>
     </Screen>

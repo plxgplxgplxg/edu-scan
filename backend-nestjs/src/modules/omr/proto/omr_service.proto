@@ -52,8 +52,8 @@ message OmrDetectRequest {
 message OmrAnswerResponse {
   int32 question_number = 1;
   optional string detected_answer = 2;
-  bool needs_review = 3;
-  optional string review_reason = 4;
+  bool needs_review = 5;
+  optional string review_reason = 6;
   // correct_answer and is_correct are deprecated.
   // Grading is solely performed by the backend.
   reserved 3, 4;

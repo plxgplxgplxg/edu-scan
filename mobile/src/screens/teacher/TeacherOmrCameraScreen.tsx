@@ -61,7 +61,10 @@ export function TeacherOmrCameraScreen() {
     setIsCapturing(true);
     try {
       const capturedPhoto = await photoOutput.capturePhotoToFile(
-        { flashMode: flashEnabled ? 'on' : 'off' },
+        {
+          flashMode: flashEnabled ? 'on' : 'off',
+          enableShutterSound: true,
+        },
         {},
       );
       const fileUri = capturedPhoto.filePath.startsWith('file://')

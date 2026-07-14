@@ -55,7 +55,7 @@ export function TeacherExamBuilderScreen() {
   const [questionCount, setQuestionCount] = useState(40);
   const [optionsCount, setOptionsCount] = useState(4);
   const [template, setTemplate] = useState('40');
-  const [testCodes, setTestCodes] = useState<string[]>(['']);
+  const [testCodes, setTestCodes] = useState<string[]>([]);
 
   // Step 3 states
   const [variants, setVariants] = useState<VariantState[]>([]);
@@ -76,7 +76,7 @@ export function TeacherExamBuilderScreen() {
       setTitle(data.title ?? '');
       setQuestionCount(40);
       if (data.variants && data.variants.length > 0) {
-        const codes = data.variants.map(v => v.testCode === 'DEFAULT' ? '' : v.testCode);
+        const codes = data.variants.map(v => v.testCode === 'DEFAULT' ? '' : v.testCode).filter(c => c !== '');
         setTestCodes(codes);
         setVariants(data.variants.map((v) => ({
           testCode: v.testCode === 'DEFAULT' ? '' : v.testCode,
@@ -84,7 +84,7 @@ export function TeacherExamBuilderScreen() {
         })));
         setSelectedTestCode(data.variants[0].testCode === 'DEFAULT' ? '' : data.variants[0].testCode);
       } else {
-        setTestCodes(['']);
+        setTestCodes([]);
         setVariants([{ testCode: '', answerKeys: [] }]);
         setSelectedTestCode('');
       }
@@ -93,7 +93,7 @@ export function TeacherExamBuilderScreen() {
 
   const handleNextToStep3 = () => {
     const cleanedCodes = testCodes.map(c => c.trim());
-    if (cleanedCodes.length > 1 && cleanedCodes.some(c => c === '')) {
+    if (cleanedCodes.length > 0 && cleanedCodes.some(c => c === '')) {
       setSubmitError('Vui lòng nhập mã đề cho tất cả các đề hoặc xóa các mã trống.');
       return;
     }
@@ -104,10 +104,12 @@ export function TeacherExamBuilderScreen() {
     }
     setSubmitError(null);
     
-    const newVariants = cleanedCodes.map(code => {
-      const existing = variants.find(v => v.testCode === code);
-      return existing ? existing : { testCode: code, answerKeys: [] };
-    });
+    const newVariants = cleanedCodes.length === 0 
+      ? [{ testCode: '', answerKeys: variants.find(v => v.testCode === '')?.answerKeys || [] }]
+      : cleanedCodes.map(code => {
+          const existing = variants.find(v => v.testCode === code);
+          return existing ? existing : { testCode: code, answerKeys: [] };
+        });
     setVariants(newVariants);
     if (!newVariants.find(v => v.testCode === selectedTestCode)) {
       setSelectedTestCode(newVariants[0].testCode);
@@ -303,26 +305,24 @@ export function TeacherExamBuilderScreen() {
             <View style={{ gap: 8 }}>
               {testCodes.map((code, idx) => (
                 <View key={idx} style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-                  <TextInputField
-                    placeholder={`Mã đề ${idx + 1}`}
+                  <TextInput
+                    placeholder={`Nhập mã đề ${idx + 1}`}
+                    placeholderTextColor={palette.mutedForeground}
                     value={code}
                     onChangeText={(txt) => {
                       const newCodes = [...testCodes];
                       newCodes[idx] = txt;
                       setTestCodes(newCodes);
                     }}
-                    style={{ flex: 1, margin: 0, height: 48 }}
-                    containerStyle={{ marginVertical: 0, flex: 1 }}
+                    style={{ flex: 1, height: 48, backgroundColor: palette.white, borderRadius: 12, borderWidth: 1, borderColor: palette.border, paddingHorizontal: 16, fontSize: 16, color: palette.foreground, fontFamily: appTheme.typography.family }}
                   />
-                  {testCodes.length > 1 && (
-                    <Pressable onPress={() => {
-                      const newCodes = [...testCodes];
-                      newCodes.splice(idx, 1);
-                      setTestCodes(newCodes);
-                    }} style={{ padding: 12, backgroundColor: palette.destructive + '20', borderRadius: 12 }}>
-                      <AppText weight="bold" color={palette.destructive}>Xóa</AppText>
-                    </Pressable>
-                  )}
+                  <Pressable onPress={() => {
+                    const newCodes = [...testCodes];
+                    newCodes.splice(idx, 1);
+                    setTestCodes(newCodes);
+                  }} style={{ paddingHorizontal: 16, backgroundColor: palette.destructive + '15', borderRadius: 12, height: 48, justifyContent: 'center' }}>
+                    <AppText weight="bold" color={palette.destructive}>Xóa</AppText>
+                  </Pressable>
                 </View>
               ))}
               <Pressable onPress={() => setTestCodes([...testCodes, ''])} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: palette.primary, borderStyle: 'dashed' }}>

@@ -50,11 +50,11 @@ export function TeacherOmrUploadScreen() {
     // Submit the batch using the api
     const { uploadOmrBatch } = require('../../api/edu-scan');
     try {
-      await uploadOmrBatch(accessToken!, {
+      const batch = await uploadOmrBatch(accessToken!, {
         examId,
         files: files.map(f => ({ uri: f.uri, name: f.name, type: f.type }))
       });
-      navigation.replace('TeacherOmrProcessing', { examId, totalFiles: files.length });
+      navigation.replace('TeacherOmrProcessing', { examId, batchId: batch.id, totalFiles: files.length });
     } catch (err: any) {
       showToast(err.message || 'Lỗi khi tải ảnh lên');
       setSubmitting(false);

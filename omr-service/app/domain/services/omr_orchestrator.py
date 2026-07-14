@@ -135,24 +135,15 @@ class OmrOrchestrator:
         if aligned_image is None or aligned_image.size == 0:
             raise InvalidImageError("Unable to read processed image for overlay rendering")
 
-        answer_key_map = {
-            item.questionNumber: item.correctAnswer
-            for item in request.answerKey
-        }
+        mark_map = {item.questionNumber: item.status for item in request.marks}
         answers = []
         for answer in payload.get("answers", []):
             question_number = int(answer["questionNumber"])
-            correct_answer = answer_key_map.get(question_number)
-            detected_answer = answer.get("detectedAnswer")
+            mark_status = mark_map.get(question_number, "REVIEW")
             answers.append(
                 {
                     **answer,
-                    "correctAnswer": correct_answer,
-                    "isCorrect": (
-                        None
-                        if detected_answer is None
-                        else detected_answer == correct_answer
-                    ),
+                    "markStatus": mark_status,
                 }
             )
 
@@ -184,17 +175,30 @@ class OmrOrchestrator:
                 templateName=request.templateName,
             )
         )
-        overlay_response = self.render_grade_overlay(
-            OmrGradeOverlayRequest(
-                resultJsonPath=detect_response.artifacts.resultJsonPath or "",
-                answerKey=request.answerKey,
-            )
-        )
-
         answer_key_map = {
             item.questionNumber: item.correctAnswer
             for item in request.answerKey
         }
+        overlay_response = self.render_grade_overlay(
+            OmrGradeOverlayRequest(
+                resultJsonPath=detect_response.artifacts.resultJsonPath or "",
+                marks=[
+                    {
+                        "questionNumber": answer.questionNumber,
+                        "status": (
+                            "REVIEW"
+                            if answer.needsReview
+                            else "CORRECT"
+                            if answer.detectedAnswer
+                            == answer_key_map.get(answer.questionNumber)
+                            else "WRONG"
+                        ),
+                    }
+                    for answer in detect_response.answers
+                ],
+            )
+        )
+
         graded_answers = [
             answer.model_copy(
                 update={

@@ -43,9 +43,9 @@ class OmrGrpcService(omr_service_pb2_grpc.OmrServiceServicer):
 
     def GradeOverlay(self, request, context):
         self._logger.info(
-            "GradeOverlay start: resultJsonPath=%s answerKeyCount=%d",
+            "GradeOverlay start: resultJsonPath=%s marksCount=%d",
             request.result_json_path,
-            len(request.answer_key),
+            len(request.marks),
         )
         result = self._call_with_boundary(
             context,

@@ -24,29 +24,35 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11omr_service.proto\x12\x0e\x65\x64uscan.omr.v1\"C\n\x10OmrAnswerKeyItem\x12\x17\n\x0fquestion_number\x18\x01 \x01(\x05\x12\x16\n\x0e\x63orrect_answer\x18\x02 \x01(\t\"S\n\x10OmrDetectRequest\x12\x11\n\timage_url\x18\x01 \x01(\t\x12\x1a\n\rtemplate_name\x18\x02 \x01(\tH\x00\x88\x01\x01\x42\x10\n\x0e_template_name\"h\n\x16OmrGradeOverlayRequest\x12\x18\n\x10result_json_path\x18\x01 \x01(\t\x12\x34\n\nanswer_key\x18\x02 \x03(\x0b\x32 .eduscan.omr.v1.OmrAnswerKeyItem\"\x8a\x01\n\x11OmrProcessRequest\x12\x11\n\timage_url\x18\x01 \x01(\t\x12\x1a\n\rtemplate_name\x18\x02 \x01(\tH\x00\x88\x01\x01\x12\x34\n\nanswer_key\x18\x03 \x03(\x0b\x32 .eduscan.omr.v1.OmrAnswerKeyItemB\x10\n\x0e_template_name\"\xb0\x02\n\x14OmrArtifactsResponse\x12!\n\x14processed_image_path\x18\x01 \x01(\tH\x00\x88\x01\x01\x12!\n\x14\x61nnotated_image_path\x18\x02 \x01(\tH\x01\x88\x01\x01\x12\x1e\n\x11warp_overlay_path\x18\x03 \x01(\tH\x02\x88\x01\x01\x12\x1f\n\x12\x61nswer_scores_path\x18\x04 \x01(\tH\x03\x88\x01\x01\x12\x1d\n\x10result_json_path\x18\x05 \x01(\tH\x04\x88\x01\x01\x42\x17\n\x15_processed_image_pathB\x17\n\x15_annotated_image_pathB\x14\n\x12_warp_overlay_pathB\x15\n\x13_answer_scores_pathB\x13\n\x11_result_json_path\"\xfa\x01\n\x11OmrAnswerResponse\x12\x17\n\x0fquestion_number\x18\x01 \x01(\x05\x12\x1c\n\x0f\x64\x65tected_answer\x18\x02 \x01(\tH\x00\x88\x01\x01\x12\x1b\n\x0e\x63orrect_answer\x18\x03 \x01(\tH\x01\x88\x01\x01\x12\x17\n\nis_correct\x18\x04 \x01(\x08H\x02\x88\x01\x01\x12\x14\n\x0cneeds_review\x18\x05 \x01(\x08\x12\x1a\n\rreview_reason\x18\x06 \x01(\tH\x03\x88\x01\x01\x42\x12\n\x10_detected_answerB\x11\n\x0f_correct_answerB\r\n\x0b_is_correctB\x10\n\x0e_review_reason\"\xe5\x01\n\x12OmrProcessResponse\x12\x19\n\x0cstudent_code\x18\x01 \x01(\tH\x00\x88\x01\x01\x12\x14\n\x07test_id\x18\x02 \x01(\tH\x01\x88\x01\x01\x12\x14\n\x0cneeds_review\x18\x03 \x01(\x08\x12\x32\n\x07\x61nswers\x18\x04 \x03(\x0b\x32!.eduscan.omr.v1.OmrAnswerResponse\x12\x37\n\tartifacts\x18\x05 \x01(\x0b\x32$.eduscan.omr.v1.OmrArtifactsResponseB\x0f\n\r_student_codeB\n\n\x08_test_id\"R\n\x17OmrGradeOverlayResponse\x12\x37\n\tartifacts\x18\x01 \x01(\x0b\x32$.eduscan.omr.v1.OmrArtifactsResponse2\x8f\x02\n\nOmrService\x12N\n\x06\x44\x65tect\x12 .eduscan.omr.v1.OmrDetectRequest\x1a\".eduscan.omr.v1.OmrProcessResponse\x12_\n\x0cGradeOverlay\x12&.eduscan.omr.v1.OmrGradeOverlayRequest\x1a\'.eduscan.omr.v1.OmrGradeOverlayResponse\x12P\n\x07Process\x12!.eduscan.omr.v1.OmrProcessRequest\x1a\".eduscan.omr.v1.OmrProcessResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11omr_service.proto\x12\x0e\x65\x64uscan.omr.v1\"C\n\x10OmrAnswerKeyItem\x12\x17\n\x0fquestion_number\x18\x01 \x01(\x05\x12\x16\n\x0e\x63orrect_answer\x18\x02 \x01(\t\"\xb0\x02\n\x14OmrArtifactsResponse\x12!\n\x14processed_image_path\x18\x01 \x01(\tH\x00\x88\x01\x01\x12!\n\x14\x61nnotated_image_path\x18\x02 \x01(\tH\x01\x88\x01\x01\x12\x1e\n\x11warp_overlay_path\x18\x03 \x01(\tH\x02\x88\x01\x01\x12\x1f\n\x12\x61nswer_scores_path\x18\x04 \x01(\tH\x03\x88\x01\x01\x12\x1d\n\x10result_json_path\x18\x05 \x01(\tH\x04\x88\x01\x01\x42\x17\n\x15_processed_image_pathB\x17\n\x15_annotated_image_pathB\x14\n\x12_warp_overlay_pathB\x15\n\x13_answer_scores_pathB\x13\n\x11_result_json_path\"S\n\x10OmrDetectRequest\x12\x11\n\timage_url\x18\x01 \x01(\t\x12\x1a\n\rtemplate_name\x18\x02 \x01(\tH\x00\x88\x01\x01\x42\x10\n\x0e_template_name\"\xca\x01\n\x11OmrAnswerResponse\x12\x17\n\x0fquestion_number\x18\x01 \x01(\x05\x12\x1c\n\x0f\x64\x65tected_answer\x18\x02 \x01(\tH\x00\x88\x01\x01\x12\x14\n\x0cneeds_review\x18\x05 \x01(\x08\x12\x1a\n\rreview_reason\x18\x06 \x01(\tH\x01\x88\x01\x01\x42\x12\n\x10_detected_answerB\x10\n\x0e_review_reasonJ\x04\x08\x03\x10\x04J\x04\x08\x04\x10\x05R\x0e\x63orrect_answerR\nis_correct\"\xe5\x01\n\x12OmrProcessResponse\x12\x19\n\x0cstudent_code\x18\x01 \x01(\tH\x00\x88\x01\x01\x12\x14\n\x07test_id\x18\x02 \x01(\tH\x01\x88\x01\x01\x12\x14\n\x0cneeds_review\x18\x03 \x01(\x08\x12\x32\n\x07\x61nswers\x18\x04 \x03(\x0b\x32!.eduscan.omr.v1.OmrAnswerResponse\x12\x37\n\tartifacts\x18\x05 \x01(\x0b\x32$.eduscan.omr.v1.OmrArtifactsResponseB\x0f\n\r_student_codeB\n\n\x08_test_id\"Y\n\x0fOmrQuestionMark\x12\x17\n\x0fquestion_number\x18\x01 \x01(\x05\x12-\n\x06status\x18\x02 \x01(\x0e\x32\x1d.eduscan.omr.v1.OmrMarkStatus\"t\n\x16OmrGradeOverlayRequest\x12\x18\n\x10result_json_path\x18\x01 \x01(\t\x12.\n\x05marks\x18\x02 \x03(\x0b\x32\x1f.eduscan.omr.v1.OmrQuestionMarkJ\x04\x08\x03\x10\x04R\nanswer_key\"R\n\x17OmrGradeOverlayResponse\x12\x37\n\tartifacts\x18\x01 \x01(\x0b\x32$.eduscan.omr.v1.OmrArtifactsResponse\"\x8a\x01\n\x11OmrProcessRequest\x12\x11\n\timage_url\x18\x01 \x01(\t\x12\x1a\n\rtemplate_name\x18\x02 \x01(\tH\x00\x88\x01\x01\x12\x34\n\nanswer_key\x18\x03 \x03(\x0b\x32 .eduscan.omr.v1.OmrAnswerKeyItemB\x10\n\x0e_template_name*T\n\rOmrMarkStatus\x12\x1f\n\x1bOMR_MARK_STATUS_UNSPECIFIED\x10\x00\x12\x0b\n\x07\x43ORRECT\x10\x01\x12\t\n\x05WRONG\x10\x02\x12\n\n\x06REVIEW\x10\x03\x32\x94\x02\n\nOmrService\x12N\n\x06\x44\x65tect\x12 .eduscan.omr.v1.OmrDetectRequest\x1a\".eduscan.omr.v1.OmrProcessResponse\x12_\n\x0cGradeOverlay\x12&.eduscan.omr.v1.OmrGradeOverlayRequest\x1a\'.eduscan.omr.v1.OmrGradeOverlayResponse\x12U\n\x07Process\x12!.eduscan.omr.v1.OmrProcessRequest\x1a\".eduscan.omr.v1.OmrProcessResponse\"\x03\x88\x02\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'omr_service_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
+  _globals['_OMRSERVICE'].methods_by_name['Process']._loaded_options = None
+  _globals['_OMRSERVICE'].methods_by_name['Process']._serialized_options = b'\210\002\001'
+  _globals['_OMRMARKSTATUS']._serialized_start=1369
+  _globals['_OMRMARKSTATUS']._serialized_end=1453
   _globals['_OMRANSWERKEYITEM']._serialized_start=37
   _globals['_OMRANSWERKEYITEM']._serialized_end=104
-  _globals['_OMRDETECTREQUEST']._serialized_start=106
-  _globals['_OMRDETECTREQUEST']._serialized_end=189
-  _globals['_OMRGRADEOVERLAYREQUEST']._serialized_start=191
-  _globals['_OMRGRADEOVERLAYREQUEST']._serialized_end=295
-  _globals['_OMRPROCESSREQUEST']._serialized_start=298
-  _globals['_OMRPROCESSREQUEST']._serialized_end=436
-  _globals['_OMRARTIFACTSRESPONSE']._serialized_start=439
-  _globals['_OMRARTIFACTSRESPONSE']._serialized_end=743
-  _globals['_OMRANSWERRESPONSE']._serialized_start=746
-  _globals['_OMRANSWERRESPONSE']._serialized_end=996
-  _globals['_OMRPROCESSRESPONSE']._serialized_start=999
-  _globals['_OMRPROCESSRESPONSE']._serialized_end=1228
-  _globals['_OMRGRADEOVERLAYRESPONSE']._serialized_start=1230
-  _globals['_OMRGRADEOVERLAYRESPONSE']._serialized_end=1312
-  _globals['_OMRSERVICE']._serialized_start=1315
-  _globals['_OMRSERVICE']._serialized_end=1586
+  _globals['_OMRARTIFACTSRESPONSE']._serialized_start=107
+  _globals['_OMRARTIFACTSRESPONSE']._serialized_end=411
+  _globals['_OMRDETECTREQUEST']._serialized_start=413
+  _globals['_OMRDETECTREQUEST']._serialized_end=496
+  _globals['_OMRANSWERRESPONSE']._serialized_start=499
+  _globals['_OMRANSWERRESPONSE']._serialized_end=701
+  _globals['_OMRPROCESSRESPONSE']._serialized_start=704
+  _globals['_OMRPROCESSRESPONSE']._serialized_end=933
+  _globals['_OMRQUESTIONMARK']._serialized_start=935
+  _globals['_OMRQUESTIONMARK']._serialized_end=1024
+  _globals['_OMRGRADEOVERLAYREQUEST']._serialized_start=1026
+  _globals['_OMRGRADEOVERLAYREQUEST']._serialized_end=1142
+  _globals['_OMRGRADEOVERLAYRESPONSE']._serialized_start=1144
+  _globals['_OMRGRADEOVERLAYRESPONSE']._serialized_end=1226
+  _globals['_OMRPROCESSREQUEST']._serialized_start=1229
+  _globals['_OMRPROCESSREQUEST']._serialized_end=1367
+  _globals['_OMRSERVICE']._serialized_start=1456
+  _globals['_OMRSERVICE']._serialized_end=1732
 # @@protoc_insertion_point(module_scope)

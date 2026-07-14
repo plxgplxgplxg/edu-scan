@@ -67,7 +67,9 @@ class OmrServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def Process(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """Process is deprecated — backend handles all grading.
+        It is kept for reference during migration and will be removed in a future release.
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')

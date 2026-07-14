@@ -9,6 +9,11 @@ class OmrAnswerKeyItem(BaseModel):
     correctAnswer: Literal["A", "B", "C", "D"]
 
 
+class OmrQuestionMark(BaseModel):
+    questionNumber: int = Field(gt=0)
+    status: Literal["CORRECT", "WRONG", "REVIEW"]
+
+
 class OmrDetectRequest(BaseModel):
     imageUrl: HttpUrl
     templateName: str | None = None
@@ -16,15 +21,15 @@ class OmrDetectRequest(BaseModel):
 
 class OmrGradeOverlayRequest(BaseModel):
     resultJsonPath: str
-    answerKey: list[OmrAnswerKeyItem] = Field(min_length=1, max_length=200)
+    marks: list[OmrQuestionMark] = Field(min_length=1, max_length=200)
 
     @model_validator(mode="after")
     def validate_payload(self) -> "OmrGradeOverlayRequest":
         seen_numbers: set[int] = set()
-        for item in self.answerKey:
+        for item in self.marks:
             if item.questionNumber in seen_numbers:
                 raise ValueError(
-                    f"Duplicated answer key questionNumber {item.questionNumber}",
+                    f"Duplicated mark questionNumber {item.questionNumber}",
                 )
             seen_numbers.add(item.questionNumber)
 
