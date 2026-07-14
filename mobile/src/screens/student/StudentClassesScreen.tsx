@@ -1,6 +1,6 @@
 /* eslint-disable react/no-unstable-nested-components, no-void, react-native/no-inline-styles */
-import React, { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { FlatList, Pressable, StyleSheet, View, ActivityIndicator } from 'react-native';
 import {
   BookOpen,
   KeyRound,
@@ -10,7 +10,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { joinClassByCode, listAssignments, listClasses, mapClassSummary } from '../../api/edu-scan';
+import { joinClassByCode, listAssignments, listClasses, mapClassSummary, type AssignmentApi, type ClassSummary } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
 import { ModalSheet } from '../../components/ModalSheet';
 import { PageHeader } from '../../components/PageHeader';
@@ -19,7 +19,6 @@ import { ErrorState, LoadingState } from '../../components/RequestState';
 import { Screen } from '../../components/Screen';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { TextInputField } from '../../components/TextInputField';
-import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { useAppContent } from '../../hooks/useAppContent';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
@@ -39,29 +38,67 @@ export function StudentClassesScreen() {
   const [classCode, setClassCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const { data, loading, error, reload } = useAsyncResource(
-    async () => {
-      if (!accessToken) {
-        return [];
-      }
 
-      const [paginatedClasses, assignments] = await Promise.all([
-        listClasses(accessToken, 1, 50, search),
+  const [studentClasses, setStudentClasses] = useState<ClassSummary[]>([]);
+  const [assignments, setAssignments] = useState<AssignmentApi[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchInitial = useCallback(async () => {
+    if (!accessToken) {
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const [paginatedClasses, assignmentsData] = await Promise.all([
+        listClasses(accessToken, 1, 10, search),
         listAssignments(accessToken),
       ]);
-      const classes = paginatedClasses.data;
+      setAssignments(assignmentsData);
+      setStudentClasses(paginatedClasses.data.map((item) => mapClassSummary(item, assignmentsData, 'STUDENT')));
+      setHasMore(paginatedClasses.page < paginatedClasses.totalPages);
+      setPage(2);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+    } finally {
+      setLoading(false);
+    }
+  }, [accessToken, search]);
 
-      return classes.map((item) => mapClassSummary(item, assignments, 'STUDENT'));
-    },
-    [accessToken, search],
-  );
-  const studentClasses = data ?? [];
+  useEffect(() => {
+    void fetchInitial();
+  }, [fetchInitial]);
+
+  const loadMore = async () => {
+    if (!hasMore || loadingMore || loading || !accessToken) {
+      return;
+    }
+    setLoadingMore(true);
+    try {
+      const paginatedClasses = await listClasses(accessToken, page, 10, search);
+      setStudentClasses((prev) => [
+        ...prev,
+        ...paginatedClasses.data.map((item) => mapClassSummary(item, assignments, 'STUDENT')),
+      ]);
+      setHasMore(paginatedClasses.page < paginatedClasses.totalPages);
+      setPage((p) => p + 1);
+    } catch (err) {
+      // ignore silently
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   const handleRefresh = () => {
-    reload().catch(() => undefined);
+    void fetchInitial();
   };
 
   return (
-    <Screen refreshing={loading} onRefresh={handleRefresh}>
+    <Screen scrollable={false}>
       <PageHeader
         backLabel={content.common.buttons.backToHome}
         title={content.student.classes.title}
@@ -73,40 +110,56 @@ export function StudentClassesScreen() {
         leadingVisual={<BookOpen size={30} color={palette.white} />}
       />
 
-      <View
-        style={[
+      <FlatList
+        data={studentClasses}
+        keyExtractor={(item) => item.id}
+        refreshing={loading}
+        onRefresh={handleRefresh}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        contentContainerStyle={[
           styles.list,
           {
             paddingHorizontal: layout.horizontalPadding,
             paddingTop: layout.sectionGap,
+            paddingBottom: layout.sectionGap + layout.navHeight + 20,
             maxWidth: layout.contentMaxWidth,
             alignSelf: 'center',
             width: '100%',
-            gap: layout.sectionGap,
           },
         ]}
-      >
-        {loading ? <LoadingState label={content.common.labels.loading} /> : null}
-        <TextInputField
-          label={content.common.search.classes}
-          value={search}
-          onChangeText={setSearch}
-          placeholder={content.common.search.classes}
-          trailing={<Search size={18} color={palette.mutedForeground} />}
-        />
-        {error ? (
-          <ErrorState
-            message={error}
-            retryLabel={content.common.buttons.retry}
-            onRetry={reload}
-          />
-        ) : null}
-
-        {studentClasses.map(item => (
-          <Pressable
-            key={item.id}
-            onPress={() => navigation.navigate('StudentClassDetail', { classId: item.id })}
-          >
+        ListHeaderComponent={
+          <>
+            <TextInputField
+              label={content.common.search.classes}
+              value={search}
+              onChangeText={setSearch}
+              placeholder={content.common.search.classes}
+              trailing={<Search size={18} color={palette.mutedForeground} />}
+            />
+            {error ? (
+              <ErrorState
+                message={error}
+                retryLabel={content.common.buttons.retry}
+                onRetry={handleRefresh}
+              />
+            ) : null}
+          </>
+        }
+        ListFooterComponent={
+          <>
+            {loadingMore ? <ActivityIndicator size="small" color={palette.primary} style={{ marginVertical: 16 }} /> : null}
+            <PrimaryButton
+              variant="outline"
+              label={content.student.classes.joinNewClass}
+              icon={<KeyRound size={18} color={palette.primary} />}
+              onPress={() => setShowJoin(true)}
+              style={{ marginTop: 16 }}
+            />
+          </>
+        }
+        renderItem={({ item }) => (
+          <Pressable onPress={() => navigation.navigate('StudentClassDetail', { classId: item.id })}>
             <SurfaceCard style={styles.card}>
               <View
                 style={[
@@ -147,15 +200,8 @@ export function StudentClassesScreen() {
               </View>
             </SurfaceCard>
           </Pressable>
-        ))}
-
-        <PrimaryButton
-          variant="outline"
-          label={content.student.classes.joinNewClass}
-          icon={<KeyRound size={18} color={palette.primary} />}
-          onPress={() => setShowJoin(true)}
-        />
-      </View>
+        )}
+      />
 
       <ModalSheet visible={showJoin} onClose={() => setShowJoin(false)}>
         <AppText variant="headline" weight="bold" style={styles.sheetTitle}>
@@ -185,7 +231,7 @@ export function StudentClassesScreen() {
               await joinClassByCode(accessToken, classCode.trim());
               setClassCode('');
               setShowJoin(false);
-              await reload();
+              handleRefresh();
             } catch (err) {
               setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
             } finally {
@@ -200,7 +246,6 @@ export function StudentClassesScreen() {
           </AppText>
         ) : null}
       </ModalSheet>
-
     </Screen>
   );
 }
@@ -229,7 +274,6 @@ const styles = StyleSheet.create({
     gap: 6,
     flexWrap: 'wrap',
   },
-
   pendingBadge: {
     backgroundColor: palette.warningSoft,
     paddingHorizontal: 12,
