@@ -46,6 +46,15 @@ export class GradingService {
     exam: OmrExam,
     detectedTestId: string | null | undefined,
   ): TestCodeResolution {
+    if (exam.variants.length === 1 && exam.variants[0].testCode === 'DEFAULT') {
+      return {
+        detectedTestId: this.normalizeTestCode(detectedTestId),
+        resolvedVariantId: exam.variants[0].id,
+        resolvedTestCode: exam.variants[0].testCode,
+        status: TestCodeResolutionStatus.MATCHED,
+      };
+    }
+
     const normalizedDetectedTestId = this.normalizeTestCode(detectedTestId);
 
     if (!normalizedDetectedTestId) {

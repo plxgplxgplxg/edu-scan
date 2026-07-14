@@ -52,10 +52,10 @@ export function TeacherExamBuilderScreen() {
   const [note, setNote] = useState('');
 
   // Step 2 states
-  const [questionCount, setQuestionCount] = useState(20);
+  const [questionCount, setQuestionCount] = useState(40);
   const [optionsCount, setOptionsCount] = useState(4);
   const [template, setTemplate] = useState('40');
-  const [testCodesString, setTestCodesString] = useState('001');
+  const [testCodes, setTestCodes] = useState<string[]>(['']);
 
   // Step 3 states
   const [variants, setVariants] = useState<VariantState[]>([]);
@@ -74,31 +74,37 @@ export function TeacherExamBuilderScreen() {
   useEffect(() => {
     if (data) {
       setTitle(data.title ?? '');
-      setQuestionCount((data as any).questionCount ?? 20);
+      setQuestionCount(40);
       if (data.variants && data.variants.length > 0) {
-        setTestCodesString(data.variants.map(v => v.testCode).join(', '));
+        const codes = data.variants.map(v => v.testCode === 'DEFAULT' ? '' : v.testCode);
+        setTestCodes(codes);
         setVariants(data.variants.map((v) => ({
-          testCode: v.testCode,
+          testCode: v.testCode === 'DEFAULT' ? '' : v.testCode,
           answerKeys: [...v.answerKeys].sort((a, b) => a.questionNumber - b.questionNumber),
         })));
-        setSelectedTestCode(data.variants[0].testCode);
+        setSelectedTestCode(data.variants[0].testCode === 'DEFAULT' ? '' : data.variants[0].testCode);
       } else {
-        setTestCodesString('001');
-        setVariants([{ testCode: '001', answerKeys: [] }]);
-        setSelectedTestCode('001');
+        setTestCodes(['']);
+        setVariants([{ testCode: '', answerKeys: [] }]);
+        setSelectedTestCode('');
       }
     }
   }, [data]);
 
   const handleNextToStep3 = () => {
-    const codes = testCodesString.split(',').map(c => c.trim()).filter(c => c);
-    if (codes.length === 0) {
-      setSubmitError('Vui lòng nhập ít nhất 1 mã đề');
+    const cleanedCodes = testCodes.map(c => c.trim());
+    if (cleanedCodes.length > 1 && cleanedCodes.some(c => c === '')) {
+      setSubmitError('Vui lòng nhập mã đề cho tất cả các đề hoặc xóa các mã trống.');
+      return;
+    }
+    const uniqueCodes = new Set(cleanedCodes);
+    if (uniqueCodes.size !== cleanedCodes.length) {
+      setSubmitError('Các mã đề không được trùng nhau.');
       return;
     }
     setSubmitError(null);
     
-    const newVariants = codes.map(code => {
+    const newVariants = cleanedCodes.map(code => {
       const existing = variants.find(v => v.testCode === code);
       return existing ? existing : { testCode: code, answerKeys: [] };
     });
@@ -137,7 +143,10 @@ export function TeacherExamBuilderScreen() {
         title: title || 'Đề thi mới',
         maxScore: 10,
         questionCount,
-        variants,
+        variants: variants.map(v => ({
+          testCode: v.testCode || 'DEFAULT',
+          answerKeys: v.answerKeys
+        })),
       } as any);
       await publishExam(accessToken, targetExamId);
       navigation.goBack();
@@ -254,17 +263,32 @@ export function TeacherExamBuilderScreen() {
                 <AppText variant="title" weight="bold">-</AppText>
               </Pressable>
               <View style={styles.counterValue}>
-                <AppText variant="headline" weight="bold" color={palette.primary}>{questionCount}</AppText>
-                <AppText variant="caption" color={palette.mutedForeground}>câu hỏi</AppText>
+                <TextInput
+                  style={{ fontSize: 24, fontWeight: 'bold', color: palette.primary, textAlign: 'center', minWidth: 48, padding: 0 }}
+                  keyboardType="number-pad"
+                  value={questionCount ? String(questionCount) : ''}
+                  onChangeText={(text) => {
+                    const num = parseInt(text.replace(/[^0-9]/g, ''), 10);
+                    if (!isNaN(num)) {
+                      setQuestionCount(Math.min(40, num));
+                    } else if (text === '') {
+                      setQuestionCount(0 as any);
+                    }
+                  }}
+                  onBlur={() => {
+                    if (!questionCount || questionCount < 1) setQuestionCount(1);
+                  }}
+                />
+                <AppText variant="caption" color={palette.mutedForeground}>câu hỏi (tối đa 40)</AppText>
               </View>
-              <Pressable style={styles.counterBtn} onPress={() => setQuestionCount(questionCount + 1)}>
+              <Pressable style={styles.counterBtn} onPress={() => setQuestionCount(Math.min(40, questionCount + 1))}>
                 <AppText variant="title" weight="bold">+</AppText>
               </Pressable>
             </View>
 
             <AppText variant="label" weight="semibold" style={{ marginTop: 16 }}>Số lựa chọn mỗi câu</AppText>
             <View style={styles.optionsRow}>
-              {[2, 3, 4, 5].map(num => (
+              {[2, 3, 4].map(num => (
                 <Pressable
                   key={num}
                   style={[styles.optionBtn, optionsCount === num ? styles.optionBtnActive : null]}
@@ -275,28 +299,51 @@ export function TeacherExamBuilderScreen() {
               ))}
             </View>
 
-            <TextInputField
-              label="Các mã đề (ngăn cách bởi dấu phẩy)"
-              placeholder="VD: 201, 202, 301"
-              value={testCodesString}
-              onChangeText={setTestCodesString}
-              style={{ marginTop: 16 }}
-            />
+            <AppText variant="label" weight="semibold" style={{ marginTop: 16 }}>Các mã đề (để trống nếu không có mã đề)</AppText>
+            <View style={{ gap: 8 }}>
+              {testCodes.map((code, idx) => (
+                <View key={idx} style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                  <TextInputField
+                    placeholder={`Mã đề ${idx + 1}`}
+                    value={code}
+                    onChangeText={(txt) => {
+                      const newCodes = [...testCodes];
+                      newCodes[idx] = txt;
+                      setTestCodes(newCodes);
+                    }}
+                    style={{ flex: 1, margin: 0, height: 48 }}
+                    containerStyle={{ marginVertical: 0, flex: 1 }}
+                  />
+                  {testCodes.length > 1 && (
+                    <Pressable onPress={() => {
+                      const newCodes = [...testCodes];
+                      newCodes.splice(idx, 1);
+                      setTestCodes(newCodes);
+                    }} style={{ padding: 12, backgroundColor: palette.destructive + '20', borderRadius: 12 }}>
+                      <AppText weight="bold" color={palette.destructive}>Xóa</AppText>
+                    </Pressable>
+                  )}
+                </View>
+              ))}
+              <Pressable onPress={() => setTestCodes([...testCodes, ''])} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: palette.primary, borderStyle: 'dashed' }}>
+                <AppText variant="title" weight="bold" color={palette.primary}>+</AppText>
+                <AppText weight="bold" color={palette.primary}>Thêm mã đề</AppText>
+              </Pressable>
+            </View>
 
             <AppText variant="label" weight="semibold" style={{ marginTop: 16 }}>Mẫu phiếu trả lời</AppText>
             <View style={{ gap: 12 }}>
               {[
-                { id: '40', title: '40 câu — 1 cột', desc: 'Phổ biến cho kiểm tra 15 phút' },
-                { id: '60', title: '60 câu — 2 cột', desc: 'Dành cho đề thi giữa/cuối kỳ' },
+                { id: '40', title: '40 câu — 1 cột', desc: 'Mẫu chuẩn của EduScan (Cố định)' },
               ].map(tpl => (
-                <Pressable key={tpl.id} style={[styles.templateCard, template === tpl.id ? styles.templateCardActive : null]} onPress={() => setTemplate(tpl.id)}>
+                <View key={tpl.id} style={[styles.templateCard, styles.templateCardActive]}>
                   <View style={styles.templateIcon} />
                   <View style={{ flex: 1 }}>
                     <AppText variant="body" weight="bold">{tpl.title}</AppText>
                     <AppText variant="caption" color={palette.mutedForeground}>{tpl.desc}</AppText>
                   </View>
-                  {template === tpl.id && <Check size={20} color={palette.primary} />}
-                </Pressable>
+                  <Check size={20} color={palette.primary} />
+                </View>
               ))}
             </View>
           </View>
@@ -313,7 +360,7 @@ export function TeacherExamBuilderScreen() {
                     onPress={() => setSelectedTestCode(v.testCode)}
                   >
                     <AppText variant="body" weight="bold" color={selectedTestCode === v.testCode ? palette.white : palette.primary}>
-                      Đề {v.testCode}
+                      {v.testCode ? `Đề ${v.testCode}` : 'Đề Mặc định'}
                     </AppText>
                     {v.answerKeys.length === questionCount && <Check size={14} color={selectedTestCode === v.testCode ? palette.white : palette.success} style={{ marginLeft: 4 }} />}
                   </Pressable>
@@ -331,6 +378,7 @@ export function TeacherExamBuilderScreen() {
                   value={quickInput}
                   onChangeText={setQuickInput}
                   autoCapitalize="characters"
+                  maxLength={questionCount}
                 />
                 <Pressable style={styles.quickApplyBtn} onPress={handleQuickInputApply}>
                   <AppText variant="body" weight="bold" color={palette.primary}>Áp dụng</AppText>
