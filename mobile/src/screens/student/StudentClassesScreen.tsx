@@ -6,6 +6,7 @@ import {
   KeyRound,
   Search,
   Users,
+  Plus,
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -59,8 +60,8 @@ export function StudentClassesScreen() {
         listAssignments(accessToken),
       ]);
       setAssignments(assignmentsData);
-      setStudentClasses(paginatedClasses.data.map((item) => mapClassSummary(item, assignmentsData, 'STUDENT')));
-      setHasMore(paginatedClasses.page < paginatedClasses.totalPages);
+      setStudentClasses((paginatedClasses.data || []).map((item) => mapClassSummary(item, assignmentsData, 'STUDENT')));
+      setHasMore(paginatedClasses.page < (paginatedClasses.totalPages || 1));
       setPage(2);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
@@ -82,9 +83,9 @@ export function StudentClassesScreen() {
       const paginatedClasses = await listClasses(accessToken, page, 10, search);
       setStudentClasses((prev) => [
         ...prev,
-        ...paginatedClasses.data.map((item) => mapClassSummary(item, assignments, 'STUDENT')),
+        ...(paginatedClasses.data || []).map((item) => mapClassSummary(item, assignments, 'STUDENT')),
       ]);
-      setHasMore(paginatedClasses.page < paginatedClasses.totalPages);
+      setHasMore(paginatedClasses.page < (paginatedClasses.totalPages || 1));
       setPage((p) => p + 1);
     } catch (err) {
       // ignore silently
@@ -149,13 +150,6 @@ export function StudentClassesScreen() {
         ListFooterComponent={
           <>
             {loadingMore ? <ActivityIndicator size="small" color={palette.primary} style={{ marginVertical: 16 }} /> : null}
-            <PrimaryButton
-              variant="outline"
-              label={content.student.classes.joinNewClass}
-              icon={<KeyRound size={18} color={palette.primary} />}
-              onPress={() => setShowJoin(true)}
-              style={{ marginTop: 16 }}
-            />
           </>
         }
         renderItem={({ item }) => (
@@ -202,6 +196,19 @@ export function StudentClassesScreen() {
           </Pressable>
         )}
       />
+
+      <Pressable
+        style={[
+          styles.fab,
+          {
+            bottom: layout.navHeight + 20,
+            right: layout.horizontalPadding,
+          },
+        ]}
+        onPress={() => setShowJoin(true)}
+      >
+        <Plus size={24} color={palette.white} />
+      </Pressable>
 
       <ModalSheet visible={showJoin} onClose={() => setShowJoin(false)}>
         <AppText variant="headline" weight="bold" style={styles.sheetTitle}>
@@ -294,5 +301,19 @@ const styles = StyleSheet.create({
   },
   sheetButton: {
     marginTop: appTheme.spacing.lg,
+  },
+  fab: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: palette.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 6,
   },
 });

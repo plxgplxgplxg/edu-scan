@@ -63,7 +63,7 @@ export function StudentDashboardScreen() {
         listClasses(accessToken),
         listAssignments(accessToken),
       ]);
-      const classes = paginatedClasses.data;
+      const classes = paginatedClasses?.data || [];
 
       return {
         classCount: classes.length,

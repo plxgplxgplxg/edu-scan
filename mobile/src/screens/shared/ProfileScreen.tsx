@@ -64,7 +64,7 @@ export function ProfileScreen() {
           listExams(accessToken),
           listOmrBatches(accessToken),
         ]);
-        const classes = paginatedClasses.data;
+        const classes = paginatedClasses?.data || [];
 
         return {
           classes: classes.length,
@@ -78,7 +78,7 @@ export function ProfileScreen() {
           listClasses(accessToken),
           listAssignments(accessToken),
         ]);
-        const classes = paginatedClasses.data;
+        const classes = paginatedClasses?.data || [];
 
         return {
           classes: classes.length,

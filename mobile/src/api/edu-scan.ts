@@ -1008,7 +1008,7 @@ export async function buildNotifications(
   }
 
   const [users, paginatedClasses] = await Promise.all([listUsers(token), listClasses(token)]);
-  const classes = paginatedClasses.data;
+  const classes = paginatedClasses.data || [];
 
   return [
     ...users.slice(0, 5).map((user) => ({

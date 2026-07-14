@@ -53,7 +53,7 @@ export function TeacherClassesScreen() {
       }
 
       const paginatedClasses = await listClasses(accessToken);
-      const classes = paginatedClasses.data;
+      const classes = paginatedClasses?.data || [];
       return classes.map((item) => mapClassSummary(item, [], role));
     },
     [accessToken, role],

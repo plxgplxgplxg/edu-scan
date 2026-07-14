@@ -78,7 +78,7 @@ export function AdminStatisticsScreen() {
         </View>
 
         <Text style={styles.sectionTitle}>Danh sách lớp học</Text>
-        {classes.data.map((c: any) => (
+        {(classes?.data || []).map((c: any) => (
           <SurfaceCard key={c.id} style={styles.classCard}>
             <View>
               <Text style={styles.className}>{c.name}</Text>

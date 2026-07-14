@@ -53,7 +53,7 @@ export function AdminDashboardScreen() {
         listUsers(accessToken),
         listClasses(accessToken),
       ]);
-      const classes = paginatedClasses.data;
+      const classes = paginatedClasses?.data || [];
 
       return {
         teachers: users.filter((user) => user.role === 'TEACHER').length,
