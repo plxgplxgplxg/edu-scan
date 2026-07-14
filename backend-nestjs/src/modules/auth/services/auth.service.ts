@@ -1,10 +1,17 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { JwtSignOptions } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma.service';
 import { LoginDto } from '../dto/request/login.dto';
+import { RegisterDto } from '../dto/request/register.dto';
 
 @Injectable()
 export class AuthService {
@@ -13,6 +20,44 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
+
+  async register(registerDto: RegisterDto) {
+    if (registerDto.password !== registerDto.confirmPassword) {
+      throw new BadRequestException('Passwords do not match');
+    }
+
+    const email = registerDto.email.trim().toLowerCase();
+    const passwordHash = await bcrypt.hash(registerDto.password, 10);
+    const name = this.buildDefaultName(email);
+
+    try {
+      const user = await this.prismaService.user.create({
+        data: {
+          email,
+          passwordHash,
+          name,
+          role: registerDto.role,
+        },
+      });
+
+      return this.generateTokens(
+        user.id,
+        user.email,
+        user.role,
+        user.name,
+        user.studentCode,
+      );
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException('Email is already registered');
+      }
+
+      throw error;
+    }
+  }
 
   async login(loginDto: LoginDto) {
     const user = await this.prismaService.user.findUnique({
@@ -98,5 +143,14 @@ export class AuthService {
         studentCode,
       },
     };
+  }
+
+  private buildDefaultName(email: string) {
+    const localPart = email.split('@')[0] || 'Student';
+    return localPart
+      .split(/[._-]+/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
   }
 }

@@ -5,7 +5,7 @@ import { contentByLanguage } from '../content';
 import { demoAccounts } from '../api/mockData';
 import type { AppContent } from '../content';
 import type { LanguageCode, UserRole } from '../types/app';
-import { login as loginRequest } from '../api/edu-scan';
+import { login as loginRequest, register as registerRequest } from '../api/edu-scan';
 import { configureAuthSession } from '../api/http';
 
 interface AuthState {
@@ -22,6 +22,12 @@ interface AuthState {
 interface AuthContextValue extends AuthState {
   content: AppContent;
   login: (email: string, password: string) => Promise<UserRole>;
+  register: (
+    email: string,
+    password: string,
+    confirmPassword: string,
+    role: Exclude<UserRole, 'ADMIN'>,
+  ) => Promise<UserRole>;
   loginAs: (role: UserRole) => void;
   logout: () => void;
   setLanguage: (language: LanguageCode) => void;
@@ -123,6 +129,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       content,
       login: async (email, password) => {
         const session = await loginRequest(email, password);
+
+        setState(current => ({
+          ...current,
+          userId: session.user.id,
+          role: session.user.role,
+          profileName: session.user.name,
+          email: session.user.email,
+          studentCode: session.user.studentCode,
+          accessToken: session.accessToken,
+          refreshToken: session.refreshToken,
+        }));
+
+        return session.user.role;
+      },
+      register: async (email, password, confirmPassword, role) => {
+        const session = await registerRequest(email, password, confirmPassword, role);
 
         setState(current => ({
           ...current,

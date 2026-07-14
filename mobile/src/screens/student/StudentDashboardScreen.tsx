@@ -59,10 +59,11 @@ export function StudentDashboardScreen() {
         };
       }
 
-      const [classes, assignments] = await Promise.all([
+      const [paginatedClasses, assignments] = await Promise.all([
         listClasses(accessToken),
         listAssignments(accessToken),
       ]);
+      const classes = paginatedClasses.data;
 
       return {
         classCount: classes.length,
@@ -115,7 +116,6 @@ export function StudentDashboardScreen() {
             <View style={[styles.metricsCard, layout.isCompact ? styles.metricsCardStack : null]}>
               <MetricBlock label={content.student.dashboard.metrics.classes} value={String(metrics.classCount)} light />
               <MetricBlock label={content.student.dashboard.metrics.assignments} value={String(metrics.pendingAssignments)} light />
-              <MetricBlock label={content.common.labels.today} value={content.common.labels.active} light />
             </View>
           </View>
         }

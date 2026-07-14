@@ -67,48 +67,80 @@ export class ClassesRepository {
   async listTeacherClasses(
     teacherId: string,
     page = 1,
-  ): Promise<ClassLightweight[]> {
-    return this.prismaService.class.findMany({
-      where: { teacherId },
-      include: classListInclude,
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: 10,
-      skip: (page - 1) * 10,
-    });
+    limit = 10,
+    keyword?: string,
+  ): Promise<[ClassLightweight[], number]> {
+    const where: Prisma.ClassWhereInput = { teacherId };
+    if (keyword) {
+      where.OR = [
+        { name: { contains: keyword, mode: 'insensitive' } },
+        { code: { contains: keyword, mode: 'insensitive' } },
+      ];
+    }
+    const [data, total] = await this.prismaService.$transaction([
+      this.prismaService.class.findMany({
+        where,
+        include: classListInclude,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip: (page - 1) * limit,
+      }),
+      this.prismaService.class.count({ where }),
+    ]);
+    return [data, total];
   }
 
   async listStudentClasses(
     studentId: string,
     page = 1,
-  ): Promise<ClassLightweight[]> {
-    return this.prismaService.class.findMany({
-      where: {
-        enrollments: {
-          some: {
-            studentId,
-          },
-        },
-      },
-      include: classListInclude,
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: 10,
-      skip: (page - 1) * 10,
-    });
+    limit = 10,
+    keyword?: string,
+  ): Promise<[ClassLightweight[], number]> {
+    const where: Prisma.ClassWhereInput = {
+      enrollments: { some: { studentId } },
+    };
+    if (keyword) {
+      where.OR = [
+        { name: { contains: keyword, mode: 'insensitive' } },
+        { code: { contains: keyword, mode: 'insensitive' } },
+      ];
+    }
+    const [data, total] = await this.prismaService.$transaction([
+      this.prismaService.class.findMany({
+        where,
+        include: classListInclude,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip: (page - 1) * limit,
+      }),
+      this.prismaService.class.count({ where }),
+    ]);
+    return [data, total];
   }
 
-  async listAllClasses(page = 1): Promise<ClassLightweight[]> {
-    return this.prismaService.class.findMany({
-      include: classListInclude,
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: 10,
-      skip: (page - 1) * 10,
-    });
+  async listAllClasses(
+    page = 1,
+    limit = 10,
+    keyword?: string,
+  ): Promise<[ClassLightweight[], number]> {
+    const where: Prisma.ClassWhereInput = {};
+    if (keyword) {
+      where.OR = [
+        { name: { contains: keyword, mode: 'insensitive' } },
+        { code: { contains: keyword, mode: 'insensitive' } },
+      ];
+    }
+    const [data, total] = await this.prismaService.$transaction([
+      this.prismaService.class.findMany({
+        where,
+        include: classListInclude,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip: (page - 1) * limit,
+      }),
+      this.prismaService.class.count({ where }),
+    ]);
+    return [data, total];
   }
 
   async findTeacherClassById(classId: string, teacherId: string) {

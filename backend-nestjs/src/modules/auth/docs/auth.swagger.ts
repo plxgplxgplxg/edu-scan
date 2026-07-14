@@ -4,11 +4,13 @@ import { ApiModuleTag } from '../../../common/swagger/decorators/api-module-tag.
 import { ApiPublicOperation } from '../../../common/swagger/decorators/api-auth.decorator';
 import {
   ApiStandardErrorResponses,
+  ApiWrappedCreatedResponse,
   ApiWrappedOkResponse,
 } from '../../../common/swagger/decorators/api-responses.decorator';
 import { SWAGGER_MODULES_METADATA } from '../../../common/swagger/swagger.metadata';
 import { LoginDto } from '../dto/request/login.dto';
 import { RefreshTokenDto } from '../dto/request/refresh-token.dto';
+import { RegisterDto } from '../dto/request/register.dto';
 import { AuthTokensResponseDto } from '../dto/response/auth-response.dto';
 
 export const AuthSwagger = {
@@ -28,6 +30,21 @@ export const AuthSwagger = {
         description: 'Đăng nhập thành công và trả về bộ token xác thực.',
       }),
       ApiStandardErrorResponses(400, 401, 500),
+    );
+  },
+  DangKy() {
+    return applyDecorators(
+      ApiPublicOperation({
+        summary: 'Đăng ký tài khoản giáo viên hoặc học sinh',
+        notes:
+          'Endpoint công khai. Chỉ cho phép tự đăng ký vai trò giáo viên hoặc học sinh, không cho phép tạo admin.',
+      }),
+      ApiBody({ type: RegisterDto }),
+      ApiWrappedCreatedResponse({
+        type: AuthTokensResponseDto,
+        description: 'Đăng ký thành công và trả về bộ token xác thực.',
+      }),
+      ApiStandardErrorResponses(400, 409, 500),
     );
   },
   LamMoiToken() {

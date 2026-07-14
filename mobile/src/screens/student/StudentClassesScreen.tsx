@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import {
   BookOpen,
   KeyRound,
+  Search,
   Users,
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -34,6 +35,7 @@ export function StudentClassesScreen() {
   const { accessToken } = useAuth();
   const layout = useResponsiveLayout();
   const [showJoin, setShowJoin] = useState(false);
+  const [search, setSearch] = useState('');
   const [classCode, setClassCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -43,14 +45,15 @@ export function StudentClassesScreen() {
         return [];
       }
 
-      const [classes, assignments] = await Promise.all([
-        listClasses(accessToken),
+      const [paginatedClasses, assignments] = await Promise.all([
+        listClasses(accessToken, 1, 50, search),
         listAssignments(accessToken),
       ]);
+      const classes = paginatedClasses.data;
 
       return classes.map((item) => mapClassSummary(item, assignments, 'STUDENT'));
     },
-    [accessToken],
+    [accessToken, search],
   );
   const studentClasses = data ?? [];
   const handleRefresh = () => {
@@ -84,6 +87,13 @@ export function StudentClassesScreen() {
         ]}
       >
         {loading ? <LoadingState label={content.common.labels.loading} /> : null}
+        <TextInputField
+          label={content.common.search.classes}
+          value={search}
+          onChangeText={setSearch}
+          placeholder={content.common.search.classes}
+          trailing={<Search size={18} color={palette.mutedForeground} />}
+        />
         {error ? (
           <ErrorState
             message={error}

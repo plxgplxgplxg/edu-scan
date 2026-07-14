@@ -28,6 +28,7 @@ export type AdminTabParamList = {
 
 export type RootStackParamList = {
   Login: undefined;
+  Register: undefined;
   TeacherTabs: NavigatorScreenParams<TeacherTabParamList> | undefined;
   StudentTabs: NavigatorScreenParams<StudentTabParamList> | undefined;
   AdminTabs: NavigatorScreenParams<AdminTabParamList> | undefined;

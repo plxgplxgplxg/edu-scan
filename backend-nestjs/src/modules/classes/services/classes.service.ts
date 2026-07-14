@@ -27,30 +27,53 @@ export class ClassesService {
     });
   }
 
-  async listTeacherClasses(teacherId: string, page = 1) {
-    const classes = await this.classesRepository.listTeacherClasses(
+  async listTeacherClasses(teacherId: string, page = 1, limit = 10, keyword?: string) {
+    const [classes, total] = await this.classesRepository.listTeacherClasses(
       teacherId,
       page,
+      limit,
+      keyword,
     );
-    return classes.map((item) => this.mapClassLightweightToResponse(item));
+    return {
+      data: classes.map((item) => this.mapClassLightweightToResponse(item)),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
-  async listClasses(currentUser: AuthenticatedUser, page = 1) {
+  async listClasses(currentUser: AuthenticatedUser, page = 1, limit = 10, keyword?: string) {
     let classes: ClassLightweight[] = [];
+    let total = 0;
     if (currentUser.role === Role.TEACHER) {
-      classes = await this.classesRepository.listTeacherClasses(
+      [classes, total] = await this.classesRepository.listTeacherClasses(
         currentUser.id,
         page,
+        limit,
+        keyword,
       );
     } else if (currentUser.role === Role.STUDENT) {
-      classes = await this.classesRepository.listStudentClasses(
+      [classes, total] = await this.classesRepository.listStudentClasses(
         currentUser.id,
         page,
+        limit,
+        keyword,
       );
     } else {
-      classes = await this.classesRepository.listAllClasses(page);
+      [classes, total] = await this.classesRepository.listAllClasses(page, limit, keyword);
     }
-    return classes.map((item) => this.mapClassLightweightToResponse(item));
+    return {
+      data: classes.map((item) => this.mapClassLightweightToResponse(item)),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   private mapClassLightweightToResponse(item: ClassLightweight) {

@@ -23,6 +23,7 @@ import type { RootStackParamList } from '../../navigation/types';
 import { getInitials } from '../../utils/string';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { requestJson } from '../../api/http';
+import { useNotifications } from '../../features/notifications/application/notifications-provider';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -69,6 +70,7 @@ export function TeacherDashboardScreen() {
   const content = useAppContent();
   const { accessToken, profileName } = useAuth();
   const layout = useResponsiveLayout();
+  const { unreadCount } = useNotifications();
 
   const { data, loading, error, reload } = useAsyncResource(
     async () => {
@@ -95,6 +97,9 @@ export function TeacherDashboardScreen() {
         subtitle={`${content.roles.TEACHER} • ${content.teacher.dashboard.subtitle}`}
         overline={content.teacher.dashboard.greeting}
         gradient={primaryHeroGradient}
+        showNotificationButton
+        actionBadge={unreadCount || undefined}
+        onNotificationPress={() => navigation.navigate('SharedNotifications')}
         leadingVisual={
           <View
             style={[

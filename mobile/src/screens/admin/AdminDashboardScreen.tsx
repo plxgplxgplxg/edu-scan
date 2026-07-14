@@ -17,7 +17,7 @@ import { useAppContent } from '../../hooks/useAppContent';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
-import { adminHeroGradient } from '../../theme/header';
+import { primaryHeroGradient } from '../../theme/header';
 import type { RootStackParamList } from '../../navigation/types';
 import { listClasses, listUsers } from '../../api/edu-scan';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
@@ -49,10 +49,11 @@ export function AdminDashboardScreen() {
         };
       }
 
-      const [users, classes] = await Promise.all([
+      const [users, paginatedClasses] = await Promise.all([
         listUsers(accessToken),
         listClasses(accessToken),
       ]);
+      const classes = paginatedClasses.data;
 
       return {
         teachers: users.filter((user) => user.role === 'TEACHER').length,
@@ -76,7 +77,7 @@ export function AdminDashboardScreen() {
         overline={content.admin.dashboard.title}
         title={content.meta.appName}
         subtitle={content.admin.dashboard.subtitle}
-        gradient={adminHeroGradient}
+        gradient={primaryHeroGradient}
         showNotificationButton
         onNotificationPress={() => navigation.navigate('SharedNotifications')}
         metrics={[

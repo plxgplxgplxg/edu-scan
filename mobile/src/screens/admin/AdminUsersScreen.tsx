@@ -21,7 +21,7 @@ import { useAppContent } from '../../hooks/useAppContent';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
-import { adminHeroGradient } from '../../theme/header';
+import { primaryHeroGradient } from '../../theme/header';
 import type { RootStackParamList } from '../../navigation/types';
 import type { UserRole } from '../../types/app';
 
@@ -84,7 +84,7 @@ export function AdminUsersScreen() {
         backLabel={content.common.buttons.backToHome}
         title={content.admin.users.title}
         subtitle={content.common.search.users}
-        gradient={adminHeroGradient}
+        gradient={primaryHeroGradient}
         onBack={() => navigation.navigate('AdminTabs', { screen: 'AdminDashboard' })}
       />
 

@@ -45,12 +45,17 @@ export class ClassesController {
   async getMyClasses(
     @CurrentUser() currentUser: AuthenticatedUser,
     @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('keyword') keyword?: string,
   ) {
     assertUserRole(currentUser, [Role.TEACHER]);
     const parsedPage = page ? parseInt(page, 10) : 1;
+    const parsedLimit = limit ? parseInt(limit, 10) : 10;
     return this.classesService.listTeacherClasses(
       currentUser.id,
       parsedPage > 0 ? parsedPage : 1,
+      parsedLimit > 0 ? parsedLimit : 10,
+      keyword,
     );
   }
 
@@ -60,12 +65,17 @@ export class ClassesController {
   async listClasses(
     @CurrentUser() currentUser: AuthenticatedUser,
     @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('keyword') keyword?: string,
   ) {
     assertUserRole(currentUser, [Role.TEACHER, Role.STUDENT, Role.ADMIN]);
     const parsedPage = page ? parseInt(page, 10) : 1;
+    const parsedLimit = limit ? parseInt(limit, 10) : 10;
     return this.classesService.listClasses(
       currentUser,
       parsedPage > 0 ? parsedPage : 1,
+      parsedLimit > 0 ? parsedLimit : 10,
+      keyword,
     );
   }
 

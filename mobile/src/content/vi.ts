@@ -17,6 +17,8 @@ export const vi = {
     buttons: {
       login: 'Đăng nhập',
       loggingIn: 'Đang đăng nhập...',
+      register: 'Đăng ký',
+      registering: 'Đang đăng ký...',
       backToHome: 'Trang chủ',
       back: 'Quay lại',
       cancel: 'Huỷ',
@@ -80,7 +82,9 @@ export const vi = {
     },
     messages: {
       loginEmpty: 'Vui lòng nhập đầy đủ email và mật khẩu',
+      registerEmpty: 'Vui lòng nhập đầy đủ vai trò, email, mật khẩu và nhập lại mật khẩu',
       loginPasswordShort: 'Mật khẩu phải có ít nhất 6 ký tự',
+      passwordMismatch: 'Mật khẩu nhập lại không khớp',
       emptyClasses: 'Không tìm thấy lớp học nào',
       emptyExams: 'Không tìm thấy đề thi nào',
       emptyAssignments: 'Không có bài tập nào',
@@ -112,6 +116,7 @@ export const vi = {
     form: {
       email: 'Email',
       password: 'Mật khẩu',
+      confirmPassword: 'Nhập lại mật khẩu',
       className: 'Tên lớp',
       subject: 'Môn học',
       schoolYear: 'Năm học',
@@ -155,6 +160,10 @@ export const vi = {
   auth: {
     title: 'Đăng nhập',
     welcome: 'Chào mừng trở lại! Vui lòng đăng nhập.',
+    registerTitle: 'Đăng ký',
+    registerWelcome: 'Tạo tài khoản mới để bắt đầu sử dụng EduScan.',
+    registerLink: 'Đăng ký tài khoản',
+    loginLink: 'Đã có tài khoản? Đăng nhập',
     demoTitle: 'Tài khoản demo',
   },
   teacher: {

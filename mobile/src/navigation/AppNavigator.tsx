@@ -15,6 +15,7 @@ import type {
   TeacherTabParamList,
 } from './types';
 import { LoginScreen } from '../screens/auth/LoginScreen';
+import { RegisterScreen } from '../screens/auth/RegisterScreen';
 import { TeacherDashboardScreen } from '../screens/teacher/TeacherDashboardScreen';
 import { TeacherClassesScreen } from '../screens/teacher/TeacherClassesScreen';
 import { TeacherClassDetailScreen } from '../screens/teacher/TeacherClassDetailScreen';
@@ -238,7 +239,12 @@ export function AppNavigator() {
           animation: 'slide_from_right',
         }}
       >
-        {!role ? <Stack.Screen name="Login" component={LoginScreen} /> : null}
+        {!role ? (
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Register" component={RegisterScreen} />
+          </>
+        ) : null}
 
         {role === 'TEACHER' ? (
           <>

@@ -10,6 +10,7 @@ import { palette, spacing, typography } from '../../theme/tokens';
 import { PageHeader } from '../../components/PageHeader';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { EmptyState } from '../../components/EmptyState';
+import { primaryHeroGradient } from '../../theme/header';
 
 export function AdminStatisticsScreen() {
   const navigation = useNavigation();
@@ -26,7 +27,7 @@ export function AdminStatisticsScreen() {
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <PageHeader title="Thống kê hệ thống" onBack={() => navigation.goBack()} />
+        <PageHeader title="Thống kê hệ thống" onBack={() => navigation.goBack()} gradient={primaryHeroGradient} />
         <View style={styles.center}>
           <ActivityIndicator size="large" color={palette.primary} />
         </View>
@@ -37,7 +38,7 @@ export function AdminStatisticsScreen() {
   if (error || !data) {
     return (
       <View style={styles.container}>
-        <PageHeader title="Thống kê hệ thống" onBack={() => navigation.goBack()} />
+        <PageHeader title="Thống kê hệ thống" onBack={() => navigation.goBack()} gradient={primaryHeroGradient} />
         <EmptyState
           icon={<Users size={24} color={palette.primary} />}
           title="Không thể tải dữ liệu"
@@ -53,7 +54,7 @@ export function AdminStatisticsScreen() {
 
   return (
     <View style={styles.container}>
-      <PageHeader title="Thống kê hệ thống" onBack={() => navigation.goBack()} />
+      <PageHeader title="Thống kê hệ thống" onBack={() => navigation.goBack()} gradient={primaryHeroGradient} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.sectionTitle}>Tổng quan</Text>
         <View style={styles.grid}>

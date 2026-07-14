@@ -1,4 +1,4 @@
-/* eslint-disable react/no-unstable-nested-components, no-void, react-native/no-inline-styles */
+/* eslint-disable react-native/no-inline-styles */
 import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -8,6 +8,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowRight, Eye, EyeOff, ScanLine } from 'lucide-react-native';
 
@@ -15,14 +16,18 @@ import { ArrowRight, Eye, EyeOff, ScanLine } from 'lucide-react-native';
 import { useAuth } from '../../store/auth-store';
 import { appTheme } from '../../theme/tokens';
 import { clamp, useResponsiveLayout } from '../../theme/responsive';
+import { primaryHeroGradient } from '../../theme/header';
 import { GradientBackground } from '../../components/GradientBackground';
 import { AppText } from '../../components/AppText';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { Screen } from '../../components/Screen';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { TextInputField } from '../../components/TextInputField';
+import type { RootStackParamList } from '../../navigation/types';
 
-export function LoginScreen() {
+type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
+
+export function LoginScreen({ navigation }: Props) {
   const { content, login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -67,10 +72,7 @@ export function LoginScreen() {
       bleedTop
       contentContainerStyle={styles.screenContent}
     >
-      <GradientBackground
-        colors={[appTheme.palette.primary, '#8B5CF6', appTheme.palette.tertiary]}
-        style={StyleSheet.absoluteFill}
-      />
+      <GradientBackground colors={primaryHeroGradient} style={StyleSheet.absoluteFill} />
       <View
         style={[
           styles.heroBubbleLeft,
@@ -178,13 +180,12 @@ export function LoginScreen() {
                 </Pressable>
               }
             />
-            <AppText 
-              variant="label" 
-              color={appTheme.palette.primary} 
-              style={{ alignSelf: 'flex-end', marginTop: -4 }}
-            >
-              Quên mật khẩu?
-            </AppText>
+            
+            <Pressable onPress={() => navigation.navigate('Register')} style={styles.authLink}>
+              <AppText variant="label" color={appTheme.palette.primary}>
+                {content.auth.registerLink}
+              </AppText>
+            </Pressable>
             <PrimaryButton
               label={loading ? content.common.buttons.loggingIn : content.common.buttons.login}
               icon={!loading ? <ArrowRight size={18} color={appTheme.palette.white} /> : undefined}
@@ -238,16 +239,20 @@ const styles = StyleSheet.create({
     gap: 16,
     marginTop: 16,
   },
+  authLink: {
+    alignSelf: 'flex-end',
+    marginTop: -12,
+  },
   heroBubbleLeft: {
     position: 'absolute',
-    left: -70,
-    top: 164,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    left: -96,
+    top: 156,
+    backgroundColor: 'rgba(255,255,255,0.16)',
   },
   heroBubbleRight: {
     position: 'absolute',
-    right: -32,
-    top: 24,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    right: -72,
+    top: -24,
+    backgroundColor: 'rgba(255,255,255,0.14)',
   },
 });

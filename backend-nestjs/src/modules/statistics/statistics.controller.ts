@@ -7,13 +7,16 @@ import { Roles } from '../../common/decorators/auth/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/auth/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/auth/roles.guard';
 import { StatisticsService } from './services/statistics.service';
+import { StatisticsSwagger } from './docs/statistics.swagger';
 
+@StatisticsSwagger.Controller()
 @Controller('stats')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class StatisticsController {
   constructor(private readonly statisticsService: StatisticsService) {}
 
   @Get('teacher')
+  @StatisticsSwagger.GetTeacherStats()
   @Roles(Role.TEACHER)
   async getTeacherStats(
     @CurrentUser() currentUser: AuthenticatedUser,
@@ -24,6 +27,7 @@ export class StatisticsController {
   }
 
   @Get('student')
+  @StatisticsSwagger.GetStudentStats()
   @Roles(Role.STUDENT)
   async getStudentStats(@CurrentUser() currentUser: AuthenticatedUser) {
     assertUserRole(currentUser, [Role.STUDENT]);
@@ -31,6 +35,7 @@ export class StatisticsController {
   }
 
   @Get('admin')
+  @StatisticsSwagger.GetAdminStats()
   @Roles(Role.ADMIN)
   async getAdminStats(
     @CurrentUser() currentUser: AuthenticatedUser,
@@ -47,6 +52,7 @@ export class StatisticsController {
   }
 
   @Get('teacher/class/:classId')
+  @StatisticsSwagger.GetTeacherClassStats()
   @Roles(Role.TEACHER)
   async getTeacherClassStats(
     @Param('classId') classId: string,
@@ -57,6 +63,7 @@ export class StatisticsController {
   }
 
   @Get('teacher/late-missing')
+  @StatisticsSwagger.GetTeacherLateMissingStudents()
   @Roles(Role.TEACHER)
   async getTeacherLateMissingStudents(
     @CurrentUser() currentUser: AuthenticatedUser,

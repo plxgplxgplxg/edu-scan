@@ -3,6 +3,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { AuthSwagger } from '../docs/auth.swagger';
 import { LoginDto } from '../dto/request/login.dto';
 import { RefreshTokenDto } from '../dto/request/refresh-token.dto';
+import { RegisterDto } from '../dto/request/register.dto';
 import { AuthService } from '../services/auth.service';
 
 type RefreshRequest = {
@@ -22,6 +23,12 @@ export class AuthController {
   @AuthSwagger.DangNhap()
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
+  }
+
+  @Post('register')
+  @AuthSwagger.DangKy()
+  async register(@Body() registerDto: RegisterDto) {
+    return this.authService.register(registerDto);
   }
 
   @UseGuards(AuthGuard('jwt-refresh'))

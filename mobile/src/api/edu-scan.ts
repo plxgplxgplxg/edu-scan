@@ -244,6 +244,14 @@ export type ClassDetailView = {
   students: StudentRecord[];
 };
 
+export type PaginatedClassPageApi = {
+  data: ClassApi[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
 export type TeacherExamView = {
   id: string;
   title: string;
@@ -284,8 +292,22 @@ export async function login(email: string, password: string) {
   });
 }
 
-export async function listClasses(token: string) {
-  return requestJson<ClassApi[]>('/classes', { token });
+export async function register(
+  email: string,
+  password: string,
+  confirmPassword: string,
+  role: Exclude<Role, 'ADMIN'>,
+) {
+  return requestJson<AuthSession>('/auth/register', {
+    method: 'POST',
+    body: { email, password, confirmPassword, role },
+  });
+}
+
+export async function listClasses(token: string, page = 1, limit = 10, keyword?: string) {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (keyword) params.set('keyword', keyword);
+  return requestJson<PaginatedClassPageApi>(`/classes?${params.toString()}`, { token });
 }
 
 export async function getClassDetail(token: string, classId: string) {
@@ -985,7 +1007,8 @@ export async function buildNotifications(
     ].sort((left, right) => right.time.localeCompare(left.time));
   }
 
-  const [users, classes] = await Promise.all([listUsers(token), listClasses(token)]);
+  const [users, paginatedClasses] = await Promise.all([listUsers(token), listClasses(token)]);
+  const classes = paginatedClasses.data;
 
   return [
     ...users.slice(0, 5).map((user) => ({

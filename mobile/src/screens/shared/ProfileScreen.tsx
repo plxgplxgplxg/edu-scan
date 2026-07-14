@@ -59,11 +59,12 @@ export function ProfileScreen() {
       }
 
       if (role === 'TEACHER') {
-        const [classes, exams, omrBatches] = await Promise.all([
+        const [paginatedClasses, exams, omrBatches] = await Promise.all([
           listClasses(accessToken),
           listExams(accessToken),
           listOmrBatches(accessToken),
         ]);
+        const classes = paginatedClasses.data;
 
         return {
           classes: classes.length,
@@ -73,10 +74,11 @@ export function ProfileScreen() {
       }
 
       if (role === 'STUDENT') {
-        const [classes, assignments] = await Promise.all([
+        const [paginatedClasses, assignments] = await Promise.all([
           listClasses(accessToken),
           listAssignments(accessToken),
         ]);
+        const classes = paginatedClasses.data;
 
         return {
           classes: classes.length,
