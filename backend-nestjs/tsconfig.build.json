@@ -7,6 +7,8 @@
     "**/*spec.ts",
     "**/._*",
     "prisma",
-    "prisma.config.ts"
+    "prisma.config.ts",
+    "check-db.ts",
+    "check-db2.ts"
   ]
 }
