@@ -377,4 +377,26 @@ export class StatisticsService {
       },
     };
   }
+
+  async getProfileStats(userId: string, role: Role) {
+    if (role === Role.TEACHER) {
+      const [classes, exams, omrBatches] = await Promise.all([
+        this.prisma.class.count({ where: { teacherId: userId } }),
+        this.prisma.exam.count({ where: { teacherId: userId } }),
+        this.prisma.omrBatch.count({ where: { teacherId: userId } }),
+      ]);
+      return { classes, exams, omrBatches };
+    }
+    if (role === Role.STUDENT) {
+      const classes = await this.prisma.classEnrollment.count({ where: { studentId: userId } });
+      const pendingAssignments = await this.prisma.assignment.count({
+        where: {
+          class: { enrollments: { some: { studentId: userId } } },
+          submits: { none: { studentId: userId } }
+        }
+      });
+      return { classes, assignments: pendingAssignments };
+    }
+    return {};
+  }
 }

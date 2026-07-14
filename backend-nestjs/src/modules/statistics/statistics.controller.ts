@@ -83,4 +83,10 @@ export class StatisticsController {
       },
     );
   }
+
+  @Get('profile')
+  @Roles(Role.TEACHER, Role.STUDENT, Role.ADMIN)
+  async getProfileStats(@CurrentUser() currentUser: AuthenticatedUser) {
+    return this.statisticsService.getProfileStats(currentUser.id, currentUser.role);
+  }
 }

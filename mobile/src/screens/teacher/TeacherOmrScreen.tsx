@@ -1,10 +1,11 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { StyleSheet, View, Pressable, TextInput, FlatList, ActivityIndicator } from 'react-native';
-import { Calendar, ClipboardList, Plus, Search, FileText } from 'lucide-react-native';
+import { StyleSheet, View, Pressable, TextInput, FlatList, ActivityIndicator, Alert } from 'react-native';
+import { Calendar, ClipboardList, Plus, Search, FileText, Trash2 } from 'lucide-react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { formatVietnameseDate } from '../../utils/format';
 
-import { listOmrExams } from '../../api/edu-scan';
+import { listOmrExams, deleteExam } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ErrorState, LoadingState } from '../../components/RequestState';
@@ -31,7 +32,7 @@ export function TeacherOmrScreen() {
 
   const { data, loading, error, reload } = useAsyncResource(async () => {
     if (!accessToken) return null;
-    return listOmrExams(accessToken, page, 20, keyword);
+    return listOmrExams(accessToken, page, 10, keyword);
   }, [accessToken, page, keyword]);
 
   useEffect(() => {
@@ -79,6 +80,29 @@ export function TeacherOmrScreen() {
     return 'Bản nháp';
   };
 
+  const handleDeleteExam = (exam: any) => {
+    Alert.alert(
+      'Xóa đề thi',
+      `Bạn có chắc chắn muốn xóa đề thi "${exam.title}" không? Hành động này không thể hoàn tác.`,
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xóa',
+          style: 'destructive',
+          onPress: async () => {
+            if (!accessToken) return;
+            try {
+              await deleteExam(accessToken, exam.id);
+              void reload();
+            } catch (err) {
+              Alert.alert('Lỗi', 'Không thể xóa đề thi này.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderItem = ({ item: exam }: { item: any }) => {
     const sStyle = getStatusStyle(exam.status);
     return (
@@ -91,8 +115,19 @@ export function TeacherOmrScreen() {
             <View style={styles.examInfo}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                 <AppText variant="body" weight="bold" style={{ flex: 1 }}>{exam.title}</AppText>
-                <View style={[styles.statusBadge, { backgroundColor: sStyle.bg }]}>
-                  <AppText variant="caption" weight="bold" color={sStyle.color}>{getStatusLabel(exam.status)}</AppText>
+                <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                  {exam.status !== 'PUBLISHED' && (
+                    <View style={[styles.statusBadge, { backgroundColor: sStyle.bg }]}>
+                      <AppText variant="caption" weight="bold" color={sStyle.color}>{getStatusLabel(exam.status)}</AppText>
+                    </View>
+                  )}
+                  <Pressable 
+                    onPress={() => handleDeleteExam(exam)}
+                    hitSlop={8}
+                    style={{ padding: 4, backgroundColor: '#FFF0F0', borderRadius: 20 }}
+                  >
+                    <Trash2 size={16} color={palette.destructive} />
+                  </Pressable>
                 </View>
               </View>
               <AppText variant="caption" color={palette.mutedForeground}>
@@ -101,11 +136,13 @@ export function TeacherOmrScreen() {
               <View style={styles.metaRow}>
                 <View style={styles.metaItem}>
                   <Calendar size={14} color={palette.mutedForeground} />
-                  <AppText variant="caption" color={palette.mutedForeground}>---</AppText>
+                  <AppText variant="caption" color={palette.mutedForeground}>
+                    {exam.createdAt ? formatVietnameseDate(exam.createdAt) : '---'}
+                  </AppText>
                 </View>
                 <View style={styles.metaItem}>
                   <ClipboardList size={14} color={palette.mutedForeground} />
-                  <AppText variant="caption" color={palette.mutedForeground}>0/0 bài</AppText>
+                  <AppText variant="caption" color={palette.mutedForeground}>{exam.submissionCount || exam._count?.submissions || 0} bài</AppText>
                 </View>
               </View>
             </View>
@@ -164,13 +201,14 @@ export function TeacherOmrScreen() {
       />
 
       <FlatList
+        style={{ flex: 1 }}
         data={examsList}
         keyExtractor={item => item.id}
         renderItem={renderItem}
         ListHeaderComponent={listHeader}
         contentContainerStyle={[styles.listContainer, { paddingHorizontal: layout.horizontalPadding }]}
         onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
+        onEndReachedThreshold={0.1}
         ListEmptyComponent={
           !loading && examsList.length === 0 ? (
             <AppText variant="body" color={palette.mutedForeground} style={{ textAlign: 'center', marginTop: appTheme.spacing.xl }}>
@@ -187,14 +225,12 @@ export function TeacherOmrScreen() {
         }
       />
 
-      <View style={[styles.fabContainer, { right: layout.horizontalPadding || 16 }]}>
-        <PrimaryButton
-          label="Tạo đề thi"
-          icon={<Plus size={18} color={palette.white} />}
-          onPress={() => navigation.navigate('TeacherOmrExamBuilder')}
-          style={styles.fab}
-        />
-      </View>
+      <Pressable
+        style={[styles.fab, { right: layout.horizontalPadding || 16 }]}
+        onPress={() => navigation.navigate('TeacherOmrExamBuilder')}
+      >
+        <Plus size={28} color={palette.white} />
+      </Pressable>
     </Screen>
   );
 }
@@ -313,17 +349,20 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: palette.tertiary,
   },
-  fabContainer: {
+  fab: {
     position: 'absolute',
     bottom: 96,
-    zIndex: 50,
-  },
-  fab: {
-    borderRadius: 24,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: palette.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
     elevation: 8,
     shadowColor: palette.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
+    zIndex: 50,
   },
 });

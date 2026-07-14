@@ -99,7 +99,7 @@ export function Screen({
   ) : (
     <View
       style={[
-        styles.content,
+        { flex: 1 },
         !withoutBottomInset ? { paddingBottom: bottomInset } : null,
         contentContainerStyle,
       ]}

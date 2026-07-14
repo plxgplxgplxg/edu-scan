@@ -132,7 +132,6 @@ export function StudentClassesScreen() {
         ListHeaderComponent={
           <>
             <TextInputField
-              label={content.common.search.classes}
               value={search}
               onChangeText={setSearch}
               placeholder={content.common.search.classes}
@@ -201,7 +200,7 @@ export function StudentClassesScreen() {
         style={[
           styles.fab,
           {
-            bottom: layout.navHeight + 20,
+            bottom: layout.navHeight + 40,
             right: layout.horizontalPadding,
           },
         ]}

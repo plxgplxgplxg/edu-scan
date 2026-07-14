@@ -112,6 +112,8 @@ type ExamApi = {
       correctAnswer: 'A' | 'B' | 'C' | 'D';
     }>;
   }>;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type SubmissionDetailApi = {
@@ -482,6 +484,13 @@ export async function createOmrExam(
 }
 export async function getExamDetail(token: string, examId: string) {
   return requestJson<ExamApi>(`/exams/${encodeURIComponent(examId)}`, { token });
+}
+
+export async function deleteExam(token: string, examId: string) {
+  return requestJson<{ id: string; deleted: boolean }>(`/exams/${encodeURIComponent(examId)}`, {
+    method: 'DELETE',
+    token,
+  });
 }
 
 

@@ -16,7 +16,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { PageHeader } from '../../components/PageHeader';
 import { ModalSheet } from '../../components/ModalSheet';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { ErrorState, LoadingState } from '../../components/RequestState';
+
 import { Screen } from '../../components/Screen';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { AppText } from '../../components/AppText';
@@ -25,13 +25,7 @@ import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import { primaryHeroGradient } from '../../theme/header';
 import { getInitials } from '../../utils/string';
-import {
-  listAssignments,
-  listClasses,
-  listExams,
-  listOmrBatches,
-} from '../../api/edu-scan';
-import { useAsyncResource } from '../../hooks/useAsyncResource';
+
 import type { RootStackParamList } from '../../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -52,54 +46,7 @@ export function ProfileScreen() {
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false); // Thêm state demo cho Dark Mode toggle
 
-  const { loading, error, reload } = useAsyncResource(
-    async () => {
-      if (!accessToken || !role) {
-        return null;
-      }
-
-      if (role === 'TEACHER') {
-        const [paginatedClasses, exams, omrBatches] = await Promise.all([
-          listClasses(accessToken),
-          listExams(accessToken),
-          listOmrBatches(accessToken),
-        ]);
-        const classes = paginatedClasses?.data || [];
-
-        return {
-          classes: classes.length,
-          exams: exams.length,
-          omrBatches: omrBatches.length,
-        };
-      }
-
-      if (role === 'STUDENT') {
-        const [paginatedClasses, assignments] = await Promise.all([
-          listClasses(accessToken),
-          listAssignments(accessToken),
-        ]);
-        const classes = paginatedClasses?.data || [];
-
-        return {
-          classes: classes.length,
-          assignments: assignments.filter((item) => !item.submits?.[0]).length,
-        };
-      }
-
-      return null;
-    },
-    [accessToken, role],
-  );
-
-  const roleGradients = useMemo(
-    () =>
-      ({
-        TEACHER: primaryHeroGradient,
-        STUDENT: [appTheme.palette.info, '#5CB6FF'],
-        ADMIN: [appTheme.palette.success, appTheme.palette.quaternary],
-      })[role ?? 'TEACHER'],
-    [role],
-  );
+  const roleGradients = primaryHeroGradient;
 
   const menuItems: ProfileMenuItem[] = [
     {
@@ -149,7 +96,7 @@ export function ProfileScreen() {
   ];
 
   return (
-    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
+    <Screen>
       <PageHeader
         hideBackButton
         title={profileName}
@@ -196,20 +143,13 @@ export function ProfileScreen() {
           },
         ]}
       >
-        {loading ? <LoadingState label={content.common.labels.loading} /> : null}
-        {error ? (
-          <ErrorState
-            message={error}
-            retryLabel={content.common.buttons.retry}
-            onRetry={reload}
-          />
-        ) : null}
+
         {menuItems.map(item => (
           <Pressable key={item.key} onPress={item.onPress}>
             <SurfaceCard style={styles.menuCard}>
               <View style={styles.menuIcon}>{item.icon}</View>
               <View style={styles.flex}>
-                <AppText variant="bodyStrong" color={palette.foreground}>
+                <AppText variant="body" weight="semibold" color={palette.foreground}>
                   {item.title}
                 </AppText>
                 <AppText variant="caption" color={palette.foregroundSoft}>
@@ -226,7 +166,7 @@ export function ProfileScreen() {
               <LogOut size={18} color={palette.destructive} />
             </View>
             <View style={styles.flex}>
-              <AppText variant="bodyStrong" color={palette.destructive}>
+              <AppText variant="body" weight="semibold" color={palette.destructive}>
                 {content.common.buttons.logout}
               </AppText>
               <AppText variant="caption" color={palette.destructive} style={{ opacity: 0.75 }}>

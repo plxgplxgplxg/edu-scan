@@ -30,6 +30,7 @@ interface PageHeaderProps {
   metrics?: MetricItem[];
   overline?: string;
   actionIcon?: React.ReactNode;
+  onActionPress?: () => void;
   actionBadge?: string | number;
   footer?: React.ReactNode;
   leadingVisual?: React.ReactNode;
@@ -49,6 +50,7 @@ export function PageHeader({
   metrics,
   overline,
   actionIcon,
+  onActionPress,
   actionBadge,
   footer,
   leadingVisual,
@@ -248,7 +250,8 @@ export function PageHeader({
             </Pressable>
           ) : null}
           {actionIcon ? (
-            <View
+            <Pressable
+              onPress={onActionPress}
               style={[
                 styles.circleButton,
                 {
@@ -259,7 +262,7 @@ export function PageHeader({
               ]}
             >
               {actionIcon}
-            </View>
+            </Pressable>
           ) : null}
           {avatarLabel ? (
             <View

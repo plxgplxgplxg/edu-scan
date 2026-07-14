@@ -26,6 +26,7 @@ import { useResponsiveLayout } from '../../theme/responsive';
 import { useOmrUpload } from '../../features/omr/application/useOmrUpload';
 import { useToast } from '../../app/ToastProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { formatVietnameseDate } from '../../utils/format';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -68,25 +69,50 @@ export function TeacherOmrExamDetailScreen() {
 
   // Header Derived Values
   const title = exam?.title || 'Đang tải...';
-  const overline = exam?.classes?.length ? `${exam.classes[0].subject} • ${exam.classes.map(c => c.name).join(', ')}` : 'Đang tải...';
-  const subtitle = `20 câu • Tạo ngày 2025-06-12`; // Mock created At
-  const statusBadge = (
-    <View style={{ backgroundColor: '#FFF1DB', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 }}>
-      <AppText variant="caption" weight="bold" color={palette.warning}>Đang chấm</AppText>
+  const overline = exam?.classes?.length ? `${exam.classes[0].subject} • ${exam.classes.map(c => c.name).join(', ')}` : (exam?.title ? 'Đề thi' : 'Đang tải...');
+  const subtitleParts = [
+    exam?.questionCount ? `${exam.questionCount} câu` : undefined,
+    exam?.createdAt ? `Tạo ngày ${formatVietnameseDate(exam.createdAt)}` : undefined,
+  ].filter(Boolean);
+  const subtitle = subtitleParts.join(' • ');
+
+  const getStatusStyle = (status?: string) => {
+    if (status === 'PUBLISHED') return { bg: '#E2F2FF', color: palette.info }; // Sẵn sàng
+    return { bg: '#FFF1DB', color: palette.warning }; // Bản nháp
+  };
+  const getStatusLabel = (status?: string) => {
+    if (status === 'PUBLISHED') return 'Sẵn sàng';
+    return 'Bản nháp';
+  };
+  const sStyle = getStatusStyle(exam?.status);
+
+  const statusBadge = exam?.status !== 'PUBLISHED' ? (
+    <View style={{ backgroundColor: sStyle.bg, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 }}>
+      <AppText variant="caption" weight="bold" color={sStyle.color}>{getStatusLabel(exam?.status)}</AppText>
     </View>
-  );
+  ) : undefined;
+
+  const summary = React.useMemo(() => {
+    if (!submissionsData?.items || submissionsData.items.length === 0) {
+      return { average: 0, max: 0, min: 0 };
+    }
+    const scores = submissionsData.items.map(s => s.score).filter(s => typeof s === 'number');
+    if (scores.length === 0) return { average: 0, max: 0, min: 0 };
+    const max = Math.max(...scores);
+    const min = Math.min(...scores);
+    const average = scores.reduce((a, b) => a + b, 0) / scores.length;
+    return { average, max, min };
+  }, [submissionsData?.items]);
 
   const metrics = [
     { value: String(submissionsData?.total || 0), label: 'Đã chấm' },
-    { value: '8.3', label: 'Điểm TB' },
-    { value: String(submissionsData?.items.filter(i => i.status === 'NEEDS_REVIEW').length || 0), label: 'Cần xem lại' },
+    { value: summary.average.toFixed(1), label: 'Điểm TB' },
+    { value: String(submissionsData?.items?.filter(i => i.status === 'NEEDS_REVIEW').length || 0), label: 'Cần xem lại' },
   ];
 
   // Render Tabs Content
   const renderOverview = () => {
     const keys = exam?.variants?.[0]?.answerKeys || [];
-    const dummyKeys = Array.from({ length: 20 }).map((_, i) => ({ questionNumber: i + 1, correctAnswer: ['A','B','C','D'][i % 4] as 'A'|'B'|'C'|'D' }));
-    const displayKeys = keys.length > 0 ? keys : dummyKeys;
 
     return (
       <View style={{ gap: appTheme.spacing.md }}>
@@ -97,19 +123,19 @@ export function TeacherOmrExamDetailScreen() {
           </View>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
             <View style={{ flex: 1, minWidth: '45%', backgroundColor: palette.background, padding: 16, borderRadius: 12 }}>
-              <AppText variant="title" weight="bold" color={palette.primary}>{submissionsData?.total || 12}</AppText>
+              <AppText variant="title" weight="bold" color={palette.primary}>{submissionsData?.total || 0}</AppText>
               <AppText variant="body" color={palette.mutedForeground}>Số bài</AppText>
             </View>
             <View style={{ flex: 1, minWidth: '45%', backgroundColor: palette.background, padding: 16, borderRadius: 12 }}>
-              <AppText variant="title" weight="bold" color={palette.primary}>8.3</AppText>
+              <AppText variant="title" weight="bold" color={palette.primary}>{summary.average.toFixed(1)}</AppText>
               <AppText variant="body" color={palette.mutedForeground}>Điểm TB</AppText>
             </View>
             <View style={{ flex: 1, minWidth: '45%', backgroundColor: palette.background, padding: 16, borderRadius: 12 }}>
-              <AppText variant="title" weight="bold" color={palette.primary}>10</AppText>
+              <AppText variant="title" weight="bold" color={palette.primary}>{summary.max.toFixed(1)}</AppText>
               <AppText variant="body" color={palette.mutedForeground}>Cao nhất</AppText>
             </View>
             <View style={{ flex: 1, minWidth: '45%', backgroundColor: palette.background, padding: 16, borderRadius: 12 }}>
-              <AppText variant="title" weight="bold" color={palette.primary}>7</AppText>
+              <AppText variant="title" weight="bold" color={palette.primary}>{summary.min.toFixed(1)}</AppText>
               <AppText variant="body" color={palette.mutedForeground}>Thấp nhất</AppText>
             </View>
           </View>
@@ -121,12 +147,14 @@ export function TeacherOmrExamDetailScreen() {
             <AppText variant="headline" weight="bold" color={palette.primary}>Đáp án mẫu</AppText>
           </View>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {displayKeys.map(k => (
+            {keys.length > 0 ? keys.map(k => (
               <View key={k.questionNumber} style={{ width: '18%', aspectRatio: 1, backgroundColor: '#F3E8FF', borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}>
                 <AppText variant="caption" color={palette.mutedForeground}>Câu {k.questionNumber}</AppText>
                 <AppText variant="body" weight="bold" color={palette.primary}>{k.correctAnswer}</AppText>
               </View>
-            ))}
+            )) : (
+              <AppText variant="body" color={palette.mutedForeground}>Chưa có đáp án mẫu cho đề thi này.</AppText>
+            )}
           </View>
         </SurfaceCard>
       </View>
@@ -136,7 +164,7 @@ export function TeacherOmrExamDetailScreen() {
   const renderSubmissions = () => {
     return (
       <View style={{ gap: appTheme.spacing.md }}>
-        {submissionsData?.items.map(sub => (
+        {submissionsData?.items?.map(sub => (
           <Pressable key={sub.id} onPress={() => setSelectedSubmissionId(sub.id)}>
             <SurfaceCard style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
               <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: '#F3E8FF', alignItems: 'center', justifyContent: 'center' }}>
@@ -155,7 +183,7 @@ export function TeacherOmrExamDetailScreen() {
             </SurfaceCard>
           </Pressable>
         ))}
-        {(!submissionsData?.items || submissionsData.items.length === 0) && !loading && (
+        {(!submissionsData?.items || submissionsData?.items?.length === 0) && !loading && (
           <AppText variant="body" color={palette.mutedForeground} style={{ textAlign: 'center', marginTop: appTheme.spacing.xl }}>
             Chưa có lượt chấm nào.
           </AppText>
