@@ -2,6 +2,7 @@ import { applyDecorators } from '@nestjs/common';
 import { ApiQuery } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 import { ApiModuleTag } from '../../../common/swagger/decorators/api-module-tag.decorator';
+import { SWAGGER_MODULES_METADATA } from '../../../common/swagger/swagger.metadata';
 import { ApiBearerOperation } from '../../../common/swagger/decorators/api-auth.decorator';
 import {
   ApiStandardErrorResponses,
@@ -11,7 +12,7 @@ import {
 export const StatisticsSwagger = {
   Controller() {
     return applyDecorators(
-      ApiModuleTag('Statistics'),
+      ApiModuleTag(SWAGGER_MODULES_METADATA.statistics),
     );
   },
   GetTeacherStats() {

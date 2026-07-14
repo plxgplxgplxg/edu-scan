@@ -45,9 +45,9 @@ export function RegisterScreen({ navigation }: Props) {
   const layout = useResponsiveLayout();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
-  const heroSize = clamp(layout.width * 0.22, 76, 104);
+  const heroSize = clamp(layout.width * 0.19, 68, 92);
   const heroBubbleSize = clamp(layout.width * 0.42, 136, 196);
-  const topHeroMinHeight = clamp(height * 0.18, 116, 176);
+  const topHeroMinHeight = clamp(height * 0.155, 104, 148);
 
   React.useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -137,11 +137,12 @@ export function RegisterScreen({ navigation }: Props) {
           <View
             style={[
               styles.hero,
+              styles.registerHero,
               {
                 minHeight: topHeroMinHeight,
                 paddingHorizontal: layout.horizontalPadding,
                 paddingTop: insets.top + appTheme.spacing.sm,
-                gap: 12,
+                gap: 10,
               },
             ]}
           >
@@ -151,11 +152,11 @@ export function RegisterScreen({ navigation }: Props) {
                 {
                   width: heroSize,
                   height: heroSize,
-                  borderRadius: 28,
+                  borderRadius: 26,
                 },
               ]}
             >
-              <ScanLine size={38} color={appTheme.palette.white} />
+              <ScanLine size={34} color={appTheme.palette.white} />
             </View>
             <AppText
               variant="hero"
@@ -164,9 +165,6 @@ export function RegisterScreen({ navigation }: Props) {
               style={{ fontFamily: appTheme.typography.displayFamily }}
             >
               {content.meta.appName}
-            </AppText>
-            <AppText variant="body" color="rgba(255,255,255,0.80)" style={styles.center}>
-              {content.meta.slogan}
             </AppText>
           </View>
 
@@ -290,6 +288,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  registerHero: {
+    flex: 0,
+  },
   logoWrap: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -303,7 +304,7 @@ const styles = StyleSheet.create({
   sheet: {
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
-    gap: 8,
+    gap: 6,
   },
   handle: {
     alignSelf: 'center',
@@ -314,8 +315,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   form: {
-    gap: 16,
-    marginTop: 16,
+    gap: 12,
+    marginTop: 14,
   },
   roleGroup: {
     gap: 8,
@@ -326,16 +327,20 @@ const styles = StyleSheet.create({
     padding: 4,
     borderRadius: 24,
     backgroundColor: appTheme.palette.inputBackground,
+    borderWidth: 1,
+    borderColor: appTheme.palette.border,
   },
   roleOption: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 40,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 20,
   },
   roleOptionSelected: {
     backgroundColor: appTheme.palette.primary,
+    ...appTheme.shadows.glow,
+    shadowOpacity: 0.12,
   },
   authLink: {
     alignSelf: 'flex-end',

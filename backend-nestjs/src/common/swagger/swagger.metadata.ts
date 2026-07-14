@@ -6,7 +6,8 @@ export type SwaggerModuleKey =
   | 'submissions'
   | 'assignments'
   | 'omr'
-  | 'reports';
+  | 'reports'
+  | 'statistics';
 
 export interface SwaggerModuleMetadata {
   key: SwaggerModuleKey;
@@ -134,6 +135,17 @@ export const SWAGGER_MODULES_METADATA: Record<
     docsPath: '/api/docs/reports',
     jsonPath: '/api/docs-json/reports',
     exportFileName: 'openapi.reports.json',
+  },
+  statistics: {
+    key: 'statistics',
+    title: 'statistics',
+    description:
+      'Tài liệu dành cho thống kê tổng quan và chi tiết cho giáo viên, học sinh và quản trị viên.',
+    tagName: 'statistics',
+    tagDescription: 'Thống kê dữ liệu hệ thống.',
+    docsPath: '/api/docs/statistics',
+    jsonPath: '/api/docs-json/statistics',
+    exportFileName: 'openapi.statistics.json',
   },
 };
 

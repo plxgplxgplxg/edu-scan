@@ -7,6 +7,7 @@ import { OmrModule } from '../../modules/omr/omr.module';
 import { ReportsModule } from '../../modules/reports/reports.module';
 import { SubmissionsModule } from '../../modules/submissions/submissions.module';
 import { UsersModule } from '../../modules/users/users.module';
+import { StatisticsModule } from '../../modules/statistics/statistics.module';
 import {
   SWAGGER_MODULES_METADATA,
   type SwaggerModuleKey,
@@ -52,6 +53,10 @@ export const SWAGGER_MODULES_CONFIG: Record<
   reports: {
     ...SWAGGER_MODULES_METADATA.reports,
     moduleClass: ReportsModule,
+  },
+  statistics: {
+    ...SWAGGER_MODULES_METADATA.statistics,
+    moduleClass: StatisticsModule,
   },
 };
 
