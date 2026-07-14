@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View, Pressable } from 'react-native';
+import { ActivityIndicator, StyleSheet, View, Pressable, Alert } from 'react-native';
 import { useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
 import { Camera, useCameraDevice, useCameraPermission, usePhotoOutput } from 'react-native-vision-camera';
+import DocumentPicker from 'react-native-document-picker';
 import { Check, ImageIcon, X, Zap } from 'lucide-react-native';
 import { AppText } from '../../components/AppText';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -17,6 +18,7 @@ export function TeacherOmrCameraScreen() {
   const layout = useResponsiveLayout();
   const { showToast } = useToast();
   const examId = route.params?.examId as string;
+  const existingFiles = (route.params?.existingFiles as NativeFile[]) ?? [];
   const device = useCameraDevice('back');
   const photoOutput = usePhotoOutput();
   const { hasPermission, requestPermission } = useCameraPermission();
@@ -40,6 +42,13 @@ export function TeacherOmrCameraScreen() {
     [device, hasPermission, isCapturing],
   );
 
+  const navigateWithFile = (file: NativeFile) => {
+    navigation.replace('TeacherOmrUpload', {
+      examId,
+      initialFiles: [...existingFiles, file],
+    });
+  };
+
   const handleCapture = async () => {
     if (isCapturing) {
       return;
@@ -61,28 +70,58 @@ export function TeacherOmrCameraScreen() {
     setIsCapturing(true);
     try {
       const capturedPhoto = await photoOutput.capturePhotoToFile(
-        {
-          flashMode: flashEnabled ? 'on' : 'off',
-          enableShutterSound: true,
-        },
+        { flashMode: flashEnabled ? 'on' : 'off' },
         {},
       );
-      const fileUri = capturedPhoto.filePath.startsWith('file://')
-        ? capturedPhoto.filePath
-        : `file://${capturedPhoto.filePath}`;
-      const capturedFile: NativeFile = {
+      const rawPath: string = capturedPhoto.filePath;
+      const fileUri = rawPath.startsWith('file://') ? rawPath : `file://${rawPath}`;
+      navigateWithFile({
         uri: fileUri,
         name: `omr-${Date.now()}.jpg`,
         type: 'image/jpeg',
         size: null,
-      };
+      });
+    } catch (error: any) {
+      Alert.alert(
+        'Lỗi chụp ảnh',
+        error?.message ?? String(error),
+        [{ text: 'OK' }],
+      );
+      setIsCapturing(false);
+    }
+  };
+
+  const handlePickFromGallery = async () => {
+    if (isCapturing) {
+      return;
+    }
+    setIsCapturing(true);
+    try {
+      const files = await DocumentPicker.pick({
+        type: DocumentPicker.types.images,
+        allowMultiSelection: true,
+        copyTo: 'cachesDirectory',
+      });
+
+      const nativeFiles: NativeFile[] = files.map(file => {
+        const rawUri = (file.fileCopyUri ?? file.uri) as string;
+        return {
+          uri: rawUri.startsWith('file://') ? rawUri : `file://${rawUri}`,
+          name: file.name ?? `omr-${Date.now()}.jpg`,
+          type: file.type ?? 'image/jpeg',
+          size: file.size ?? null,
+        };
+      });
 
       navigation.replace('TeacherOmrUpload', {
         examId,
-        initialFiles: [capturedFile],
+        initialFiles: [...existingFiles, ...nativeFiles],
       });
     } catch (error: any) {
-      showToast(error?.message || 'Không thể chụp ảnh OMR');
+      if (!DocumentPicker.isCancel(error)) {
+        showToast(error?.message || 'Không thể chọn ảnh OMR');
+      }
+    } finally {
       setIsCapturing(false);
     }
   };
@@ -100,7 +139,7 @@ export function TeacherOmrCameraScreen() {
         <Camera
           style={StyleSheet.absoluteFill}
           device={device}
-          isActive={isFocused && !isCapturing}
+          isActive={isFocused}
           outputs={[photoOutput]}
         />
       ) : (
@@ -129,10 +168,7 @@ export function TeacherOmrCameraScreen() {
         </View>
         <Pressable
           onPress={() => setFlashEnabled(current => !current)}
-          style={[
-            styles.iconButton,
-            flashEnabled ? styles.iconButtonActive : null,
-          ]}
+          style={[styles.iconButton, flashEnabled ? styles.iconButtonActive : null]}
         >
           <Zap size={24} color={palette.white} />
         </Pressable>
@@ -151,21 +187,6 @@ export function TeacherOmrCameraScreen() {
             Giữ thiết bị song song với mặt giấy để ảnh không bị nghiêng hoặc mờ.
           </AppText>
         </View>
-      </View>
-
-      <View style={styles.qualityBarContainer}>
-        <AppText variant="caption" color={palette.white} style={{ transform: [{ rotate: '-90deg' }], width: 100, marginLeft: -40, marginBottom: 40, letterSpacing: 2 }}>
-          CHẤT LƯỢNG
-        </AppText>
-        <View style={styles.qualityTrack}>
-          <View
-            style={[
-              styles.qualityFill,
-              { height: hasPermission && device ? '88%' : '24%' },
-            ]}
-          />
-        </View>
-        <Zap size={16} color="rgba(18, 184, 134, 1)" style={{ marginTop: 8 }} />
       </View>
 
       <View style={[styles.bottomContainer, { paddingHorizontal: layout.horizontalPadding, paddingBottom: layout.bottomOffset + 24 }]}>
@@ -194,10 +215,10 @@ export function TeacherOmrCameraScreen() {
 
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ alignItems: 'center', gap: 8 }}>
-            <Pressable style={styles.bottomIcon}>
+            <Pressable style={styles.bottomIcon} onPress={handlePickFromGallery} disabled={isCapturing}>
               <ImageIcon size={24} color={palette.white} />
             </Pressable>
-            <AppText variant="caption" color={palette.white} weight="bold">ĐÃ QUÉT</AppText>
+            <AppText variant="caption" color={palette.white} weight="bold">THƯ VIỆN</AppText>
           </View>
 
           <Pressable
@@ -224,7 +245,6 @@ export function TeacherOmrCameraScreen() {
             <AppText variant="caption" color={palette.white} weight="bold">HƯỚNG DẪN</AppText>
           </View>
         </View>
-
       </View>
     </View>
   );
@@ -246,11 +266,8 @@ const styles = StyleSheet.create({
   bottomRight: { bottom: -2, right: -2, borderTopWidth: 0, borderLeftWidth: 0, borderBottomRightRadius: 16 },
   guideCard: { alignItems: 'center', gap: 10, backgroundColor: 'rgba(0,0,0,0.35)', paddingHorizontal: 20, paddingVertical: 14, borderRadius: 20 },
   guideText: { textAlign: 'center', maxWidth: 220 },
-  qualityBarContainer: { position: 'absolute', right: 20, top: '40%', alignItems: 'center' },
-  qualityTrack: { width: 6, height: 160, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 3, overflow: 'hidden' },
-  qualityFill: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '80%', backgroundColor: 'rgba(18, 184, 134, 1)', borderRadius: 3 },
   bottomContainer: { position: 'absolute', bottom: 0, left: 0, right: 0 },
-  conditionPill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(18, 184, 134, 0.8)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
+  conditionPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
   bottomIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
   captureButtonOuter: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', borderWidth: 4, borderColor: 'rgba(216, 75, 203, 0.5)' },
   captureButtonInner: { width: 60, height: 60, borderRadius: 30, backgroundColor: palette.white, alignItems: 'center', justifyContent: 'center' },

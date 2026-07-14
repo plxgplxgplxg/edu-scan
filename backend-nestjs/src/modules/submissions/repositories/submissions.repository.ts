@@ -58,7 +58,7 @@ export class SubmissionsRepository {
       this.prisma.submission.count({ where }),
     ]);
 
-    return { data, total, page, limit };
+    return { items: data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   async findOneWithDetails(id: string) {

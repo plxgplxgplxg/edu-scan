@@ -51,6 +51,8 @@ services:
     ports:
       - "8000:8000"
       - "50051:50051"
+    volumes:
+      - omr_artifacts:/app/artifacts
     networks:
       - eduscan-network
 
@@ -70,10 +72,13 @@ services:
       - postgres
       - redis
       - omr-service
+    volumes:
+      - omr_artifacts:/app/artifacts
     networks:
       - eduscan-network
 
 volumes:
+  omr_artifacts:
   postgres_data:
   redis_data:
 

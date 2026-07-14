@@ -26,23 +26,40 @@ export function TeacherOmrProcessingScreen() {
   useEffect(() => {
     if (!accessToken || !batchId) return;
 
-    const interval = setInterval(async () => {
+    let isMounted = true;
+    let errorCount = 0;
+    const TERMINAL_STATUSES = ['COMPLETED', 'PARTIAL_FAILED', 'FAILED'];
+
+    const navigate = () => navigation.replace('TeacherOmrExamDetail', { examId });
+
+    const poll = async () => {
       try {
         const batch = await getOmrBatchHeader(accessToken, batchId);
+        if (!isMounted) return;
         setProcessed(batch.processedFiles);
         setSuccessCount(batch.successCount);
         setFailedCount(batch.failedCount);
+        errorCount = 0;
 
-        if (batch.status === 'COMPLETED' || batch.status === 'PARTIAL_FAILED' || batch.status === 'FAILED') {
-          clearInterval(interval);
-          navigation.replace('TeacherOmrExamDetail', { examId });
+        if (TERMINAL_STATUSES.includes(batch.status)) {
+          navigate();
         }
-      } catch (err) {
-        console.error('Lỗi khi kiểm tra trạng thái OMR:', err);
+      } catch {
+        if (!isMounted) return;
+        errorCount += 1;
+        if (errorCount >= 5) {
+          navigate();
+        }
       }
-    }, 2000);
+    };
 
-    return () => clearInterval(interval);
+    poll();
+    const interval = setInterval(poll, 3000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, [accessToken, batchId, examId, navigation]);
 
   return (
