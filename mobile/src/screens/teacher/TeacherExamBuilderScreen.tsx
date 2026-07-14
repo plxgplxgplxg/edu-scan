@@ -1,6 +1,6 @@
 /* eslint-disable react/no-unstable-nested-components, no-void, react-native/no-inline-styles */
-import React, { useEffect, useState, useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View, Alert, Dimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { ArrowLeft, Check } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -16,7 +16,6 @@ import { TextInputField } from '../../components/TextInputField';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
-import { useResponsiveLayout } from '../../theme/responsive';
 import type { RootStackParamList } from '../../navigation/types';
 import { GradientBackground } from '../../components/GradientBackground';
 
@@ -44,7 +43,6 @@ export function TeacherExamBuilderScreen() {
   const route = useRoute<any>();
   const examId = route.params?.examId as string | undefined;
   const { accessToken } = useAuth();
-  const layout = useResponsiveLayout();
   const insets = useSafeAreaInsets();
 
   const [step, setStep] = useState<number>(1);

@@ -13,7 +13,6 @@ import { DashboardModuleCard } from '../../components/DashboardModuleCard';
 import { AppText } from '../../components/AppText';
 import { PageHeader } from '../../components/PageHeader';
 import { Screen } from '../../components/Screen';
-import { SurfaceCard } from '../../components/SurfaceCard';
 import { ErrorState, LoadingState } from '../../components/RequestState';
 import { useAppContent } from '../../hooks/useAppContent';
 import { useAuth } from '../../store/auth-store';
@@ -24,7 +23,6 @@ import type { RootStackParamList } from '../../navigation/types';
 import { getInitials } from '../../utils/string';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { requestJson } from '../../api/http';
-import { useNotifications } from '../../features/notifications/application/notifications-provider';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 

@@ -52,7 +52,7 @@ export function ProfileScreen() {
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false); // Thêm state demo cho Dark Mode toggle
 
-  const { data, loading, error, reload } = useAsyncResource(
+  const { loading, error, reload } = useAsyncResource(
     async () => {
       if (!accessToken || !role) {
         return null;
@@ -261,32 +261,6 @@ export function ProfileScreen() {
   );
 }
 
-function MetricBlock({
-  label,
-  value,
-  light = false,
-}: {
-  label: string;
-  value: string;
-  light?: boolean;
-}) {
-  return (
-    <View style={styles.metricBlock}>
-      <AppText 
-        variant="headline" 
-        weight="bold" 
-        color={light ? palette.white : palette.foreground}
-        style={{ fontFamily: appTheme.typography.displayFamily }}
-      >
-        {value}
-      </AppText>
-      <AppText variant="label" color={light ? 'rgba(255,255,255,0.7)' : palette.mutedForeground}>
-        {label}
-      </AppText>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   initialsCard: {
     alignItems: 'center',
@@ -304,25 +278,6 @@ const styles = StyleSheet.create({
     backgroundColor: appTheme.palette.glassFill,
     borderWidth: 1,
     borderColor: appTheme.palette.glassBorder,
-  },
-  metricsCard: {
-    backgroundColor: appTheme.palette.glassFill,
-    borderRadius: appTheme.radius.lg,
-    padding: appTheme.spacing.lg,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    borderWidth: 1,
-    borderColor: appTheme.palette.glassBorder,
-  },
-  metricsCardStack: {
-    flexWrap: 'wrap',
-    rowGap: appTheme.spacing.md,
-  },
-  metricBlock: {
-    alignItems: 'center',
-    gap: 4,
-    flex: 1,
-    minWidth: 90,
   },
   menu: {
     gap: appTheme.spacing.lg,

@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   RefreshControl,
-  ScrollView,
   StyleSheet,
   View,
   Animated,

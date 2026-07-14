@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, View, Animated, Platform } from 'react-native';
+import { Pressable, StyleSheet, View, Animated } from 'react-native';
 import { ArrowLeft, Bell } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -59,7 +59,6 @@ export function PageHeader({
   const insets = useSafeAreaInsets();
   const layout = useResponsiveLayout();
   const useCompactMetrics = layout.isCompact && (metrics?.length ?? 0) > 2;
-  const extraTopInset = layout.isCompact ? 32 : 40 - 8;
 
   const headerGradient = gradient || [appTheme.palette.primary, appTheme.palette.tertiary];
   

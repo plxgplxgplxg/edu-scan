@@ -36,7 +36,6 @@ import { StudentStatisticsScreen } from '../screens/student/StudentStatisticsScr
 import { AdminStatisticsScreen } from '../screens/admin/AdminStatisticsScreen';
 import { ProfileScreen } from '../screens/shared/ProfileScreen';
 import { NotificationsScreen } from '../screens/shared/NotificationsScreen';
-import { palette } from '../theme/tokens';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const TeacherTab = createBottomTabNavigator<TeacherTabParamList>();

@@ -12,5 +12,7 @@ module.exports = {
       '<rootDir>/test/mocks/navigation-bottom-tabs.js',
     '^react-native-linear-gradient$':
       '<rootDir>/test/mocks/react-native-linear-gradient.js',
+    '^react-native-vision-camera$':
+      '<rootDir>/test/mocks/react-native-vision-camera.js',
   },
 };

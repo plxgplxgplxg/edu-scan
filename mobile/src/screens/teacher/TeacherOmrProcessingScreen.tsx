@@ -1,20 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
+import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, CheckCircle2, Circle } from 'lucide-react-native';
 import { AppText } from '../../components/AppText';
 import { Screen } from '../../components/Screen';
-import { appTheme, palette } from '../../theme/tokens';
+import { palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
-import { useAuth } from '../../store/auth-store';
 
 export function TeacherOmrProcessingScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const layout = useResponsiveLayout();
-  const { accessToken } = useAuth();
-  
-  const examId = route.params?.examId as string;
   const totalFiles = route.params?.totalFiles as number || 0;
   
   const [processed, setProcessed] = useState(0);

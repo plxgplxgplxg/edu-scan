@@ -1,7 +1,7 @@
 /* eslint-disable react/no-unstable-nested-components, no-void, react-native/no-inline-styles */
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, View, Image, Modal, Alert, ScrollView } from 'react-native';
-import { ArrowLeft, FolderOpen, ImageIcon, ScanLine, ChevronRight, Pencil, Settings } from 'lucide-react-native';
+import { ArrowLeft, ImageIcon, ScanLine, ChevronRight, Pencil, Settings } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -13,12 +13,10 @@ import {
 } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
 import { ModalSheet } from '../../components/ModalSheet';
-import { PrimaryButton } from '../../components/PrimaryButton';
 import { ErrorState, LoadingState } from '../../components/RequestState';
 import { Screen } from '../../components/Screen';
 import { PageHeader } from '../../components/PageHeader';
 import { SurfaceCard } from '../../components/SurfaceCard';
-import { TextInputField } from '../../components/TextInputField';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import type { RootStackParamList } from '../../navigation/types';
 import { useAuth } from '../../store/auth-store';
@@ -45,7 +43,6 @@ export function TeacherOmrExamDetailScreen() {
   const [keyword] = useState('');
   const [sortScore] = useState<'asc'|'desc'>('desc');
   const [showUpload, setShowUpload] = useState(false);
-  const [showSourceOptions, setShowSourceOptions] = useState(false);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
 
   const { data: exam, loading: examLoading } = useAsyncResource(async () => {
@@ -58,7 +55,7 @@ export function TeacherOmrExamDetailScreen() {
     return getExamSubmissions(accessToken, examId, page, keyword, undefined, sortScore);
   }, [accessToken, examId, page, keyword, sortScore]);
 
-  const { selectedFiles, submitting, submitError, pickFiles, submit } =
+  const { pickFiles } =
     useOmrUpload({
       accessToken,
       onUploaded: async () => {
@@ -66,17 +63,6 @@ export function TeacherOmrExamDetailScreen() {
         showToast('Đã nộp các ảnh OMR để chấm!');
       },
     });
-
-  const handleStartScan = async () => {
-    if (selectedFiles.length === 0) {
-      showToast('Vui lòng chọn ảnh trước khi quét!');
-      return;
-    }
-    const success = await submit(examId);
-    if (success) {
-      setShowUpload(false);
-    }
-  };
 
   const loading = examLoading || subLoading;
 

@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Pressable, Image, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, ImageIcon, X, AlertTriangle, Plus } from 'lucide-react-native';
 import { AppText } from '../../components/AppText';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { Screen } from '../../components/Screen';
-import { appTheme, palette } from '../../theme/tokens';
+import { palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
-import { useOmrUpload } from '../../features/omr/application/useOmrUpload';
 import { useAuth } from '../../store/auth-store';
 import { useToast } from '../../app/ToastProvider';
 import type { NativeFile } from '../../features/shared/domain/native-file';
@@ -25,11 +24,6 @@ export function TeacherOmrUploadScreen() {
   
   const [files, setFiles] = useState<NativeFile[]>(initialFiles || []);
   const [submitting, setSubmitting] = useState(false);
-
-  const { pickFiles } = useOmrUpload({
-    accessToken,
-    onUploaded: async () => {},
-  });
 
   const handleAddFiles = async () => {
     try {

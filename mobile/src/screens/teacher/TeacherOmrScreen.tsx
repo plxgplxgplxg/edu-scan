@@ -54,7 +54,7 @@ export function TeacherOmrScreen() {
       } else {
         setPage(1); // will trigger reload
       }
-    }, [])
+    }, [page, reload])
   );
 
   const handleSearch = (text: string) => {
