@@ -1,5 +1,5 @@
 /* eslint-disable no-void, react-native/no-inline-styles */
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { ArrowLeft, Check } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -169,28 +169,47 @@ export function TeacherExamBuilderScreen() {
 
   const currentVariant = variants.find(v => v.testCode === selectedTestCode);
   const currentAnswers = currentVariant?.answerKeys || [];
-  
-  const handleQuickInputApply = () => {
-    if (!currentVariant) return;
-    const cleanStr = quickInput.replace(/[^a-eA-E]/g, '').toUpperCase();
-    const newAnswers = [...currentVariant.answerKeys];
-    
-    for (let i = 0; i < cleanStr.length && i < questionCount; i++) {
-      const qNum = i + 1;
-      const char = cleanStr[i];
-      const existingIdx = newAnswers.findIndex(a => a.questionNumber === qNum);
-      if (existingIdx >= 0) {
-        newAnswers[existingIdx].correctAnswer = char;
-      } else {
-        newAnswers.push({ questionNumber: qNum, correctAnswer: char });
-      }
-    }
-    newAnswers.sort((a, b) => a.questionNumber - b.questionNumber);
-    
-    const updated = variants.map(v => v.testCode === selectedTestCode ? { ...v, answerKeys: newAnswers } : v);
-    setVariants(updated);
-    setQuickInput('');
+
+  useEffect(() => {
+    setQuickInput((value) => value.slice(0, questionCount));
+  }, [questionCount]);
+
+  const handleQuickInputChange = (value: string) => {
+    setQuickInput(
+      value
+        .replace(/[^a-eA-E]/g, '')
+        .toUpperCase()
+        .slice(0, questionCount),
+    );
   };
+  
+  const handleQuickInputApply = useCallback(() => {
+    const cleanStr = quickInput.slice(0, questionCount);
+    if (!cleanStr) return;
+    
+    setVariants((currentVariants) =>
+      currentVariants.map((variant) => {
+        if (variant.testCode !== selectedTestCode) return variant;
+
+        const newAnswers = [...variant.answerKeys];
+        for (let i = 0; i < cleanStr.length && i < questionCount; i++) {
+          const qNum = i + 1;
+          const char = cleanStr[i];
+          const existingIdx = newAnswers.findIndex(a => a.questionNumber === qNum);
+          if (existingIdx >= 0) {
+            newAnswers[existingIdx].correctAnswer = char;
+          } else {
+            newAnswers.push({ questionNumber: qNum, correctAnswer: char });
+          }
+        }
+        newAnswers.sort((a, b) => a.questionNumber - b.questionNumber);
+
+        return { ...variant, answerKeys: newAnswers };
+      }),
+    );
+
+    setQuickInput('');
+  }, [questionCount, quickInput, selectedTestCode]);
 
   const toggleAnswer = (qNum: number, ans: string) => {
     if (!currentVariant) return;
@@ -241,7 +260,7 @@ export function TeacherExamBuilderScreen() {
         </View>
       </GradientBackground>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="always">
         {loading && <LoadingState label="Đang tải..." />}
         {error && <ErrorState message={error} retryLabel="Thử lại" onRetry={() => void reload()} />}
         
@@ -423,9 +442,12 @@ export function TeacherExamBuilderScreen() {
                   placeholder="VD: ABCDABCD..."
                   placeholderTextColor="rgba(255,255,255,0.6)"
                   value={quickInput}
-                  onChangeText={setQuickInput}
+                  onChangeText={handleQuickInputChange}
                   autoCapitalize="characters"
+                  autoCorrect={false}
                   maxLength={questionCount}
+                  onSubmitEditing={handleQuickInputApply}
+                  returnKeyType="done"
                 />
                 <Pressable style={styles.quickApplyBtn} onPress={handleQuickInputApply}>
                   <AppText variant="body" weight="bold" color={palette.primary}>Áp dụng</AppText>
