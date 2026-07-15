@@ -1,13 +1,6 @@
-/* eslint-disable react-native/no-inline-styles */
-import React, { useMemo, useState } from 'react';
+import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import {
-  BookOpen,
-  Clock,
-  FileText,
-  Upload,
-  X,
-} from 'lucide-react-native';
+import { BookOpen, Clock, Upload } from 'lucide-react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -19,15 +12,12 @@ import {
 } from '../../api/edu-scan';
 import { AppText } from '../../components/AppText';
 import { FilterChips } from '../../components/FilterChips';
-import { ModalSheet } from '../../components/ModalSheet';
 import { PageHeader } from '../../components/PageHeader';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ErrorState, LoadingState } from '../../components/RequestState';
-import { DocumentViewerModal } from '../../components/DocumentViewerModal';
 import { Screen } from '../../components/Screen';
 import { StatusBadge } from '../../components/StatusBadge';
 import { SurfaceCard } from '../../components/SurfaceCard';
-import { TextInputField } from '../../components/TextInputField';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { useAppContent } from '../../hooks/useAppContent';
 import { useAuth } from '../../store/auth-store';
@@ -36,8 +26,6 @@ import { useResponsiveLayout } from '../../theme/responsive';
 import { primaryHeroGradient } from '../../theme/header';
 import { formatVietnameseDate, isExpired } from '../../utils/format';
 import type { RootStackParamList } from '../../navigation/types';
-import { useAssignmentSubmission } from '../../features/assignments/application/useAssignmentSubmission';
-import { formatFileSize } from '../../features/assignments/domain/assignment-file-utils';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type TabKey = 'assignments' | 'info';
@@ -51,36 +39,11 @@ export function StudentClassDetailScreen() {
   const classId = route.params?.classId;
   const assignmentIdParam = route.params?.assignmentId;
   const modeParam = route.params?.mode;
-  
-  const [tab, setTab] = useState<TabKey>('assignments');
-  const [showSubmit, setShowSubmit] = useState<string | null>(null);
-  const [isEditingSubmit, setIsEditingSubmit] = useState(false);
-  const [submitNote, setSubmitNote] = useState('');
-  const [retainedAttachments, setRetainedAttachments] = useState<Array<{
-    url: string;
-    publicId: string;
-    originalName: string;
-    mimeType: string;
-    sizeBytes: number;
-    uploadedAt: string;
-  }>>([]);
-
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [previewFileName, setPreviewFileName] = useState('');
-  const [previewMimeType, setPreviewMimeType] = useState('');
-
-  const openPreview = (url: string | null | undefined, name: string | null | undefined, mime: string | null | undefined) => {
-    if (!url) return;
-    setPreviewUrl(url);
-    setPreviewFileName(name || 'Tài liệu');
-    setPreviewMimeType(mime || '');
-  };
+  const [tab, setTab] = React.useState<TabKey>('assignments');
 
   const { data, loading, error, reload } = useAsyncResource(
     async () => {
-      if (!accessToken || !classId) {
-        return null;
-      }
+      if (!accessToken || !classId) return null;
 
       const [classItem, assignments] = await Promise.all([
         getClassDetail(accessToken, classId),
@@ -91,47 +54,27 @@ export function StudentClassDetailScreen() {
       return {
         currentClass: mapClassDetail(classItem),
         assignments: assignments
-          .filter((item) => item.classId === classItem.id)
-          .map((item) => mapStudentAssignmentSummary(item, classMap)),
+          .filter(item => item.classId === classItem.id)
+          .map(item => mapStudentAssignmentSummary(item, classMap)),
       };
     },
     [accessToken, classId],
   );
 
-  const classAssignments = useMemo(
-    () => data?.assignments ?? [],
-    [data?.assignments],
-  );
-  const {
-    selectedFiles,
-    submitting,
-    submitError,
-    pickFiles,
-    removeFile,
-    clearSelectedFiles,
-    submitAssignmentContent,
-    updateSubmissionContent,
-  } = useAssignmentSubmission({
-    accessToken,
-    onSubmitted: reload,
-  });
+  React.useEffect(() => {
+    if (classId && assignmentIdParam) {
+      navigation.replace('StudentAssignmentDetail', {
+        classId,
+        assignmentId: assignmentIdParam,
+        classCode: data?.currentClass.code,
+        mode: modeParam,
+      });
+    }
+  }, [assignmentIdParam, classId, data?.currentClass.code, modeParam, navigation]);
+
   const handleRefresh = () => {
     reload().catch(() => undefined);
   };
-
-  React.useEffect(() => {
-    if (data?.assignments && modeParam === 'submit' && assignmentIdParam) {
-      const assignment = data.assignments.find((a) => a.id === assignmentIdParam);
-      if (assignment) {
-        const expired = isExpired(assignment.deadline);
-        if (!assignment.submitted && (!expired || assignment.allowLate)) {
-          setShowSubmit(assignmentIdParam);
-        } else {
-          setShowSubmit(null);
-        }
-      }
-    }
-  }, [data, modeParam, assignmentIdParam]);
 
   if (!data && loading) {
     return (
@@ -166,29 +109,9 @@ export function StudentClassDetailScreen() {
   }
 
   const { currentClass } = data;
-  const activeSubmitAssignment = classAssignments.find(item => item.id === showSubmit) ?? null;
-  const activeSubmitExpired = activeSubmitAssignment ? isExpired(activeSubmitAssignment.deadline) : false;
-  const canSubmitActiveAssignment =
-    !!activeSubmitAssignment &&
-    !submitting &&
-    (!!submitNote.trim() || selectedFiles.length > 0 || retainedAttachments.length > 0) &&
-    (!activeSubmitExpired || activeSubmitAssignment.allowLate) &&
-    activeSubmitAssignment.gradeStatus !== 'GRADED';
-
-  const handleEditSubmit = (assignment: any) => {
-    setShowSubmit(assignment.id);
-    setIsEditingSubmit(true);
-    setSubmitNote(assignment.submittedNote || '');
-    setRetainedAttachments(assignment.submittedAttachments || []);
-    clearSelectedFiles();
-  };
-
-  const removeRetainedAttachment = (idx: number) => {
-    setRetainedAttachments(prev => prev.filter((_, i) => i !== idx));
-  };
+  const classAssignments = data.assignments;
 
   return (
-    <>
     <Screen refreshing={loading} onRefresh={handleRefresh}>
       <PageHeader
         backLabel={content.student.classes.title}
@@ -206,10 +129,9 @@ export function StudentClassDetailScreen() {
             paddingHorizontal: layout.horizontalPadding,
             paddingTop: layout.sectionGap,
             maxWidth: layout.contentMaxWidth,
-            alignSelf: 'center',
-            width: '100%',
             gap: layout.sectionGap,
           },
+          styles.contentWidth,
         ]}
       >
         <FilterChips
@@ -225,121 +147,79 @@ export function StudentClassDetailScreen() {
           <View style={styles.section}>
             {classAssignments.map(item => {
               const expired = isExpired(item.deadline);
+              const canSubmit = !item.submitted && (!expired || item.allowLate);
 
               return (
-                <SurfaceCard key={item.id} style={styles.assignmentCard}>
-                  <View style={[styles.assignmentHead, layout.isCompact ? styles.assignmentHeadStack : null]}>
-                    <View style={styles.flex}>
-                      <AppText variant="body" weight="medium">
-                        {item.title}
-                      </AppText>
-                      {item.description ? (
-                        <AppText variant="caption" color={palette.mutedForeground}>
-                          {item.description}
+                <Pressable
+                  key={item.id}
+                  onPress={() =>
+                    navigation.navigate('StudentAssignmentDetail', {
+                      assignmentId: item.id,
+                      classId,
+                      classCode: currentClass.code,
+                      mode: 'readonly',
+                    })
+                  }
+                >
+                  <SurfaceCard style={styles.assignmentCard}>
+                    <View style={[styles.assignmentHead, layout.isCompact ? styles.assignmentHeadStack : null]}>
+                      <View style={styles.flex}>
+                        <AppText variant="body" weight="medium">
+                          {item.title}
                         </AppText>
-                      ) : null}
+                        {item.description ? (
+                          <AppText variant="caption" color={palette.mutedForeground} numberOfLines={2}>
+                            {item.description}
+                          </AppText>
+                        ) : null}
+                      </View>
+                      {item.gradeStatus ? <StatusBadge status={item.gradeStatus} /> : null}
                     </View>
-                    {item.gradeStatus ? <StatusBadge status={item.gradeStatus} /> : null}
-                  </View>
-                  <View style={styles.metaRow}>
-                    <View style={styles.inlineMeta}>
-                      <Clock size={12} color={expired && !item.submitted ? palette.destructive : palette.mutedForeground} />
-                      <AppText
-                        variant="caption"
-                        color={expired && !item.submitted ? palette.destructive : palette.mutedForeground}
-                      >
-                        {`${content.common.form.deadline}: ${formatVietnameseDate(item.deadline)}`}
-                      </AppText>
-                    </View>
-                    {item.submitStatus ? <StatusBadge status={item.submitStatus} /> : null}
-                  </View>
-                  {item.allowLate && !item.submitted ? (
-                    <AppText variant="caption" color={palette.warning}>
-                      {`${content.common.messages.lateAllowed} • ${String(item.latePenaltyPct)}%`}
-                    </AppText>
-                  ) : null}
-                  {item.attachments && item.attachments.length > 0 ? (
-                    <View style={{ gap: 4, marginVertical: 8 }}>
-                      {item.attachments.map((attachment: any, idx: number) => (
-                        <Pressable
-                          key={attachment.publicId || idx}
-                          style={styles.fileRow}
-                          onPress={() => {
-                            openPreview(attachment.url, attachment.originalName, attachment.mimeType);
-                          }}
+                    <View style={styles.metaRow}>
+                      <View style={styles.inlineMeta}>
+                        <Clock size={12} color={expired && !item.submitted ? palette.destructive : palette.mutedForeground} />
+                        <AppText
+                          variant="caption"
+                          color={expired && !item.submitted ? palette.destructive : palette.mutedForeground}
                         >
-                          <FileText size={16} color={palette.primary} />
-                          <View style={styles.flex}>
-                            <AppText variant="label" weight="semibold" color={palette.primary} numberOfLines={1} ellipsizeMode="middle">
-                              {attachment.originalName ?? 'File hướng dẫn'}
-                            </AppText>
-                            <AppText variant="caption" color={palette.mutedForeground}>
-                              {`${attachment.mimeType ?? 'Tài liệu'} • ${formatFileSize(attachment.sizeBytes)}`}
-                            </AppText>
-                          </View>
-                        </Pressable>
-                      ))}
+                          {`${content.common.form.deadline}: ${formatVietnameseDate(item.deadline)}`}
+                        </AppText>
+                      </View>
+                      {item.submitStatus ? <StatusBadge status={item.submitStatus} /> : null}
                     </View>
-                  ) : null}
-                  {item.submitted ? (
-                    <View style={styles.submittedBox}>
+                    {item.submitted ? (
                       <AppText variant="label" weight="semibold" color={palette.success}>
                         Đã nộp {item.submittedAt ? `• ${formatVietnameseDate(item.submittedAt)}` : ''}
                       </AppText>
-                      {item.submitStatus ? <StatusBadge status={item.submitStatus} /> : null}
-                      {item.submittedNote ? (
-                        <AppText variant="caption" color={palette.mutedForeground}>
-                          {item.submittedNote}
-                        </AppText>
-                      ) : null}
-                      {item.submittedAttachments && item.submittedAttachments.length > 0 ? (
-                        <View style={{ gap: 4, marginTop: 4 }}>
-                          {item.submittedAttachments.map((attachment: any, idx: number) => (
-                            <Pressable
-                              key={attachment.publicId || idx}
-                              style={styles.fileRow}
-                              onPress={() => {
-                                openPreview(attachment.url, attachment.originalName, attachment.mimeType);
-                              }}
-                            >
-                              <FileText size={16} color={palette.primary} />
-                              <View style={styles.flex}>
-                                <AppText variant="label" weight="semibold" color={palette.primary}>
-                                  {attachment.originalName ?? 'File bài làm'}
-                                </AppText>
-                                <AppText variant="caption" color={palette.mutedForeground}>
-                                  {`${attachment.mimeType ?? 'Tài liệu'} • ${formatFileSize(attachment.sizeBytes)}`}
-                                </AppText>
-                              </View>
-                            </Pressable>
-                          ))}
-                        </View>
-                      ) : null}
-                    </View>
-                  ) : null}
-                  {item.submitted && (!expired || item.allowLate) && item.gradeStatus !== 'GRADED' ? (
-                    <PrimaryButton
-                      label="Sửa bài nộp"
-                      variant="outline"
-                      icon={<Upload size={18} color={palette.primary} />}
-                      onPress={() => handleEditSubmit(item)}
-                    />
-                  ) : null}
-                  {!item.submitted && (!expired || item.allowLate) ? (
-                    <PrimaryButton
-                      label={content.common.buttons.submitAssignment}
-                      icon={<Upload size={18} color={palette.white} />}
-                      onPress={() => setShowSubmit(item.id)}
-                    />
-                  ) : null}
-                  {!item.submitted && expired && !item.allowLate ? (
-                    <SurfaceCard style={styles.expiredState}>
-                      <AppText variant="caption" color={palette.destructive}>
-                        {content.common.messages.expiredAssignment}
+                    ) : null}
+                    {item.allowLate && !item.submitted ? (
+                      <AppText variant="caption" color={palette.warning}>
+                        {`${content.common.messages.lateAllowed} • ${String(item.latePenaltyPct)}%`}
                       </AppText>
-                    </SurfaceCard>
-                  ) : null}
-                </SurfaceCard>
+                    ) : null}
+                    {canSubmit ? (
+                      <PrimaryButton
+                        label={content.common.buttons.submitAssignment}
+                        icon={<Upload size={18} color={palette.white} />}
+                        onPress={() =>
+                          navigation.navigate('StudentAssignmentDetail', {
+                            assignmentId: item.id,
+                            classId,
+                            classCode: currentClass.code,
+                            mode: 'submit',
+                          })
+                        }
+                      />
+                    ) : null}
+                    {!item.submitted && expired && !item.allowLate ? (
+                      <SurfaceCard style={styles.expiredState}>
+                        <AppText variant="caption" color={palette.destructive}>
+                          {content.common.messages.expiredAssignment}
+                        </AppText>
+                      </SurfaceCard>
+                    ) : null}
+                  </SurfaceCard>
+                </Pressable>
               );
             })}
           </View>
@@ -370,113 +250,16 @@ export function StudentClassDetailScreen() {
         ) : null}
       </View>
     </Screen>
-
-      <ModalSheet
-        visible={!!showSubmit}
-        onClose={() => {
-          setShowSubmit(null);
-          setIsEditingSubmit(false);
-          setSubmitNote('');
-          clearSelectedFiles();
-          setRetainedAttachments([]);
-        }}
-      >
-        <AppText variant="headline" weight="bold" style={styles.sheetTitle}>
-          {isEditingSubmit ? 'Cập nhật bài nộp' : content.common.buttons.submitAssignment}
-        </AppText>
-        <AppText variant="body" color={palette.mutedForeground} style={styles.sheetSubtitle}>
-          {activeSubmitAssignment?.title ?? ''}
-        </AppText>
-        <TextInputField
-          label="Ghi chú"
-          value={submitNote}
-          onChangeText={setSubmitNote}
-          placeholder="Nhập ghi chú bài làm"
-        />
-        {retainedAttachments.map((attachment, idx) => (
-          <SurfaceCard key={attachment.publicId || idx} style={styles.selectedFileCard}>
-            <View style={styles.flex}>
-              <AppText variant="body" weight="medium">
-                {attachment.originalName}
-              </AppText>
-              <AppText variant="caption" color={palette.mutedForeground}>
-                {`${attachment.mimeType} • ${formatFileSize(attachment.sizeBytes)}`}
-              </AppText>
-            </View>
-            <Pressable onPress={() => removeRetainedAttachment(idx)}>
-              <X size={18} color={palette.destructive} />
-            </Pressable>
-          </SurfaceCard>
-        ))}
-        {selectedFiles.map((file, idx) => (
-          <SurfaceCard key={idx} style={styles.selectedFileCard}>
-            <View style={styles.flex}>
-              <AppText variant="body" weight="medium">
-                {file.name}
-              </AppText>
-              <AppText variant="caption" color={palette.mutedForeground}>
-                {`${file.type || 'application/octet-stream'} • ${formatFileSize(file.size)}`}
-              </AppText>
-            </View>
-            <Pressable onPress={() => removeFile(idx)}>
-              <X size={18} color={palette.destructive} />
-            </Pressable>
-          </SurfaceCard>
-        ))}
-        <AppText variant="caption" color={palette.mutedForeground} style={styles.sheetHint}>
-          PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, TXT, ZIP hoặc ẢNH • tối đa 20MB
-        </AppText>
-        <PrimaryButton
-          label="Chọn tệp"
-          variant="outline"
-          onPress={() => {
-            pickFiles().catch(() => undefined);
-          }}
-        />
-        <PrimaryButton
-          label={isEditingSubmit ? 'Cập nhật' : content.common.buttons.submitAssignment}
-          loading={submitting}
-          disabled={!canSubmitActiveAssignment}
-          onPress={async () => {
-            if (!showSubmit) {
-              return;
-            }
-
-            let success = false;
-            if (isEditingSubmit) {
-              success = await updateSubmissionContent(showSubmit, submitNote, retainedAttachments);
-            } else {
-              success = await submitAssignmentContent(showSubmit, submitNote);
-            }
-
-            if (success) {
-              setShowSubmit(null);
-              setIsEditingSubmit(false);
-              setSubmitNote('');
-              setRetainedAttachments([]);
-            }
-          }}
-        />
-        {submitError ? (
-          <AppText variant="caption" color={palette.destructive}>
-            {submitError}
-          </AppText>
-        ) : null}
-      </ModalSheet>
-      <DocumentViewerModal
-        visible={!!previewUrl}
-        onClose={() => setPreviewUrl(null)}
-        url={previewUrl}
-        fileName={previewFileName}
-        mimeType={previewMimeType}
-      />
-    </>
   );
 }
 
 const styles = StyleSheet.create({
   body: {
     gap: appTheme.spacing.lg,
+  },
+  contentWidth: {
+    alignSelf: 'center',
+    width: '100%',
   },
   section: {
     gap: appTheme.spacing.md,
@@ -506,16 +289,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  fileRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: appTheme.spacing.sm,
-    paddingVertical: appTheme.spacing.xs,
-  },
-  submittedBox: {
-    gap: appTheme.spacing.xs,
-    paddingTop: appTheme.spacing.xs,
-  },
   expiredState: {
     backgroundColor: palette.destructiveSoft,
     borderWidth: 0,
@@ -529,19 +302,5 @@ const styles = StyleSheet.create({
   infoCardStack: {
     flexWrap: 'wrap',
     alignItems: 'flex-start',
-  },
-  sheetTitle: {
-    marginBottom: appTheme.spacing.sm,
-  },
-  sheetSubtitle: {
-    marginBottom: appTheme.spacing.lg,
-  },
-  sheetHint: {
-    marginVertical: appTheme.spacing.md,
-  },
-  selectedFileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: appTheme.spacing.md,
   },
 });

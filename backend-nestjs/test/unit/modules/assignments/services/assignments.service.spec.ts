@@ -45,6 +45,7 @@ const mockStorageService = () => ({
 
 const mockNotificationsService = () => ({
   createAssignmentCreatedNotifications: jest.fn(),
+  createAssignmentGradedNotification: jest.fn(),
 });
 
 const mockNotificationsQueue = () => ({
@@ -594,6 +595,45 @@ describe('AssignmentsService', () => {
       );
       expect(result.score).toBe(8.5);
       expect(result.gradeStatus).toBe(GradeStatus.GRADED);
+      expect(
+        notificationsService.createAssignmentGradedNotification,
+      ).toHaveBeenCalledWith({
+        assignmentId: ASSIGNMENT_ID,
+        classId: CLASS_ID_1,
+        title: mockAssignment.title,
+        studentId: STUDENT_ID,
+      });
+    });
+
+    it('should notify only the graded student, not the teacher', async () => {
+      repository.findById.mockResolvedValue(mockAssignment);
+      repository.updateSubmit.mockResolvedValue({
+        ...mockSubmit,
+        score: 9,
+        gradeStatus: GradeStatus.GRADED,
+      });
+
+      await service.gradeSubmit(ASSIGNMENT_ID, SUBMIT_ID, TEACHER_ID, {
+        score: 9,
+      });
+
+      expect(
+        notificationsService.createAssignmentGradedNotification,
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        notificationsService.createAssignmentGradedNotification,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          studentId: STUDENT_ID,
+        }),
+      );
+      expect(
+        notificationsService.createAssignmentGradedNotification,
+      ).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          studentId: TEACHER_ID,
+        }),
+      );
     });
 
     it('should grade submit successfully without optional feedback', async () => {

@@ -2,6 +2,7 @@ import { Role } from '@prisma/client';
 
 export type NotificationType =
   | 'ASSIGNMENT_CREATED'
+  | 'ASSIGNMENT_GRADED'
   | 'ASSIGNMENT_DUE_SOON'
   | 'ASSIGNMENT_OVERDUE'
   | 'TEACHER_ASSIGNMENT_SUMMARY'

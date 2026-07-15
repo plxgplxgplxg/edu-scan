@@ -187,7 +187,7 @@ export function TeacherOmrScreen() {
   );
 
   return (
-    <Screen scrollable={false}>
+    <Screen scrollable={false} withoutBottomInset>
       <PageHeader
         overline="EDUSCAN"
         title="Kiểm tra trắc nghiệm"

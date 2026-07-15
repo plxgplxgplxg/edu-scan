@@ -85,6 +85,33 @@ export class NotificationsService {
     );
   }
 
+  async createAssignmentGradedNotification(input: {
+    assignmentId: string;
+    classId: string;
+    title: string;
+    studentId: string;
+  }) {
+    return this.createManyDeduped([
+      {
+        type: 'ASSIGNMENT_GRADED',
+        recipientId: input.studentId,
+        roleTarget: Role.STUDENT,
+        entityId: input.assignmentId,
+        classId: input.classId,
+        assignmentId: input.assignmentId,
+        routeIntent: {
+          route: 'StudentClassDetail',
+          classId: input.classId,
+          assignmentId: input.assignmentId,
+          mode: 'readonly',
+        },
+        title: input.title,
+        body: `Bài tập "${input.title}" đã được chấm.`,
+        dedupeKey: `assignment-graded:${input.assignmentId}:${input.studentId}`,
+      },
+    ]);
+  }
+
   listForUser(userId: string) {
     return this.notificationsRepository.listForRecipient(userId);
   }

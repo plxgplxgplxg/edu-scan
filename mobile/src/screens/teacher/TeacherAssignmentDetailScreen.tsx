@@ -9,6 +9,8 @@ import {
   MessageSquare,
   Edit2,
   Maximize,
+  Search,
+  ChevronRight,
 } from 'lucide-react-native';
 
 import {
@@ -52,6 +54,7 @@ export function TeacherAssignmentDetailScreen() {
   const { assignmentId, classId, classCode } = route.params;
 
   const [activeTab, setActiveTab] = useState<'info' | 'submits'>('info');
+  const [searchKeyword, setSearchKeyword] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -103,7 +106,7 @@ export function TeacherAssignmentDetailScreen() {
 
   const assignment = assignmentData?.assignment;
 
-  const fetchSubmits = useCallback(async (pageNum: number, isLoadMore = false) => {
+  const fetchSubmits = useCallback(async (pageNum: number, isLoadMore = false, keyword = searchKeyword) => {
     if (!accessToken) return;
     
     if (isLoadMore) {
@@ -113,7 +116,7 @@ export function TeacherAssignmentDetailScreen() {
     }
 
     try {
-      const res = await getAssignmentSubmits(accessToken, assignmentId, pageNum, 10);
+      const res = await getAssignmentSubmits(accessToken, assignmentId, pageNum, 10, keyword);
       
       setSubmits(prev => isLoadMore ? [...prev, ...res.items] : res.items);
       setTotalPages(res.totalPages);
@@ -139,11 +142,14 @@ export function TeacherAssignmentDetailScreen() {
       setLoadingSubmits(false);
       setLoadingMore(false);
     }
-  }, [accessToken, assignmentId]);
+  }, [accessToken, assignmentId, searchKeyword]);
 
   useEffect(() => {
-    void fetchSubmits(1);
-  }, [fetchSubmits]);
+    const timer = setTimeout(() => {
+      void fetchSubmits(1, false, searchKeyword);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [fetchSubmits, searchKeyword]);
 
   const handleLoadMore = () => {
     if (!loadingMore && page < totalPages) {
@@ -297,8 +303,8 @@ export function TeacherAssignmentDetailScreen() {
 
   const renderSubmitItem = ({ item: submit }: { item: AssignmentSubmitApi }) => {
     return (
-      <SurfaceCard style={styles.submitCard}>
-        <View style={styles.submitHead}>
+      <Pressable onPress={() => navigation.navigate('TeacherSubmitDetail', { assignmentId, submitId: submit.id })}>
+        <SurfaceCard style={[styles.submitCard, { flexDirection: 'row', alignItems: 'center' }]}>
           <View style={styles.avatarCircle}>
             <AppText variant="label" weight="bold" color={palette.secondaryForeground}>
               {submit.student?.name?.charAt(0) || '?'}
@@ -319,86 +325,9 @@ export function TeacherAssignmentDetailScreen() {
               </AppText>
             </View>
           ) : null}
-        </View>
-
-        {submit.note ? (
-          <View style={styles.noteBox}>
-            <MessageSquare size={14} color={palette.mutedForeground} style={{ marginTop: 2 }} />
-            <AppText variant="body" color={palette.foreground} style={{ flex: 1 }}>
-              {submit.note}
-            </AppText>
-          </View>
-        ) : null}
-
-        {submit.attachments && submit.attachments.length > 0 ? (
-          <View style={styles.fileSection}>
-            {submit.attachments.map((attachment, idx) => {
-              const isImage = attachment.mimeType?.startsWith('image/');
-              return isImage ? (
-                <View key={attachment.publicId || idx} style={[styles.imagePreviewContainer, { marginBottom: 8 }]}>
-                  <Image 
-                    source={{ uri: attachment.url }} 
-                    style={styles.imagePreview} 
-                    resizeMode="contain" 
-                  />
-                  <Pressable
-                    style={styles.expandIconContainer}
-                    onPress={() => openPreview(attachment.url, attachment.originalName, attachment.mimeType)}
-                  >
-                    <Maximize size={20} color="#fff" />
-                  </Pressable>
-                  <View style={styles.fileRow}>
-                    <FileText size={15} color={palette.primary} />
-                    <View style={styles.flex}>
-                      <AppText variant="label" weight="semibold" color={palette.primary} numberOfLines={1} ellipsizeMode="middle">
-                        {attachment.originalName ?? 'Hình ảnh đính kèm'}
-                      </AppText>
-                    </View>
-                  </View>
-                </View>
-              ) : (
-                <Pressable
-                  key={attachment.publicId || idx}
-                  style={[styles.fileRowOutline, { marginBottom: 8 }]}
-                  onPress={() => openPreview(attachment.url, attachment.originalName, attachment.mimeType)}
-                >
-                  <FileText size={16} color={palette.primary} />
-                  <AppText variant="label" weight="semibold" color={palette.primary} style={{ flex: 1 }} numberOfLines={1} ellipsizeMode="middle">
-                    {attachment.originalName ?? 'Tệp đính kèm'}
-                  </AppText>
-                </Pressable>
-              );
-            })}
-          </View>
-        ) : null}
-
-        {/* Grading Area */}
-        <View style={styles.gradeArea}>
-          <AppText variant="label" weight="semibold" style={{ marginBottom: 8 }}>
-            Chấm điểm & Nhận xét
-          </AppText>
-          <TextInputField
-            label="Điểm"
-            value={gradeForms[submit.id]?.score || ''}
-            onChangeText={(val) => setGradeForms(cur => ({ ...cur, [submit.id]: { ...cur[submit.id], score: val } }))}
-            keyboardType="numeric"
-            placeholder={`/ ${assignment.maxScore}`}
-          />
-          <TextInputField
-            label="Nhận xét"
-            value={gradeForms[submit.id]?.feedback || ''}
-            onChangeText={(val) => setGradeForms(cur => ({ ...cur, [submit.id]: { ...cur[submit.id], feedback: val } }))}
-            placeholder="Nhập nhận xét..."
-          />
-          <PrimaryButton
-            label={submit.score !== null ? 'Cập nhật điểm' : 'Chấm điểm'}
-            onPress={() => handleGrade(submit.id)}
-            loading={submitting}
-            icon={<Edit2 size={16} color={palette.white} />}
-            style={{ marginTop: 8 }}
-          />
-        </View>
-      </SurfaceCard>
+          <ChevronRight size={20} color={palette.mutedForeground} style={{ marginLeft: 8 }} />
+        </SurfaceCard>
+      </Pressable>
     );
   };
 
@@ -414,11 +343,19 @@ export function TeacherAssignmentDetailScreen() {
       />
 
       {activeTab === 'info' ? renderInfo() : (
-        submitError ? (
-          <AppText variant="caption" color={palette.destructive} style={{ marginTop: 8 }}>
-            {submitError}
-          </AppText>
-        ) : null
+        <>
+          <TextInputField
+            value={searchKeyword}
+            onChangeText={setSearchKeyword}
+            placeholder="Tìm kiếm học sinh..."
+            trailing={<Search size={18} color={palette.mutedForeground} />}
+          />
+          {submitError ? (
+            <AppText variant="caption" color={palette.destructive} style={{ marginTop: 8 }}>
+              {submitError}
+            </AppText>
+          ) : null}
+        </>
       )}
     </View>
   );
@@ -437,7 +374,7 @@ export function TeacherAssignmentDetailScreen() {
 
   return (
     <>
-    <Screen scrollable={false}>
+    <Screen scrollable={false} withoutBottomInset>
       <PageHeader
         title={assignment.title}
         subtitle={`${classCode || ''} • Bài tập`}

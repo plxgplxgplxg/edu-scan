@@ -407,7 +407,7 @@ export class AssignmentsService {
     );
   }
 
-  async getSubmitsForTeacher(assignmentId: string, teacherId: string, page = 1, limit = 10) {
+  async getSubmitsForTeacher(assignmentId: string, teacherId: string, page = 1, limit = 10, keyword?: string) {
     const assignment = await this.assignmentsRepository.findById(assignmentId);
     if (!assignment) {
       throw new NotFoundException('Assignment not found.');
@@ -417,7 +417,24 @@ export class AssignmentsService {
         'You do not have permission to view submissions for this assignment.',
       );
     }
-    return this.assignmentsRepository.findSubmitsByAssignment(assignmentId, page, limit);
+    return this.assignmentsRepository.findSubmitsByAssignment(assignmentId, page, limit, keyword);
+  }
+
+  async getSubmitForTeacher(assignmentId: string, submitId: string, teacherId: string) {
+    const assignment = await this.assignmentsRepository.findById(assignmentId);
+    if (!assignment) {
+      throw new NotFoundException('Assignment not found.');
+    }
+    if (assignment.teacherId !== teacherId) {
+      throw new ForbiddenException(
+        'You do not have permission to view this submission.',
+      );
+    }
+    const submit = await this.assignmentsRepository.findSubmitById(submitId);
+    if (!submit || submit.assignmentId !== assignmentId) {
+      throw new NotFoundException('Submission not found.');
+    }
+    return submit;
   }
 
   async getMySubmit(assignmentId: string, studentId: string) {
@@ -466,11 +483,24 @@ export class AssignmentsService {
       );
     }
 
-    return this.assignmentsRepository.updateSubmit(submitId, assignmentId, {
-      score: dto.score,
-      feedback: dto.feedback,
-      gradeStatus: GradeStatus.GRADED,
+    const gradedSubmit = await this.assignmentsRepository.updateSubmit(
+      submitId,
+      assignmentId,
+      {
+        score: dto.score,
+        feedback: dto.feedback,
+        gradeStatus: GradeStatus.GRADED,
+      },
+    );
+
+    await this.notificationsService.createAssignmentGradedNotification({
+      assignmentId: assignment.id,
+      classId: assignment.classId,
+      title: assignment.title,
+      studentId: gradedSubmit.studentId,
     });
+
+    return gradedSubmit;
   }
 
   private async uploadAssignmentFiles(input: {

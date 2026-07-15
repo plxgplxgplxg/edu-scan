@@ -99,7 +99,7 @@ export function StudentClassesScreen() {
   };
 
   return (
-    <Screen scrollable={false}>
+    <Screen scrollable={false} withoutBottomInset>
       <PageHeader
         backLabel={content.common.buttons.backToHome}
         title={content.student.classes.title}

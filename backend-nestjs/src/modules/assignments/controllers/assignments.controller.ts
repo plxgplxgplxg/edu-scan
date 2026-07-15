@@ -87,10 +87,21 @@ export class AssignmentsController {
     @Req() req: AssignmentRequest,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('keyword') keyword?: string,
   ) {
     const pageNum = page ? parseInt(page, 10) : 1;
     const limitNum = limit ? parseInt(limit, 10) : 10;
-    return this.assignmentsService.getSubmitsForTeacher(id, req.user.id, pageNum, limitNum);
+    return this.assignmentsService.getSubmitsForTeacher(id, req.user.id, pageNum, limitNum, keyword);
+  }
+
+  @Get(':id/submits/:submitId')
+  @Roles(Role.TEACHER)
+  getSubmit(
+    @Param('id') id: string,
+    @Param('submitId') submitId: string,
+    @Req() req: AssignmentRequest,
+  ) {
+    return this.assignmentsService.getSubmitForTeacher(id, submitId, req.user.id);
   }
 
   @Post(':id/submits')

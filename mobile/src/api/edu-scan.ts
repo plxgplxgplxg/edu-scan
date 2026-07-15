@@ -437,8 +437,21 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
-export async function getAssignmentSubmits(token: string, assignmentId: string, page = 1, limit = 10) {
-  return requestJson<PaginatedResponse<AssignmentSubmitApi>>(`/assignments/${assignmentId}/submits?page=${page}&limit=${limit}`, {
+export async function getAssignmentSubmits(token: string, assignmentId: string, page = 1, limit = 10, keyword?: string) {
+  const query = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+  });
+  if (keyword) {
+    query.append('keyword', keyword);
+  }
+  return requestJson<PaginatedResponse<AssignmentSubmitApi>>(`/assignments/${assignmentId}/submits?${query.toString()}`, {
+    token,
+  });
+}
+
+export async function getAssignmentSubmit(token: string, assignmentId: string, submitId: string) {
+  return requestJson<AssignmentSubmitApi>(`/assignments/${assignmentId}/submits/${submitId}`, {
     token,
   });
 }

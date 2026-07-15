@@ -36,6 +36,7 @@ export type RootStackParamList = {
   TeacherClasses: undefined;
   TeacherClassDetail: { classId?: string } | undefined;
   TeacherAssignmentDetail: { assignmentId: string; classId?: string; classCode?: string };
+  TeacherSubmitDetail: { assignmentId: string; submitId: string };
   TeacherOmrExams: undefined;
   TeacherOmrExamDetail: { examId: string };
   TeacherOmrBatchDetail: { batchId: string };
@@ -47,6 +48,7 @@ export type RootStackParamList = {
   StudentDashboard: undefined;
   StudentClasses: undefined;
   StudentClassDetail: { classId?: string; assignmentId?: string; mode?: 'submit' | 'readonly' } | undefined;
+  StudentAssignmentDetail: { assignmentId: string; classId?: string; classCode?: string; mode?: 'submit' | 'readonly' };
   AdminDashboard: undefined;
   AdminUsers: undefined;
   SharedProfile: undefined;

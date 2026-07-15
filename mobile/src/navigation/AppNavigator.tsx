@@ -20,6 +20,7 @@ import { TeacherDashboardScreen } from '../screens/teacher/TeacherDashboardScree
 import { TeacherClassesScreen } from '../screens/teacher/TeacherClassesScreen';
 import { TeacherClassDetailScreen } from '../screens/teacher/TeacherClassDetailScreen';
 import { TeacherAssignmentDetailScreen } from '../screens/teacher/TeacherAssignmentDetailScreen';
+import { TeacherSubmitDetailScreen } from '../screens/teacher/TeacherSubmitDetailScreen';
 import { TeacherOmrExamsScreen } from '../screens/teacher/TeacherOmrExamsScreen';
 import { TeacherOmrScreen } from '../screens/teacher/TeacherOmrScreen';
 import { TeacherOmrExamDetailScreen } from '../screens/teacher/TeacherOmrExamDetailScreen';
@@ -31,6 +32,7 @@ import { TeacherOmrProcessingScreen } from '../screens/teacher/TeacherOmrProcess
 import { StudentDashboardScreen } from '../screens/student/StudentDashboardScreen';
 import { StudentClassesScreen } from '../screens/student/StudentClassesScreen';
 import { StudentClassDetailScreen } from '../screens/student/StudentClassDetailScreen';
+import { StudentAssignmentDetailScreen } from '../screens/student/StudentAssignmentDetailScreen';
 import { AdminDashboardScreen } from '../screens/admin/AdminDashboardScreen';
 import { AdminUsersScreen } from '../screens/admin/AdminUsersScreen';
 import { TeacherStatisticsScreen } from '../screens/teacher/TeacherStatisticsScreen';
@@ -258,6 +260,10 @@ export function AppNavigator() {
               name="TeacherAssignmentDetail"
               component={TeacherAssignmentDetailScreen}
             />
+            <Stack.Screen
+              name="TeacherSubmitDetail"
+              component={TeacherSubmitDetailScreen}
+            />
             <Stack.Screen name="TeacherOmrExams" component={TeacherOmrExamsScreen} />
             <Stack.Screen
               name="TeacherOmrExamDetail"
@@ -283,6 +289,10 @@ export function AppNavigator() {
             <Stack.Screen
               name="StudentClassDetail"
               component={StudentClassDetailScreen}
+            />
+            <Stack.Screen
+              name="StudentAssignmentDetail"
+              component={StudentAssignmentDetailScreen}
             />
           </>
         ) : null}
