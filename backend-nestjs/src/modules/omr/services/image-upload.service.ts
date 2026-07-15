@@ -74,11 +74,27 @@ export class ImageUploadService {
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      if (this.isMissingArtifactFile(error)) {
+        this.logger.debug(
+          `Skipped missing optional OMR artifact ${artifactRef}: ${message}`,
+        );
+        return null;
+      }
+
       this.logger.warn(
         `Failed to upload OMR artifact from ${artifactRef}: ${message}`,
       );
       return null;
     }
+  }
+
+  private isMissingArtifactFile(error: unknown) {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error as NodeJS.ErrnoException).code === 'ENOENT'
+    );
   }
 
   private resolveMimeType(fileName: string) {
