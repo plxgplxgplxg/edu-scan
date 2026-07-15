@@ -40,7 +40,7 @@ export type RootStackParamList = {
   TeacherOmrExamDetail: { examId: string };
   TeacherOmrBatchDetail: { batchId: string };
   TeacherOMR: undefined;
-  TeacherOmrExamBuilder: { examId: string };
+  TeacherOmrExamBuilder: { examId?: string; initialStep?: number };
   TeacherOmrUpload: { examId: string; initialFiles?: NativeFile[] };
   TeacherOmrCamera: { examId: string };
   TeacherOmrProcessing: { examId: string; totalFiles: number };

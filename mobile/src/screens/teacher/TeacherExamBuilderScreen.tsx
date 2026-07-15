@@ -1,4 +1,4 @@
-/* eslint-disable react/no-unstable-nested-components, no-void, react-native/no-inline-styles */
+/* eslint-disable no-void, react-native/no-inline-styles */
 import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { ArrowLeft, Check } from 'lucide-react-native';
@@ -38,6 +38,14 @@ const STEPS = [
   { id: 4, title: 'Xác nhận' },
 ];
 
+const MAX_QUESTION_COUNT = 60;
+const DEFAULT_QUESTION_COUNT = 60;
+const DEFAULT_TEMPLATE = {
+  id: '60',
+  title: '60 câu',
+  desc: 'Mẫu chuẩn của EduScan (Cố định)',
+};
+
 export function TeacherExamBuilderScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<any>();
@@ -53,9 +61,8 @@ export function TeacherExamBuilderScreen() {
   const [note, setNote] = useState('');
 
   // Step 2 states
-  const [questionCount, setQuestionCount] = useState(40);
+  const [questionCount, setQuestionCount] = useState(DEFAULT_QUESTION_COUNT);
   const [optionsCount, setOptionsCount] = useState(4);
-  const [template, setTemplate] = useState('40');
   const [testCodes, setTestCodes] = useState<string[]>([]);
 
   // Step 3 states
@@ -66,7 +73,7 @@ export function TeacherExamBuilderScreen() {
   const [busy, setBusy] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const { data, loading, error } = useAsyncResource(async () => {
+  const { data, loading, error, reload } = useAsyncResource(async () => {
     if (!accessToken || !examId) return null;
     const examsData = await listOmrExams(accessToken);
     return examsData.data.find((item) => item.id === examId) ?? null;
@@ -75,7 +82,7 @@ export function TeacherExamBuilderScreen() {
   useEffect(() => {
     if (data) {
       setTitle(data.title ?? '');
-      setQuestionCount(data.questionCount || 40);
+      setQuestionCount(Math.min(MAX_QUESTION_COUNT, data.questionCount || DEFAULT_QUESTION_COUNT));
       if (data.variants && data.variants.length > 0) {
         const codes = data.variants.map(v => v.testCode === 'DEFAULT' ? '' : v.testCode).filter(c => c !== '');
         setTestCodes(codes);
@@ -225,7 +232,7 @@ export function TeacherExamBuilderScreen() {
             return (
               <View key={s.id} style={styles.stepContainer}>
                 <View style={[styles.stepLine, isActive || isPast ? styles.stepLineActive : null]} />
-                <AppText variant="caption" weight={isActive ? 'bold' : 'normal'} color={isActive || isPast ? palette.white : 'rgba(255,255,255,0.6)'} style={{ marginTop: 6 }}>
+                <AppText variant="caption" weight={isActive ? 'bold' : 'regular'} color={isActive || isPast ? palette.white : 'rgba(255,255,255,0.6)'} style={{ marginTop: 6 }}>
                   {s.title}
                 </AppText>
               </View>
@@ -288,7 +295,7 @@ export function TeacherExamBuilderScreen() {
                   onChangeText={(text) => {
                     const num = parseInt(text.replace(/[^0-9]/g, ''), 10);
                     if (!isNaN(num)) {
-                      setQuestionCount(Math.min(40, num));
+                      setQuestionCount(Math.min(MAX_QUESTION_COUNT, num));
                     } else if (text === '') {
                       setQuestionCount(0 as any);
                     }
@@ -297,13 +304,13 @@ export function TeacherExamBuilderScreen() {
                     if (!questionCount || questionCount < 1) setQuestionCount(1);
                   }}
                 />
-                <AppText variant="caption" color={palette.mutedForeground}>câu hỏi (tối đa 40)</AppText>
+                <AppText variant="caption" color={palette.mutedForeground}>câu hỏi (tối đa 60)</AppText>
               </View>
               <Pressable 
                 style={[styles.counterBtn, (data?.submissionCount ?? 0) > 0 ? { opacity: 0.5 } : null]} 
                 onPress={() => {
                   if ((data?.submissionCount ?? 0) > 0) return;
-                  setQuestionCount(Math.min(40, questionCount + 1));
+                  setQuestionCount(Math.min(MAX_QUESTION_COUNT, questionCount + 1));
                 }}
                 disabled={(data?.submissionCount ?? 0) > 0}
               >
@@ -374,7 +381,7 @@ export function TeacherExamBuilderScreen() {
             <AppText variant="label" weight="semibold" style={{ marginTop: 16 }}>Mẫu phiếu trả lời</AppText>
             <View style={{ gap: 12 }}>
               {[
-                { id: '40', title: '40 câu — 1 cột', desc: 'Mẫu chuẩn của EduScan (Cố định)' },
+                DEFAULT_TEMPLATE,
               ].map(tpl => (
                 <View key={tpl.id} style={[styles.templateCard, styles.templateCardActive]}>
                   <View style={styles.templateIcon} />

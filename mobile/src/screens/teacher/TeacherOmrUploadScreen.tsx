@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft, Camera, ImageIcon, X, Plus } from 'lucide-react-native';
-import DocumentPicker from 'react-native-document-picker';
+import { ArrowLeft, ImageIcon, X, AlertTriangle, Plus } from 'lucide-react-native';
 import { AppText } from '../../components/AppText';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { SurfaceCard } from '../../components/SurfaceCard';
@@ -11,7 +10,6 @@ import { palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import { useAuth } from '../../store/auth-store';
 import { useToast } from '../../app/ToastProvider';
-import { uploadOmrBatch } from '../../api/edu-scan';
 import type { NativeFile } from '../../features/shared/domain/native-file';
 
 export function TeacherOmrUploadScreen() {
@@ -19,40 +17,24 @@ export function TeacherOmrUploadScreen() {
   const route = useRoute<any>();
   const examId = route.params?.examId as string;
   const initialFiles = route.params?.initialFiles as NativeFile[] | undefined;
-
+  
   const layout = useResponsiveLayout();
   const { accessToken } = useAuth();
   const { showToast } = useToast();
-
-  const [files, setFiles] = useState<NativeFile[]>(initialFiles ?? []);
+  
+  const [files, setFiles] = useState<NativeFile[]>(initialFiles || []);
   const [submitting, setSubmitting] = useState(false);
 
-  const handleAddFromGallery = async () => {
+  const handleAddFiles = async () => {
     try {
-      const picked = await DocumentPicker.pick({
-        type: ['image/*'],
-        allowMultiSelection: true,
-        copyTo: 'cachesDirectory',
-      });
-      const newFiles: NativeFile[] = picked.map(file => {
-        const rawUri = (file.fileCopyUri ?? file.uri) as string;
-        return {
-          uri: rawUri.startsWith('file://') ? rawUri : `file://${rawUri}`,
-          name: file.name ?? `omr-${Date.now()}.jpg`,
-          type: file.type ?? 'image/jpeg',
-          size: file.size ?? null,
-        };
-      });
-      setFiles(prev => [...prev, ...newFiles]);
-    } catch (error: any) {
-      if (!DocumentPicker.isCancel(error)) {
-        showToast('Không thể chọn ảnh');
+      const { pickMultipleDocuments, documentTypes } = require('../../features/shared/infrastructure/document-picker/document-picker-adapter');
+      const newFiles = await pickMultipleDocuments(documentTypes.images);
+      if (newFiles && newFiles.length > 0) {
+        setFiles(prev => [...prev, ...newFiles]);
       }
+    } catch (e) {
+      console.log('User cancelled or error picking files', e);
     }
-  };
-
-  const handleAddFromCamera = () => {
-    navigation.navigate('TeacherOmrCamera', { examId, existingFiles: files });
   };
 
   const handleRemove = (index: number) => {
@@ -65,10 +47,12 @@ export function TeacherOmrUploadScreen() {
       return;
     }
     setSubmitting(true);
+    // Submit the batch using the api
+    const { uploadOmrBatch } = require('../../api/edu-scan');
     try {
       const batch = await uploadOmrBatch(accessToken!, {
         examId,
-        files: files.map(f => ({ uri: f.uri, name: f.name, type: f.type })),
+        files: files.map(f => ({ uri: f.uri, name: f.name, type: f.type }))
       });
       navigation.replace('TeacherOmrProcessing', { examId, batchId: batch.id, totalFiles: files.length });
     } catch (err: any) {
@@ -85,50 +69,40 @@ export function TeacherOmrUploadScreen() {
         </Pressable>
         <AppText variant="title" weight="bold" style={{ marginLeft: 8 }}>Tải ảnh lên</AppText>
       </View>
-
-      <ScrollView contentContainerStyle={{ padding: layout.horizontalPadding, paddingBottom: 120 }}>
-        <View style={styles.countRow}>
+      <ScrollView contentContainerStyle={{ padding: layout.horizontalPadding, paddingBottom: 100 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <View>
             <AppText variant="headline" weight="bold">Đã chọn {files.length} ảnh</AppText>
-            <AppText variant="caption" color={palette.mutedForeground}>Nhấn X để xoá ảnh</AppText>
+            <AppText variant="caption" color={palette.mutedForeground}>Kéo để sắp xếp thứ tự chấm</AppText>
           </View>
-          <Pressable onPress={handleAddFromGallery} style={styles.addButton}>
+          <Pressable onPress={handleAddFiles} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3E8FF', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, gap: 4 }}>
             <Plus size={16} color={palette.primary} />
-            <AppText variant="caption" weight="bold" color={palette.primary}>Thêm ảnh</AppText>
+            <AppText variant="caption" weight="bold" color={palette.primary}>Thêm</AppText>
           </Pressable>
         </View>
 
-        <View style={styles.actionRow}>
-          <Pressable style={styles.actionCard} onPress={handleAddFromCamera}>
-            <Camera size={20} color={palette.primary} />
-            <AppText variant="caption" weight="bold" color={palette.primary}>Chụp thêm</AppText>
-          </Pressable>
-          <Pressable style={styles.actionCard} onPress={handleAddFromGallery}>
-            <ImageIcon size={20} color={palette.primary} />
-            <AppText variant="caption" weight="bold" color={palette.primary}>Chọn từ thư viện</AppText>
-          </Pressable>
-        </View>
+        <SurfaceCard style={{ backgroundColor: '#FFFBEB', borderColor: '#FDE68A', borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, marginBottom: 16 }}>
+          <AlertTriangle size={16} color={palette.warning} />
+        </SurfaceCard>
 
-        <View style={styles.grid}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
           {files.map((f, i) => (
-            <SurfaceCard key={i} style={styles.imageCard}>
-              <Image source={{ uri: f.uri }} style={styles.image} resizeMode="cover" />
-              <View style={styles.badge}>
+            <View key={i} style={{ width: '30%', aspectRatio: 0.7, borderRadius: 12, overflow: 'hidden', backgroundColor: '#F3E8FF', borderWidth: 2, borderColor: '#E5E7EB', borderStyle: 'dashed' }}>
+              <Image source={{ uri: f.uri }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+              <View style={{ position: 'absolute', top: 4, left: 4, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 12, paddingHorizontal: 6, paddingVertical: 2 }}>
                 <AppText variant="caption" color={palette.white}>#{i + 1}</AppText>
               </View>
-              <Pressable onPress={() => handleRemove(i)} style={styles.removeButton}>
+              <Pressable onPress={() => handleRemove(i)} style={{ position: 'absolute', top: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 12, padding: 4 }}>
                 <X size={12} color={palette.white} />
               </Pressable>
-            </SurfaceCard>
+            </View>
           ))}
-          <Pressable onPress={handleAddFromGallery} style={styles.addCard}>
+          <Pressable onPress={handleAddFiles} style={{ width: '30%', aspectRatio: 0.7, borderRadius: 12, backgroundColor: palette.background, borderWidth: 2, borderColor: '#E5E7EB', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' }}>
             <ImageIcon size={24} color={palette.mutedForeground} />
-            <AppText variant="caption" color={palette.mutedForeground}>Thêm</AppText>
           </Pressable>
         </View>
       </ScrollView>
-
-      <View style={[styles.footer, { paddingHorizontal: layout.horizontalPadding }]}>
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: layout.horizontalPadding, backgroundColor: palette.white, borderTopWidth: 1, borderColor: '#E5E7EB' }}>
         <PrimaryButton label="Bắt đầu chấm điểm" onPress={handleStartGrading} loading={submitting} />
       </View>
     </Screen>
@@ -142,91 +116,5 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
-  },
-  countRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F3E8FF',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    gap: 4,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
-  },
-  actionCard: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#F3E8FF',
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E9D5FF',
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  imageCard: {
-    width: '30%',
-    aspectRatio: 0.7,
-    borderRadius: 12,
-    overflow: 'hidden',
-    padding: 0,
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  badge: {
-    position: 'absolute',
-    top: 4,
-    left: 4,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 12,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  removeButton: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 12,
-    padding: 4,
-  },
-  addCard: {
-    width: '30%',
-    aspectRatio: 0.7,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingVertical: 16,
-    backgroundColor: palette.white,
-    borderTopWidth: 1,
-    borderColor: '#E5E7EB',
   },
 });

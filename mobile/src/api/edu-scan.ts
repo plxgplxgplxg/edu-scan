@@ -122,6 +122,7 @@ type ExamApi = {
   title: string;
   maxScore: number;
   questionCount?: number;
+  submissionCount?: number;
   status: 'DRAFT' | 'PUBLISHED';
   classes: Array<{
     id: string;
