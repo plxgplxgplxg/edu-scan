@@ -418,7 +418,7 @@ export class ExamsRepository {
       let correctCount = 0;
       let wrongCount = 0;
       let reviewCount = 0;
-      const detailUpdates = [];
+      const detailUpdates: any[] = [];
 
       for (const detail of sub.details) {
         const finalAnswer = detail.finalAnswer;
