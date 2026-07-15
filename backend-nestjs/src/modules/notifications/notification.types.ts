@@ -25,6 +25,10 @@ export type NotificationRouteIntent =
       batchId: string;
     }
   | {
+      route: 'TeacherOmrExamDetail';
+      examId: string;
+    }
+  | {
       route: 'SharedNotifications';
     }
   | {

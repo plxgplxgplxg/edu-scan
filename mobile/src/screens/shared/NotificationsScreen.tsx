@@ -1,4 +1,4 @@
-/* eslint-disable react/no-unstable-nested-components, no-void, react-native/no-inline-styles */
+/* eslint-disable react-native/no-inline-styles */
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import {
@@ -58,6 +58,11 @@ export function NotificationsScreen() {
 
     if (intent.route === 'TeacherOmrBatchDetail' && role === 'TEACHER') {
       navigation.navigate('TeacherOmrBatchDetail', { batchId: intent.batchId });
+      return;
+    }
+
+    if (intent.route === 'TeacherOmrExamDetail' && role === 'TEACHER') {
+      navigation.navigate('TeacherOmrExamDetail', { examId: intent.examId });
     }
   };
 

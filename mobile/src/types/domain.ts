@@ -142,6 +142,7 @@ export interface NotificationItem {
     | { route: 'StudentClassDetail'; classId: string; assignmentId?: string; mode?: 'submit' | 'readonly' }
     | { route: 'TeacherClassDetail'; classId: string; assignmentId?: string }
     | { route: 'TeacherOmrBatchDetail'; batchId: string }
+    | { route: 'TeacherOmrExamDetail'; examId: string }
     | { route: 'SharedNotifications' }
     | { route: 'StudentDashboard' };
 }

@@ -245,8 +245,8 @@ export class NotificationsProcessor {
         entityId: batch.examId,
         batchId: batch.id,
         routeIntent: {
-          route: 'TeacherOmrBatchDetail',
-          batchId: batch.id,
+          route: 'TeacherOmrExamDetail',
+          examId: batch.examId,
         },
         title: `Đã chấm xong: ${batch.exam.title}`,
         body: `Đã xử lý ${batch.processedFiles}/${batch.totalFiles} bài, bấm để xem kết quả.`,

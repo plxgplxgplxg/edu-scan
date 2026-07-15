@@ -179,8 +179,23 @@ type NotificationApi = {
   body: string;
   createdAt: string;
   readAt: string | null;
+  entityId?: string | null;
+  batchId?: string | null;
   routeIntent?: NotificationItem['routeIntent'];
 };
+
+function getNotificationRouteIntent(
+  item: NotificationApi,
+): NotificationItem['routeIntent'] {
+  if (item.type === 'OMR_BATCH_COMPLETED' && item.entityId) {
+    return {
+      route: 'TeacherOmrExamDetail',
+      examId: item.entityId,
+    };
+  }
+
+  return item.routeIntent;
+}
 
 export type UserApi = {
   id: string;
@@ -1260,7 +1275,7 @@ export async function listNotifications(token: string) {
     body: item.body,
     time: item.createdAt,
     read: !!item.readAt,
-    routeIntent: item.routeIntent,
+    routeIntent: getNotificationRouteIntent(item),
   }));
 }
 
