@@ -131,7 +131,10 @@ export function TeacherOmrScreen() {
                 </View>
               </View>
               <AppText variant="caption" color={palette.mutedForeground}>
-                Chưa có dữ liệu lớp • {exam.questionCount || 0} câu
+                {exam.classes && exam.classes.length > 0
+                  ? `${exam.classes.map((c: any) => c.name).join(', ')} • `
+                  : ''}
+                {exam.questionCount || 0} câu
               </AppText>
               <View style={styles.metaRow}>
                 <View style={styles.metaItem}>
@@ -146,9 +149,6 @@ export function TeacherOmrScreen() {
                 </View>
               </View>
             </View>
-          </View>
-          <View style={styles.progressBarBg}>
-            <View style={[styles.progressBarFill, { width: '0%' }]} />
           </View>
         </SurfaceCard>
       </Pressable>
@@ -181,6 +181,11 @@ export function TeacherOmrScreen() {
     </View>
   );
 
+  const totalSubmissions = examsList.reduce(
+    (acc, exam) => acc + (exam.submissionCount || exam._count?.submissions || 0),
+    0
+  );
+
   return (
     <Screen scrollable={false}>
       <PageHeader
@@ -193,7 +198,7 @@ export function TeacherOmrScreen() {
           <View style={styles.headerFooter}>
             <View style={styles.metricsRow}>
               <MetricBox label="Đề thi" value={String(data?.total ?? 0)} />
-              <MetricBox label="Bài đã chấm" value="0" />
+              <MetricBox label="Bài đã chấm" value={String(totalSubmissions)} />
               <MetricBox label="Còn lại" value="0" />
             </View>
           </View>

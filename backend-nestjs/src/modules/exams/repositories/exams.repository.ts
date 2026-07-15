@@ -35,6 +35,11 @@ export const examDetailInclude = {
       testCode: 'asc',
     },
   },
+  _count: {
+    select: {
+      submissions: true,
+    },
+  },
 } satisfies Prisma.ExamInclude;
 
 export const examListInclude = {
@@ -60,6 +65,11 @@ export const examListInclude = {
           questionNumber: true,
         },
       },
+    },
+  },
+  _count: {
+    select: {
+      submissions: true,
     },
   },
 } satisfies Prisma.ExamInclude;

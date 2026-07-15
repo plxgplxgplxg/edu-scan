@@ -71,6 +71,9 @@ export class ExamResponseDto {
 
   @ApiProperty({ type: [ExamVariantResponseDto] })
   variants!: ExamVariantResponseDto[];
+
+  @ApiProperty({ example: 0 })
+  submissionCount?: number;
 }
 
 export class PaginatedExamResponseDto {
@@ -120,6 +123,7 @@ export function toExamResponseDto(exam: ExamWithRelations): ExamResponseDto {
         correctAnswer: item.correctAnswer,
       })),
     })),
+    submissionCount: exam._count?.submissions ?? 0,
   };
 }
 
@@ -148,5 +152,6 @@ export function toExamListResponseDto(exam: ExamLightweight): ExamResponseDto {
         correctAnswer: AnswerChoice.A,
       })),
     })),
+    submissionCount: exam._count?.submissions ?? 0,
   };
 }
