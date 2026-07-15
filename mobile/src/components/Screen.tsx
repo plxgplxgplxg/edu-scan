@@ -52,7 +52,7 @@ export function Screen({
       React.isValidElement(child) &&
       typeof child.type !== 'string' &&
       'name' in child.type &&
-      child.type.name === 'BottomNav',
+      (child.type.name === 'BottomNav' || child.type.name.includes('Modal')),
   );
   const contentChildren = childArray.filter(
     child => !overlayChildren.includes(child) && child !== headerChild,

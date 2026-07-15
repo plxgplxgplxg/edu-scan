@@ -29,6 +29,8 @@ import { Screen } from '../../components/Screen';
 import { ErrorState, LoadingState } from '../../components/RequestState';
 import { FilterChips } from '../../components/FilterChips';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
+import { ModalSheet } from '../../components/ModalSheet';
+import { DocumentViewerModal } from '../../components/DocumentViewerModal';
 import { useAuth } from '../../store/auth-store';
 import { useAppContent } from '../../hooks/useAppContent';
 import { appTheme, palette } from '../../theme/tokens';
@@ -53,6 +55,18 @@ export function TeacherAssignmentDetailScreen() {
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [gradeError, setGradeError] = useState<string | null>(null);
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewFileName, setPreviewFileName] = useState('');
+  const [previewMimeType, setPreviewMimeType] = useState('');
+
+  const openPreview = (url: string | null | undefined, name: string | null | undefined, mime: string | null | undefined) => {
+    if (!url) return;
+    setPreviewUrl(url);
+    setPreviewFileName(name || 'Tài liệu');
+    setPreviewMimeType(mime || '');
+  };
   
   // Pagination State for Submits
   const [submits, setSubmits] = useState<AssignmentSubmitApi[]>([]);
@@ -217,7 +231,7 @@ export function TeacherAssignmentDetailScreen() {
               <View style={styles.fileRow}>
                 <FileText size={15} color={palette.primary} />
                 <View style={styles.flex}>
-                  <AppText variant="label" weight="semibold" color={palette.primary}>
+                  <AppText variant="label" weight="semibold" color={palette.primary} numberOfLines={1} ellipsizeMode="middle">
                     {assignment.instructionFileOriginalName ?? 'Hình ảnh'}
                   </AppText>
                   <AppText variant="caption" color={palette.mutedForeground}>
@@ -230,12 +244,12 @@ export function TeacherAssignmentDetailScreen() {
             <Pressable
               style={[styles.fileRow, { padding: 12, backgroundColor: palette.background, borderRadius: 8, borderWidth: 1, borderColor: palette.border }]}
               onPress={() => {
-                void Linking.openURL(assignment.instructionFileUrl || '');
+                openPreview(assignment.instructionFileUrl, assignment.instructionFileOriginalName, assignment.instructionFileMimeType);
               }}
             >
               <FileText size={20} color={palette.primary} />
               <View style={styles.flex}>
-                <AppText variant="label" weight="semibold" color={palette.primary}>
+                <AppText variant="label" weight="semibold" color={palette.primary} numberOfLines={1} ellipsizeMode="middle">
                   {assignment.instructionFileOriginalName ?? 'File hướng dẫn'}
                 </AppText>
                 <AppText variant="caption" color={palette.mutedForeground}>
@@ -321,7 +335,7 @@ export function TeacherAssignmentDetailScreen() {
                 <View style={styles.fileRow}>
                   <FileText size={15} color={palette.primary} />
                   <View style={styles.flex}>
-                    <AppText variant="label" weight="semibold" color={palette.primary}>
+                    <AppText variant="label" weight="semibold" color={palette.primary} numberOfLines={1} ellipsizeMode="middle">
                       {submit.fileOriginalName ?? 'Hình ảnh đính kèm'}
                     </AppText>
                   </View>
@@ -330,10 +344,10 @@ export function TeacherAssignmentDetailScreen() {
             ) : (
               <Pressable
                 style={styles.fileRowOutline}
-                onPress={() => Linking.openURL(submit.fileUrl || '')}
+                onPress={() => openPreview(submit.fileUrl, submit.fileOriginalName, submit.fileMimeType)}
               >
                 <FileText size={16} color={palette.primary} />
-                <AppText variant="label" weight="semibold" color={palette.primary} style={{ flex: 1 }} numberOfLines={1}>
+                <AppText variant="label" weight="semibold" color={palette.primary} style={{ flex: 1 }} numberOfLines={1} ellipsizeMode="middle">
                   {submit.fileOriginalName ?? 'Tệp đính kèm'}
                 </AppText>
               </Pressable>
@@ -424,6 +438,13 @@ export function TeacherAssignmentDetailScreen() {
         onEndReachedThreshold={0.5}
         contentContainerStyle={[styles.body, { maxWidth: layout.contentMaxWidth, alignSelf: 'center', width: '100%', paddingHorizontal: layout.horizontalPadding }]}
         showsVerticalScrollIndicator={false}
+      />
+      <DocumentViewerModal
+        visible={!!previewUrl}
+        onClose={() => setPreviewUrl(null)}
+        url={previewUrl}
+        fileName={previewFileName}
+        mimeType={previewMimeType}
       />
     </Screen>
   );

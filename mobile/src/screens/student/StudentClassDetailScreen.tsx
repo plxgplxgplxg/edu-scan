@@ -24,6 +24,7 @@ import { ModalSheet } from '../../components/ModalSheet';
 import { PageHeader } from '../../components/PageHeader';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ErrorState, LoadingState } from '../../components/RequestState';
+import { DocumentViewerModal } from '../../components/DocumentViewerModal';
 import { Screen } from '../../components/Screen';
 import { StatusBadge } from '../../components/StatusBadge';
 import { SurfaceCard } from '../../components/SurfaceCard';
@@ -55,6 +56,17 @@ export function StudentClassDetailScreen() {
   const [tab, setTab] = useState<TabKey>('assignments');
   const [showSubmit, setShowSubmit] = useState<string | null>(null);
   const [submitNote, setSubmitNote] = useState('');
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewFileName, setPreviewFileName] = useState('');
+  const [previewMimeType, setPreviewMimeType] = useState('');
+
+  const openPreview = (url: string | null | undefined, name: string | null | undefined, mime: string | null | undefined) => {
+    if (!url) return;
+    setPreviewUrl(url);
+    setPreviewFileName(name || 'Tài liệu');
+    setPreviewMimeType(mime || '');
+  };
 
   const { data, loading, error, reload } = useAsyncResource(
     async () => {
@@ -227,12 +239,12 @@ export function StudentClassDetailScreen() {
                     <Pressable
                       style={styles.fileRow}
                       onPress={() => {
-                        void Linking.openURL(item.instructionFileUrl || '');
+                        openPreview(item.instructionFileUrl, item.instructionFileOriginalName, item.instructionFileMimeType);
                       }}
                     >
                       <FileText size={16} color={palette.primary} />
                       <View style={styles.flex}>
-                        <AppText variant="label" weight="semibold" color={palette.primary}>
+                        <AppText variant="label" weight="semibold" color={palette.primary} numberOfLines={1} ellipsizeMode="middle">
                           {item.instructionFileOriginalName ?? 'File hướng dẫn'}
                         </AppText>
                         <AppText variant="caption" color={palette.mutedForeground}>
@@ -256,7 +268,7 @@ export function StudentClassDetailScreen() {
                         <Pressable
                           style={styles.fileRow}
                           onPress={() => {
-                            void Linking.openURL(item.submittedFileUrl || '');
+                            openPreview(item.submittedFileUrl, item.submittedFileOriginalName, item.submittedFileMimeType);
                           }}
                         >
                           <FileText size={16} color={palette.primary} />
@@ -391,6 +403,13 @@ export function StudentClassDetailScreen() {
           </AppText>
         ) : null}
       </ModalSheet>
+      <DocumentViewerModal
+        visible={!!previewUrl}
+        onClose={() => setPreviewUrl(null)}
+        url={previewUrl}
+        fileName={previewFileName}
+        mimeType={previewMimeType}
+      />
     </Screen>
   );
 }

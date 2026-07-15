@@ -70,7 +70,7 @@ export class CloudinaryService implements IStorageService {
         {
           folder,
           public_id: `${baseName}-${uniqueSuffix}${extension}`,
-          resource_type: 'raw',
+          resource_type: 'auto',
           overwrite: false,
         },
         (error, result) => {

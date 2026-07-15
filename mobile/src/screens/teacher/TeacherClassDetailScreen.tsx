@@ -1,5 +1,5 @@
 /* eslint-disable react/no-unstable-nested-components, no-void, react-native/no-inline-styles */
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { Alert, Linking, Pressable, StyleSheet, View, Switch, FlatList } from 'react-native';
 import {
   BookOpen,
@@ -23,20 +23,18 @@ import {
   deleteAssignment,
   deleteClass,
   downloadClassReportExportFile,
-  getAssignmentSubmits,
   getClassDetail,
-  gradeAssignmentSubmit,
   listAssignments,
   mapClassDetail,
   mapTeacherAssignmentSummary,
   removeStudentFromClass,
   searchAvailableStudents,
-  type AssignmentSubmitApi,
   type UserApi,
 } from '../../api/edu-scan';
 import type { AssignmentSummary } from '../../types/domain';
 import { AppText } from '../../components/AppText';
 import { ModalSheet } from '../../components/ModalSheet';
+import { DocumentViewerModal } from '../../components/DocumentViewerModal';
 import { PageHeader } from '../../components/PageHeader';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ProgressBar } from '../../components/ProgressBar';
@@ -57,6 +55,7 @@ import {
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { primaryHeroGradient } from '../../theme/header';
 import { formatVietnameseDate, percentage } from '../../utils/format';
 import type { RootStackParamList } from '../../navigation/types';
@@ -83,6 +82,7 @@ export function TeacherClassDetailScreen() {
   const layout = useResponsiveLayout();
   const { showToast } = useToast();
   const { copyClassCode } = useCopyClassCode();
+  const insets = useSafeAreaInsets();
   const classId = route.params?.classId;
   const [activeTab, setActiveTab] = useState<DetailTab>('students');
   const [showAddStudent, setShowAddStudent] = useState(false);
@@ -96,6 +96,18 @@ export function TeacherClassDetailScreen() {
   const [showCreateAssignment, setShowCreateAssignment] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewFileName, setPreviewFileName] = useState('');
+  const [previewMimeType, setPreviewMimeType] = useState('');
+
+  const openPreview = (url: string | null | undefined, name: string | null | undefined, mime: string | null | undefined) => {
+    if (!url) return;
+    setPreviewUrl(url);
+    setPreviewFileName(name || 'Tài liệu');
+    setPreviewMimeType(mime || '');
+  };
+
   const reportJobUnsubscribeRef = useRef<(() => void) | null>(null);
   const [reportJob, setReportJob] = useState<{
     jobId: string;
@@ -144,7 +156,7 @@ export function TeacherClassDetailScreen() {
   const classStudents = currentClass?.students ?? [];
   const teacherAssignments = data?.assignments ?? [];
 
-  const fetchAvailableStudents = async (query: string, page: number, isLoadMore = false) => {
+  const fetchAvailableStudents = useCallback(async (query: string, page: number, isLoadMore = false) => {
     if (!accessToken || !currentClassId) return;
     
     if (isLoadMore) {
@@ -158,13 +170,13 @@ export function TeacherClassDetailScreen() {
       setAvailableStudents(prev => isLoadMore ? [...prev, ...res.items] : res.items);
       setAvailableStudentsPage(res.page);
       setAvailableStudentsTotalPages(res.totalPages);
-    } catch (err) {
+    } catch {
       // Ignore
     } finally {
       setAvailableStudentsLoading(false);
       setAvailableStudentsLoadingMore(false);
     }
-  };
+  }, [accessToken, currentClassId]);
 
   useEffect(() => {
     if (!showAddStudent || !currentClassId) return;
@@ -174,7 +186,7 @@ export function TeacherClassDetailScreen() {
     }, 500);
     
     return () => clearTimeout(timeout);
-  }, [showAddStudent, studentLookup, currentClassId]);
+  }, [showAddStudent, studentLookup, currentClassId, fetchAvailableStudents]);
 
   useEffect(() => {
     if (!showAddStudent) {
@@ -545,12 +557,12 @@ export function TeacherClassDetailScreen() {
                         <Pressable
                           style={styles.fileRow}
                           onPress={() => {
-                            void Linking.openURL(item.instructionFileUrl || '');
+                            openPreview(item.instructionFileUrl, item.instructionFileOriginalName, item.instructionFileMimeType);
                           }}
                         >
                           <FileText size={15} color={palette.primary} />
                           <View style={styles.flex}>
-                            <AppText variant="label" weight="semibold" color={palette.primary}>
+                            <AppText variant="label" weight="semibold" color={palette.primary} numberOfLines={1} ellipsizeMode="middle">
                               {item.instructionFileOriginalName ?? 'File hướng dẫn'}
                             </AppText>
                             <AppText variant="caption" color={palette.mutedForeground}>
@@ -712,7 +724,7 @@ export function TeacherClassDetailScreen() {
             </AppText>
           </View>
         ) : (
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, paddingBottom: 100 }}>
             <FlatList
               data={availableStudents}
               keyExtractor={item => item.id}
@@ -752,7 +764,7 @@ export function TeacherClassDetailScreen() {
           </View>
         )}
 
-        <View style={{ paddingTop: 16, borderTopWidth: 1, borderTopColor: palette.border, paddingHorizontal: layout.isCompact ? 0 : 4 }}>
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: palette.card, paddingTop: 16, paddingBottom: Math.max(insets.bottom, 24), borderTopWidth: 1, borderTopColor: palette.border, paddingHorizontal: layout.isCompact ? 0 : 4 }}>
           {submitError ? (
             <AppText variant="caption" color={palette.destructive} style={{ marginBottom: 8 }}>
               {submitError}
@@ -932,6 +944,13 @@ export function TeacherClassDetailScreen() {
         </View>
       </ModalSheet>
 
+      <DocumentViewerModal
+        visible={!!previewUrl}
+        onClose={() => setPreviewUrl(null)}
+        url={previewUrl}
+        fileName={previewFileName}
+        mimeType={previewMimeType}
+      />
     </Screen>
   );
 }
