@@ -15,6 +15,17 @@ function sanitizePublicIdSegment(value: string) {
     .toLowerCase();
 }
 
+function normalizeRawDeliveryUrl(url: string, extension: string) {
+  const rawUrl = url.replace('/image/upload/', '/raw/upload/');
+  const doubledExtension = `${extension}${extension}`;
+
+  if (extension && rawUrl.toLowerCase().endsWith(doubledExtension)) {
+    return rawUrl.slice(0, -extension.length);
+  }
+
+  return rawUrl;
+}
+
 @Injectable()
 export class CloudinaryService implements IStorageService {
   private readonly logger = new Logger(CloudinaryService.name);
@@ -69,8 +80,8 @@ export class CloudinaryService implements IStorageService {
       const upload = cloudinary.uploader.upload_stream(
         {
           folder,
-          public_id: `${baseName}-${uniqueSuffix}${extension}`,
-          resource_type: 'auto',
+          public_id: `${baseName}-${uniqueSuffix}`,
+          resource_type: 'raw',
           overwrite: false,
         },
         (error, result) => {
@@ -89,7 +100,7 @@ export class CloudinaryService implements IStorageService {
           }
 
           resolve({
-            url: result.secure_url,
+            url: normalizeRawDeliveryUrl(result.secure_url, extension),
             publicId: result.public_id,
             originalName: file.originalname,
             mimeType: file.mimetype,

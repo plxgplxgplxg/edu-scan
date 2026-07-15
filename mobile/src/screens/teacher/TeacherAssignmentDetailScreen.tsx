@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, Linking, Image, Pressable, FlatList, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Image, Pressable, FlatList, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import {
   FileText,
@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   MessageSquare,
   Edit2,
+  Maximize,
 } from 'lucide-react-native';
 
 import {
@@ -29,11 +30,10 @@ import { Screen } from '../../components/Screen';
 import { ErrorState, LoadingState } from '../../components/RequestState';
 import { FilterChips } from '../../components/FilterChips';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
-import { ModalSheet } from '../../components/ModalSheet';
 import { DocumentViewerModal } from '../../components/DocumentViewerModal';
 import { useAuth } from '../../store/auth-store';
 import { useAppContent } from '../../hooks/useAppContent';
-import { appTheme, palette } from '../../theme/tokens';
+import { palette } from '../../theme/tokens';
 import { useResponsiveLayout } from '../../theme/responsive';
 import { formatVietnameseDate, percentage } from '../../utils/format';
 import { formatFileSize } from '../../features/assignments/domain/assignment-file-utils';
@@ -55,7 +55,6 @@ export function TeacherAssignmentDetailScreen() {
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [gradeError, setGradeError] = useState<string | null>(null);
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewFileName, setPreviewFileName] = useState('');
@@ -134,7 +133,7 @@ export function TeacherAssignmentDetailScreen() {
         return newForms;
       });
 
-    } catch (err) {
+    } catch {
       // ignore
     } finally {
       setLoadingSubmits(false);
@@ -229,6 +228,12 @@ export function TeacherAssignmentDetailScreen() {
                   style={styles.imagePreview} 
                   resizeMode="contain" 
                 />
+                <Pressable
+                  style={styles.expandIconContainer}
+                  onPress={() => openPreview(attachment.url, attachment.originalName, attachment.mimeType)}
+                >
+                  <Maximize size={20} color="#fff" />
+                </Pressable>
                 <View style={styles.fileRow}>
                   <FileText size={15} color={palette.primary} />
                   <View style={styles.flex}>
@@ -336,6 +341,12 @@ export function TeacherAssignmentDetailScreen() {
                     style={styles.imagePreview} 
                     resizeMode="contain" 
                   />
+                  <Pressable
+                    style={styles.expandIconContainer}
+                    onPress={() => openPreview(attachment.url, attachment.originalName, attachment.mimeType)}
+                  >
+                    <Maximize size={20} color="#fff" />
+                  </Pressable>
                   <View style={styles.fileRow}>
                     <FileText size={15} color={palette.primary} />
                     <View style={styles.flex}>
@@ -483,6 +494,15 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 250,
     backgroundColor: '#000',
+  },
+  expandIconContainer: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 16,
+    padding: 6,
+    zIndex: 10,
   },
   fileRow: {
     flexDirection: 'row',

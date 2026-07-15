@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, View, StyleSheet, Pressable, ActivityIndicator, Platform, Linking } from 'react-native';
+import { Modal, View, StyleSheet, Pressable, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { X, Download } from 'lucide-react-native';
@@ -7,6 +7,10 @@ import { AppText } from './AppText';
 import { palette } from '../theme/tokens';
 import { primaryHeroGradient } from '../theme/header';
 import LinearGradient from 'react-native-linear-gradient';
+import {
+  downloadRemoteFile,
+  normalizeCloudinaryDocumentUrl,
+} from '../utils/file-download';
 
 interface DocumentViewerModalProps {
   visible: boolean;
@@ -27,24 +31,28 @@ export function DocumentViewerModal({
 
   if (!visible || !url) return null;
 
-  let finalUrl = url;
+  const normalizedUrl = normalizeCloudinaryDocumentUrl(url);
+  let finalUrl = normalizedUrl;
 
-  const isImage = mimeType?.startsWith('image/') || url.match(/\.(jpeg|jpg|gif|png|webp)$/i);
+  const isImage = mimeType?.startsWith('image/') || normalizedUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i);
 
   if (Platform.OS === 'android' && !isImage) {
     // encodeURIComponent is necessary for the url param
     finalUrl = `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(finalUrl)}`;
   }
 
-  const handleDownload = () => {
-    // Open in browser so OS can handle the download
-    void Linking.openURL(url);
+  const handleDownload = async () => {
+    await downloadRemoteFile({
+      url: normalizedUrl,
+      fileName,
+      mimeType,
+    });
   };
 
   return (
     <Modal visible={visible} transparent={false} animationType="slide" onRequestClose={onClose}>
       <View style={styles.container}>
-        <LinearGradient colors={primaryHeroGradient} style={styles.header}>
+        <LinearGradient colors={[...primaryHeroGradient]} style={styles.header}>
           <SafeAreaView edges={['top']}>
             <View style={styles.headerContent}>
               <Pressable style={styles.iconButton} onPress={onClose}>
@@ -117,7 +125,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   loaderContainer: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.7)',

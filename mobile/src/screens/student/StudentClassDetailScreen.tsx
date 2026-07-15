@@ -1,11 +1,10 @@
-/* eslint-disable react/no-unstable-nested-components, no-void, react-native/no-inline-styles */
+/* eslint-disable react-native/no-inline-styles */
 import React, { useMemo, useState } from 'react';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import {
   BookOpen,
   Clock,
   FileText,
-  Link,
   Upload,
   X,
 } from 'lucide-react-native';
@@ -55,7 +54,16 @@ export function StudentClassDetailScreen() {
   
   const [tab, setTab] = useState<TabKey>('assignments');
   const [showSubmit, setShowSubmit] = useState<string | null>(null);
+  const [isEditingSubmit, setIsEditingSubmit] = useState(false);
   const [submitNote, setSubmitNote] = useState('');
+  const [retainedAttachments, setRetainedAttachments] = useState<Array<{
+    url: string;
+    publicId: string;
+    originalName: string;
+    mimeType: string;
+    sizeBytes: number;
+    uploadedAt: string;
+  }>>([]);
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewFileName, setPreviewFileName] = useState('');
@@ -95,12 +103,14 @@ export function StudentClassDetailScreen() {
     [data?.assignments],
   );
   const {
-    selectedFile,
+    selectedFiles,
     submitting,
     submitError,
-    pickFile,
-    clearSelectedFile,
+    pickFiles,
+    removeFile,
+    clearSelectedFiles,
     submitAssignmentContent,
+    updateSubmissionContent,
   } = useAssignmentSubmission({
     accessToken,
     onSubmitted: reload,
@@ -161,9 +171,21 @@ export function StudentClassDetailScreen() {
   const canSubmitActiveAssignment =
     !!activeSubmitAssignment &&
     !submitting &&
-    (!!submitNote.trim() || !!selectedFile) &&
+    (!!submitNote.trim() || selectedFiles.length > 0 || retainedAttachments.length > 0) &&
     (!activeSubmitExpired || activeSubmitAssignment.allowLate) &&
     activeSubmitAssignment.gradeStatus !== 'GRADED';
+
+  const handleEditSubmit = (assignment: any) => {
+    setShowSubmit(assignment.id);
+    setIsEditingSubmit(true);
+    setSubmitNote(assignment.submittedNote || '');
+    setRetainedAttachments(assignment.submittedAttachments || []);
+    clearSelectedFiles();
+  };
+
+  const removeRetainedAttachment = (idx: number) => {
+    setRetainedAttachments(prev => prev.filter((_, i) => i !== idx));
+  };
 
   return (
     <>
@@ -236,23 +258,28 @@ export function StudentClassDetailScreen() {
                       {`${content.common.messages.lateAllowed} • ${String(item.latePenaltyPct)}%`}
                     </AppText>
                   ) : null}
-                  {item.instructionFileUrl ? (
-                    <Pressable
-                      style={styles.fileRow}
-                      onPress={() => {
-                        openPreview(item.instructionFileUrl, item.instructionFileOriginalName, item.instructionFileMimeType);
-                      }}
-                    >
-                      <FileText size={16} color={palette.primary} />
-                      <View style={styles.flex}>
-                        <AppText variant="label" weight="semibold" color={palette.primary} numberOfLines={1} ellipsizeMode="middle">
-                          {item.instructionFileOriginalName ?? 'File hướng dẫn'}
-                        </AppText>
-                        <AppText variant="caption" color={palette.mutedForeground}>
-                          {`${item.instructionFileMimeType ?? 'Tài liệu'} • ${formatFileSize(item.instructionFileSizeBytes)}`}
-                        </AppText>
-                      </View>
-                    </Pressable>
+                  {item.attachments && item.attachments.length > 0 ? (
+                    <View style={{ gap: 4, marginVertical: 8 }}>
+                      {item.attachments.map((attachment: any, idx: number) => (
+                        <Pressable
+                          key={attachment.publicId || idx}
+                          style={styles.fileRow}
+                          onPress={() => {
+                            openPreview(attachment.url, attachment.originalName, attachment.mimeType);
+                          }}
+                        >
+                          <FileText size={16} color={palette.primary} />
+                          <View style={styles.flex}>
+                            <AppText variant="label" weight="semibold" color={palette.primary} numberOfLines={1} ellipsizeMode="middle">
+                              {attachment.originalName ?? 'File hướng dẫn'}
+                            </AppText>
+                            <AppText variant="caption" color={palette.mutedForeground}>
+                              {`${attachment.mimeType ?? 'Tài liệu'} • ${formatFileSize(attachment.sizeBytes)}`}
+                            </AppText>
+                          </View>
+                        </Pressable>
+                      ))}
+                    </View>
                   ) : null}
                   {item.submitted ? (
                     <View style={styles.submittedBox}>
@@ -265,25 +292,38 @@ export function StudentClassDetailScreen() {
                           {item.submittedNote}
                         </AppText>
                       ) : null}
-                      {item.submittedFileUrl ? (
-                        <Pressable
-                          style={styles.fileRow}
-                          onPress={() => {
-                            openPreview(item.submittedFileUrl, item.submittedFileOriginalName, item.submittedFileMimeType);
-                          }}
-                        >
-                          <FileText size={16} color={palette.primary} />
-                          <View style={styles.flex}>
-                            <AppText variant="label" weight="semibold" color={palette.primary}>
-                              {item.submittedFileOriginalName ?? 'File bài làm'}
-                            </AppText>
-                            <AppText variant="caption" color={palette.mutedForeground}>
-                              {`${item.submittedFileMimeType ?? 'Tài liệu'} • ${formatFileSize(item.submittedFileSizeBytes)}`}
-                            </AppText>
-                          </View>
-                        </Pressable>
+                      {item.submittedAttachments && item.submittedAttachments.length > 0 ? (
+                        <View style={{ gap: 4, marginTop: 4 }}>
+                          {item.submittedAttachments.map((attachment: any, idx: number) => (
+                            <Pressable
+                              key={attachment.publicId || idx}
+                              style={styles.fileRow}
+                              onPress={() => {
+                                openPreview(attachment.url, attachment.originalName, attachment.mimeType);
+                              }}
+                            >
+                              <FileText size={16} color={palette.primary} />
+                              <View style={styles.flex}>
+                                <AppText variant="label" weight="semibold" color={palette.primary}>
+                                  {attachment.originalName ?? 'File bài làm'}
+                                </AppText>
+                                <AppText variant="caption" color={palette.mutedForeground}>
+                                  {`${attachment.mimeType ?? 'Tài liệu'} • ${formatFileSize(attachment.sizeBytes)}`}
+                                </AppText>
+                              </View>
+                            </Pressable>
+                          ))}
+                        </View>
                       ) : null}
                     </View>
+                  ) : null}
+                  {item.submitted && (!expired || item.allowLate) && item.gradeStatus !== 'GRADED' ? (
+                    <PrimaryButton
+                      label="Sửa bài nộp"
+                      variant="outline"
+                      icon={<Upload size={18} color={palette.primary} />}
+                      onPress={() => handleEditSubmit(item)}
+                    />
                   ) : null}
                   {!item.submitted && (!expired || item.allowLate) ? (
                     <PrimaryButton
@@ -335,12 +375,14 @@ export function StudentClassDetailScreen() {
         visible={!!showSubmit}
         onClose={() => {
           setShowSubmit(null);
+          setIsEditingSubmit(false);
           setSubmitNote('');
-          clearSelectedFile();
+          clearSelectedFiles();
+          setRetainedAttachments([]);
         }}
       >
         <AppText variant="headline" weight="bold" style={styles.sheetTitle}>
-          {content.common.buttons.submitAssignment}
+          {isEditingSubmit ? 'Cập nhật bài nộp' : content.common.buttons.submitAssignment}
         </AppText>
         <AppText variant="body" color={palette.mutedForeground} style={styles.sheetSubtitle}>
           {activeSubmitAssignment?.title ?? ''}
@@ -351,28 +393,36 @@ export function StudentClassDetailScreen() {
           onChangeText={setSubmitNote}
           placeholder="Nhập ghi chú bài làm"
         />
-        <TextInputField
-          label="File bài làm"
-          value={selectedFile?.name ?? ''}
-          editable={false}
-          placeholder="Chưa có tệp nào được chọn"
-          trailing={<Link size={16} color={palette.mutedForeground} />}
-        />
-        {selectedFile ? (
-          <SurfaceCard style={styles.selectedFileCard}>
+        {retainedAttachments.map((attachment, idx) => (
+          <SurfaceCard key={attachment.publicId || idx} style={styles.selectedFileCard}>
             <View style={styles.flex}>
               <AppText variant="body" weight="medium">
-                {selectedFile.name}
+                {attachment.originalName}
               </AppText>
               <AppText variant="caption" color={palette.mutedForeground}>
-                {`${selectedFile.type || 'application/octet-stream'} • ${formatFileSize(selectedFile.size)}`}
+                {`${attachment.mimeType} • ${formatFileSize(attachment.sizeBytes)}`}
               </AppText>
             </View>
-            <Pressable onPress={clearSelectedFile}>
+            <Pressable onPress={() => removeRetainedAttachment(idx)}>
               <X size={18} color={palette.destructive} />
             </Pressable>
           </SurfaceCard>
-        ) : null}
+        ))}
+        {selectedFiles.map((file, idx) => (
+          <SurfaceCard key={idx} style={styles.selectedFileCard}>
+            <View style={styles.flex}>
+              <AppText variant="body" weight="medium">
+                {file.name}
+              </AppText>
+              <AppText variant="caption" color={palette.mutedForeground}>
+                {`${file.type || 'application/octet-stream'} • ${formatFileSize(file.size)}`}
+              </AppText>
+            </View>
+            <Pressable onPress={() => removeFile(idx)}>
+              <X size={18} color={palette.destructive} />
+            </Pressable>
+          </SurfaceCard>
+        ))}
         <AppText variant="caption" color={palette.mutedForeground} style={styles.sheetHint}>
           PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, TXT, ZIP hoặc ẢNH • tối đa 20MB
         </AppText>
@@ -380,11 +430,11 @@ export function StudentClassDetailScreen() {
           label="Chọn tệp"
           variant="outline"
           onPress={() => {
-            pickFile().catch(() => undefined);
+            pickFiles().catch(() => undefined);
           }}
         />
         <PrimaryButton
-          label={content.common.buttons.submitAssignment}
+          label={isEditingSubmit ? 'Cập nhật' : content.common.buttons.submitAssignment}
           loading={submitting}
           disabled={!canSubmitActiveAssignment}
           onPress={async () => {
@@ -392,10 +442,18 @@ export function StudentClassDetailScreen() {
               return;
             }
 
-            const submitted = await submitAssignmentContent(showSubmit, submitNote);
-            if (submitted) {
+            let success = false;
+            if (isEditingSubmit) {
+              success = await updateSubmissionContent(showSubmit, submitNote, retainedAttachments);
+            } else {
+              success = await submitAssignmentContent(showSubmit, submitNote);
+            }
+
+            if (success) {
               setShowSubmit(null);
+              setIsEditingSubmit(false);
               setSubmitNote('');
+              setRetainedAttachments([]);
             }
           }}
         />

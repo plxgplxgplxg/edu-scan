@@ -14,5 +14,8 @@ module.exports = {
       '<rootDir>/test/mocks/react-native-linear-gradient.js',
     '^react-native-vision-camera$':
       '<rootDir>/test/mocks/react-native-vision-camera.js',
+    '^react-native-webview$': '<rootDir>/test/mocks/react-native-webview.js',
+    '^react-native-blob-util$':
+      '<rootDir>/test/mocks/react-native-blob-util.js',
   },
 };

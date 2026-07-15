@@ -161,7 +161,7 @@ async function main() {
     create: {
       assignmentId: assignment.id,
       studentId: student.id,
-      fileUrl: 'https://cloudinary.com/mock-assignment.pdf',
+      attachments: [{ url: 'https://cloudinary.com/mock-assignment.pdf', publicId: 'mock', originalName: 'mock-assignment.pdf', mimeType: 'application/pdf', sizeBytes: 1000 }],
       submitStatus: SubmitStatus.ON_TIME,
       gradeStatus: GradeStatus.GRADED,
       score: 9.0,

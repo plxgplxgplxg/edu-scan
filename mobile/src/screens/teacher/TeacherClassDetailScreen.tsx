@@ -1,6 +1,6 @@
-/* eslint-disable react/no-unstable-nested-components, no-void, react-native/no-inline-styles */
+/* eslint-disable no-void, react-native/no-inline-styles */
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, View, Switch, FlatList } from 'react-native';
+import { Alert, Pressable, StyleSheet, View, Switch, FlatList } from 'react-native';
 import {
   BookOpen,
   CheckCircle,
