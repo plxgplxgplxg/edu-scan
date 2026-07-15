@@ -26,6 +26,10 @@ function normalizeRawDeliveryUrl(url: string, extension: string) {
   return rawUrl;
 }
 
+function isImageMimeType(mimeType: string) {
+  return mimeType.startsWith('image/');
+}
+
 @Injectable()
 export class CloudinaryService implements IStorageService {
   private readonly logger = new Logger(CloudinaryService.name);
@@ -76,12 +80,13 @@ export class CloudinaryService implements IStorageService {
       const baseName = sanitizePublicIdSegment(parsed.name) || 'file';
       const extension = extname(file.originalname || '').toLowerCase();
       const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      const isImage = isImageMimeType(file.mimetype);
 
       const upload = cloudinary.uploader.upload_stream(
         {
           folder,
           public_id: `${baseName}-${uniqueSuffix}`,
-          resource_type: 'raw',
+          resource_type: isImage ? 'image' : 'raw',
           overwrite: false,
         },
         (error, result) => {
@@ -99,8 +104,12 @@ export class CloudinaryService implements IStorageService {
             return reject(new Error('Khong nhan duoc ket qua tra ve'));
           }
 
+          const url = isImage
+            ? result.secure_url
+            : normalizeRawDeliveryUrl(result.secure_url, extension);
+
           resolve({
-            url: normalizeRawDeliveryUrl(result.secure_url, extension),
+            url,
             publicId: result.public_id,
             originalName: file.originalname,
             mimeType: file.mimetype,
@@ -117,6 +126,7 @@ export class CloudinaryService implements IStorageService {
   async deleteFile(publicId: string): Promise<void> {
     try {
       await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' });
+      await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
     } catch (e) {
       this.logger.error(`Lỗi khi xóa file ${publicId}`, e);
     }

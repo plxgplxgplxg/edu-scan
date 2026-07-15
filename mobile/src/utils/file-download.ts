@@ -12,6 +12,19 @@ function getExtensionFromUrl(url: string) {
   return match ? `.${match[1].toLowerCase()}` : '';
 }
 
+function isImageFile(input: {
+  url: string;
+  fileName?: string | null;
+  mimeType?: string | null;
+}) {
+  if (input.mimeType?.startsWith('image/')) {
+    return true;
+  }
+
+  const probe = `${input.fileName ?? ''} ${input.url}`.toLowerCase();
+  return /\.(jpeg|jpg|gif|png|webp)(\?|$|\s)/i.test(probe);
+}
+
 function sanitizeFileName(fileName?: string | null, fallback = 'eduscan-file') {
   const normalized = (fileName || fallback)
     .replace(/[\\/:"*?<>|]+/g, '-')
@@ -21,10 +34,17 @@ function sanitizeFileName(fileName?: string | null, fallback = 'eduscan-file') {
   return normalized || fallback;
 }
 
-export function normalizeCloudinaryDocumentUrl(url: string) {
+export function normalizeCloudinaryDocumentUrl(
+  url: string,
+  options: { fileName?: string | null; mimeType?: string | null } = {},
+) {
   let nextUrl = url;
 
-  if (nextUrl.includes('res.cloudinary.com') && nextUrl.includes('/image/upload/')) {
+  if (
+    !isImageFile({ url, ...options }) &&
+    nextUrl.includes('res.cloudinary.com') &&
+    nextUrl.includes('/image/upload/')
+  ) {
     nextUrl = nextUrl.replace('/image/upload/', '/raw/upload/');
   }
 
@@ -43,7 +63,10 @@ export async function downloadRemoteFile(input: {
   fileName?: string | null;
   mimeType?: string | null;
 }) {
-  const normalizedUrl = normalizeCloudinaryDocumentUrl(input.url);
+  const normalizedUrl = normalizeCloudinaryDocumentUrl(input.url, {
+    fileName: input.fileName,
+    mimeType: input.mimeType,
+  });
   const nameExtension = getExtensionFromName(input.fileName);
   const urlExtension = getExtensionFromUrl(normalizedUrl);
   const safeFileName = sanitizeFileName(
