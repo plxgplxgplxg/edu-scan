@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AnswerChoice, ExamStatus } from '@prisma/client';
 import { CreateExamDto } from '../dto/request/create-exam.dto';
 import {
@@ -29,7 +30,10 @@ type NormalizedVariant = {
 
 @Injectable()
 export class ExamsService {
-  constructor(private readonly examsRepository: ExamsRepository) {}
+  constructor(
+    private readonly examsRepository: ExamsRepository,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async createOmrExam(
     teacherId: string,
@@ -154,6 +158,8 @@ export class ExamsService {
       variants: normalized.variants,
     });
 
+    this.eventEmitter.emit('exam.regrade', { examId });
+
     return toExamResponseDto(exam);
   }
 
@@ -183,6 +189,8 @@ export class ExamsService {
       correctAnswer: payload.correctAnswer,
     });
 
+    this.eventEmitter.emit('exam.regrade', { examId });
+
     return toExamResponseDto(updated);
   }
 
@@ -206,6 +214,8 @@ export class ExamsService {
       ),
       questionNumber: payload.questionNumber,
     });
+
+    this.eventEmitter.emit('exam.regrade', { examId });
 
     return toExamResponseDto(updated);
   }

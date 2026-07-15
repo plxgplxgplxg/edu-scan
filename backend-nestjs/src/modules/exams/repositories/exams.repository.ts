@@ -284,8 +284,6 @@ export class ExamsRepository {
         });
       }
 
-      await this.regradeSubmissions(examId, tx);
-
       return tx.exam.findUniqueOrThrow({
         where: { id: examId },
         include: examDetailInclude,
@@ -336,8 +334,6 @@ export class ExamsRepository {
         },
       });
 
-      await this.regradeSubmissions(data.examId, tx);
-
       return tx.exam.findUniqueOrThrow({
         where: { id: data.examId },
         include: examDetailInclude,
@@ -365,8 +361,6 @@ export class ExamsRepository {
         });
       }
 
-      await this.regradeSubmissions(data.examId, tx);
-
       return tx.exam.findUniqueOrThrow({
         where: { id: data.examId },
         include: examDetailInclude,
@@ -382,8 +376,8 @@ export class ExamsRepository {
     });
   }
 
-  async regradeSubmissions(examId: string, tx: Prisma.TransactionClient) {
-    const exam = await tx.exam.findUnique({
+  async regradeSubmissions(examId: string) {
+    const exam = await this.prismaService.exam.findUnique({
       where: { id: examId },
       include: {
         variants: {
@@ -404,7 +398,7 @@ export class ExamsRepository {
       variantAnswerKeysMap.set(variant.id, keysMap);
     }
 
-    const submissions = await tx.submission.findMany({
+    const submissions = await this.prismaService.submission.findMany({
       where: { examId },
       include: {
         details: true,
@@ -418,70 +412,73 @@ export class ExamsRepository {
       let correctCount = 0;
       let wrongCount = 0;
       let reviewCount = 0;
-      const detailUpdates: any[] = [];
 
-      for (const detail of sub.details) {
-        const finalAnswer = detail.finalAnswer;
-        const correctAnswer = answerKeysMap ? (answerKeysMap.get(detail.questionNumber) ?? null) : null;
-        const isCorrect = finalAnswer !== null && correctAnswer !== null && finalAnswer === correctAnswer;
+      await this.prismaService.$transaction(async (tx) => {
+        const detailUpdates: any[] = [];
 
-        let needsReview = detail.needsReview;
-        let reviewReason = detail.reviewReason;
+        for (const detail of sub.details) {
+          const finalAnswer = detail.finalAnswer;
+          const correctAnswer = answerKeysMap ? (answerKeysMap.get(detail.questionNumber) ?? null) : null;
+          const isCorrect = finalAnswer !== null && correctAnswer !== null && finalAnswer === correctAnswer;
 
-        if (finalAnswer === null) {
-          needsReview = true;
-          reviewReason = 'MANUAL_BLANK';
-        } else {
-          if (correctAnswer !== null) {
-            needsReview = false;
-            reviewReason = null;
+          let needsReview = detail.needsReview;
+          let reviewReason = detail.reviewReason;
+
+          if (finalAnswer === null) {
+            needsReview = true;
+            reviewReason = 'MANUAL_BLANK';
+          } else {
+            if (correctAnswer !== null) {
+              needsReview = false;
+              reviewReason = null;
+            }
           }
-        }
 
-        if (needsReview) {
-          reviewCount++;
-        } else if (isCorrect) {
-          correctCount++;
-        } else {
-          wrongCount++;
-        }
+          if (needsReview) {
+            reviewCount++;
+          } else if (isCorrect) {
+            correctCount++;
+          } else {
+            wrongCount++;
+          }
 
-        detailUpdates.push(
-          tx.submissionDetail.update({
-            where: {
-              submissionId_questionNumber: {
-                submissionId: sub.id,
-                questionNumber: detail.questionNumber,
+          detailUpdates.push(
+            tx.submissionDetail.update({
+              where: {
+                submissionId_questionNumber: {
+                  submissionId: sub.id,
+                  questionNumber: detail.questionNumber,
+                },
               },
-            },
-            data: {
-              correctAnswer,
-              isCorrect,
-              needsReview,
-              reviewReason,
-            },
-          })
-        );
-      }
+              data: {
+                correctAnswer,
+                isCorrect,
+                needsReview,
+                reviewReason,
+              },
+            })
+          );
+        }
 
-      const totalQuestions = answerKeysMap ? answerKeysMap.size : sub.details.length;
-      const score = totalQuestions > 0 && answerKeysMap && answerKeysMap.size > 0
-        ? (correctCount / answerKeysMap.size) * exam.maxScore
-        : 0;
+        const totalQuestions = answerKeysMap ? answerKeysMap.size : sub.details.length;
+        const score = totalQuestions > 0 && answerKeysMap && answerKeysMap.size > 0
+          ? (correctCount / answerKeysMap.size) * exam.maxScore
+          : 0;
 
-      const subNeedsReview = sub.details.some(d => d.needsReview) || reviewCount > 0;
+        const subNeedsReview = sub.details.some(d => d.needsReview) || reviewCount > 0;
 
-      await Promise.all(detailUpdates);
+        await Promise.all(detailUpdates);
 
-      await tx.submission.update({
-        where: { id: sub.id },
-        data: {
-          correctCount,
-          wrongCount,
-          reviewCount,
-          score,
-          status: subNeedsReview ? 'NEEDS_REVIEW' : 'GRADED',
-        },
+        await tx.submission.update({
+          where: { id: sub.id },
+          data: {
+            correctCount,
+            wrongCount,
+            reviewCount,
+            score,
+            status: subNeedsReview ? 'NEEDS_REVIEW' : 'GRADED',
+          },
+        });
       });
     }
   }
