@@ -29,6 +29,7 @@ import {
   mapTeacherAssignmentSummary,
   removeStudentFromClass,
   searchAvailableStudents,
+  updateAssignment,
   type UserApi,
 } from '../../api/edu-scan';
 import type { AssignmentSummary } from '../../types/domain';
@@ -60,7 +61,7 @@ import { primaryHeroGradient } from '../../theme/header';
 import { formatVietnameseDate, percentage } from '../../utils/format';
 import type { RootStackParamList } from '../../navigation/types';
 import type { NativeFile } from '../../features/shared/domain/native-file';
-import { pickSingleDocument, documentTypes } from '../../features/shared/infrastructure/document-picker/document-picker-adapter';
+import { pickMultipleDocuments, documentTypes } from '../../features/shared/infrastructure/document-picker/document-picker-adapter';
 import {
   ASSIGNMENT_INSTRUCTION_EXTENSIONS,
   ASSIGNMENT_INSTRUCTION_MAX_FILE_BYTES,
@@ -126,7 +127,16 @@ export function TeacherClassDetailScreen() {
     maxScore: '10',
     latePenaltyPct: '10',
   });
-  const [assignmentInstructionFile, setAssignmentInstructionFile] = useState<NativeFile | null>(null);
+  const [assignmentInstructionFiles, setAssignmentInstructionFiles] = useState<NativeFile[]>([]);
+  const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
+  const [retainedAttachments, setRetainedAttachments] = useState<Array<{
+    url: string;
+    publicId: string;
+    originalName: string;
+    mimeType: string;
+    sizeBytes: number;
+    uploadedAt: string;
+  }>>([]);
   const { data, loading, error, reload } = useAsyncResource(
     async () => {
       if (!accessToken || !classId) {
@@ -352,27 +362,50 @@ export function TeacherClassDetailScreen() {
     );
   };
 
-  const pickInstructionFile = async () => {
-    const file = await pickSingleDocument([
+  const pickInstructionFiles = async () => {
+    const files = await pickMultipleDocuments([
       ...ASSIGNMENT_INSTRUCTION_MIME_TYPES,
       documentTypes.images,
     ]);
-    if (!file) {
-      return;
-    }
+    if (files && files.length > 0) {
+      for (const file of files) {
+        if (!ASSIGNMENT_INSTRUCTION_EXTENSIONS.has(getFileExtension(file.name))) {
+          setSubmitError(`Định dạng file ${file.name} không được hỗ trợ`);
+          return;
+        }
 
-    if (!ASSIGNMENT_INSTRUCTION_EXTENSIONS.has(getFileExtension(file.name))) {
-      setSubmitError('Định dạng file hướng dẫn không được hỗ trợ');
-      return;
-    }
+        if (file.size !== null && file.size > ASSIGNMENT_INSTRUCTION_MAX_FILE_BYTES) {
+          setSubmitError(`File ${file.name} vượt quá giới hạn 10MB`);
+          return;
+        }
+      }
 
-    if (file.size !== null && file.size > ASSIGNMENT_INSTRUCTION_MAX_FILE_BYTES) {
-      setSubmitError('File hướng dẫn vượt quá giới hạn 10MB');
-      return;
+      setAssignmentInstructionFiles(prev => [...prev, ...files]);
+      setSubmitError(null);
     }
+  };
 
-    setAssignmentInstructionFile(file);
-    setSubmitError(null);
+  const removeInstructionFile = (index: number) => {
+    setAssignmentInstructionFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeRetainedAttachment = (index: number) => {
+    setRetainedAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleEditAssignment = (assignment: AssignmentSummary) => {
+    setEditingAssignmentId(assignment.id);
+    setAssignmentForm({
+      title: assignment.title,
+      description: assignment.description || '',
+      deadline: new Date(assignment.deadline),
+      allowLate: assignment.allowLate,
+      maxScore: String(assignment.maxScore),
+      latePenaltyPct: String(assignment.latePenaltyPct),
+    });
+    setAssignmentInstructionFiles([]);
+    setRetainedAttachments(assignment.attachments || []);
+    setShowCreateAssignment(true);
   };
 
   const tabItems = useMemo(
@@ -423,6 +456,7 @@ export function TeacherClassDetailScreen() {
   }
 
   return (
+    <>
     <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
       <PageHeader
         backLabel={content.common.buttons.back}
@@ -553,23 +587,28 @@ export function TeacherClassDetailScreen() {
                           {item.description}
                         </AppText>
                       ) : null}
-                      {item.instructionFileUrl ? (
-                        <Pressable
-                          style={styles.fileRow}
-                          onPress={() => {
-                            openPreview(item.instructionFileUrl, item.instructionFileOriginalName, item.instructionFileMimeType);
-                          }}
-                        >
-                          <FileText size={15} color={palette.primary} />
-                          <View style={styles.flex}>
-                            <AppText variant="label" weight="semibold" color={palette.primary} numberOfLines={1} ellipsizeMode="middle">
-                              {item.instructionFileOriginalName ?? 'File hướng dẫn'}
-                            </AppText>
-                            <AppText variant="caption" color={palette.mutedForeground}>
-                              {`${item.instructionFileMimeType ?? 'Tài liệu'} • ${formatFileSize(item.instructionFileSizeBytes)}`}
-                            </AppText>
-                          </View>
-                        </Pressable>
+                      {item.attachments && item.attachments.length > 0 ? (
+                        <View style={{ gap: 4, marginTop: 4 }}>
+                          {item.attachments.map((attachment, idx) => (
+                            <Pressable
+                              key={attachment.publicId || idx}
+                              style={styles.fileRow}
+                              onPress={() => {
+                                openPreview(attachment.url, attachment.originalName, attachment.mimeType);
+                              }}
+                            >
+                              <FileText size={15} color={palette.primary} />
+                              <View style={styles.flex}>
+                                <AppText variant="label" weight="semibold" color={palette.primary} numberOfLines={1} ellipsizeMode="middle">
+                                  {attachment.originalName ?? 'File hướng dẫn'}
+                                </AppText>
+                                <AppText variant="caption" color={palette.mutedForeground}>
+                                  {`${attachment.mimeType ?? 'Tài liệu'} • ${formatFileSize(attachment.sizeBytes)}`}
+                                </AppText>
+                              </View>
+                            </Pressable>
+                          ))}
+                        </View>
                       ) : null}
                     </View>
                     <View style={styles.scoreBadge}>
@@ -577,6 +616,15 @@ export function TeacherClassDetailScreen() {
                         {`${String(item.maxScore)} ${content.common.labels.scoreUnit}`}
                       </AppText>
                     </View>
+                    <Pressable
+                      onPress={() => handleEditAssignment(item)}
+                      style={{ marginLeft: 8 }}
+                      hitSlop={8}
+                    >
+                      <AppText variant="caption" color={palette.primary} weight="semibold">
+                        Sửa
+                      </AppText>
+                    </Pressable>
                     <Pressable
                       onPress={() => confirmDeleteAssignment(item)}
                       style={{ marginLeft: 8 }}
@@ -699,6 +747,7 @@ export function TeacherClassDetailScreen() {
           </View>
         ) : null}
       </View>
+    </Screen>
 
       <ModalSheet visible={showAddStudent} onClose={() => setShowAddStudent(false)} scrollable={false}>
         <AppText variant="headline" weight="bold" style={[styles.sheetTitle, { paddingHorizontal: layout.isCompact ? 0 : 4 }]}>
@@ -802,11 +851,21 @@ export function TeacherClassDetailScreen() {
         visible={showCreateAssignment}
         onClose={() => {
           setShowCreateAssignment(false);
-          setAssignmentInstructionFile(null);
+          setEditingAssignmentId(null);
+          setAssignmentForm({
+            title: '',
+            description: '',
+            deadline: new Date(Date.now() + 24 * 60 * 60 * 1000),
+            allowLate: false,
+            maxScore: '10',
+            latePenaltyPct: '10',
+          });
+          setAssignmentInstructionFiles([]);
+          setRetainedAttachments([]);
         }}
       >
         <AppText variant="headline" weight="bold" style={styles.sheetTitle}>
-          {content.teacher.classes.newAssignment}
+          {editingAssignmentId ? 'Cập nhật bài tập' : content.teacher.classes.newAssignment}
         </AppText>
         <View style={styles.sheetForm}>
           <TextInputField
@@ -829,26 +888,41 @@ export function TeacherClassDetailScreen() {
             <AppText variant="label" weight="semibold">
               File hướng dẫn
             </AppText>
-            {assignmentInstructionFile ? (
-              <SurfaceCard style={styles.selectedFileCard}>
+            {retainedAttachments.map((attachment, idx) => (
+              <SurfaceCard key={attachment.publicId || idx} style={styles.selectedFileCard}>
                 <View style={styles.flex}>
                   <AppText variant="body" weight="medium">
-                    {assignmentInstructionFile.name}
+                    {attachment.originalName}
                   </AppText>
                   <AppText variant="caption" color={palette.mutedForeground}>
-                    {`${assignmentInstructionFile.type || 'application/octet-stream'} • ${formatFileSize(assignmentInstructionFile.size)}`}
+                    {`${attachment.mimeType} • ${formatFileSize(attachment.sizeBytes)}`}
                   </AppText>
                 </View>
-                <Pressable onPress={() => setAssignmentInstructionFile(null)}>
+                <Pressable onPress={() => removeRetainedAttachment(idx)}>
                   <X size={18} color={palette.destructive} />
                 </Pressable>
               </SurfaceCard>
-            ) : null}
+            ))}
+            {assignmentInstructionFiles.map((file, idx) => (
+              <SurfaceCard key={idx} style={styles.selectedFileCard}>
+                <View style={styles.flex}>
+                  <AppText variant="body" weight="medium">
+                    {file.name}
+                  </AppText>
+                  <AppText variant="caption" color={palette.mutedForeground}>
+                    {`${file.type || 'application/octet-stream'} • ${formatFileSize(file.size)}`}
+                  </AppText>
+                </View>
+                <Pressable onPress={() => removeInstructionFile(idx)}>
+                  <X size={18} color={palette.destructive} />
+                </Pressable>
+              </SurfaceCard>
+            ))}
             <PrimaryButton
               label="Chọn file"
               variant="outline"
               onPress={() => {
-                void pickInstructionFile();
+                void pickInstructionFiles();
               }}
             />
             <AppText variant="caption" color={palette.mutedForeground}>
@@ -891,7 +965,7 @@ export function TeacherClassDetailScreen() {
             placeholder={content.common.placeholders.maxScore}
           />
           <PrimaryButton
-            label={content.common.buttons.createAssignment}
+            label={editingAssignmentId ? 'Cập nhật' : content.common.buttons.createAssignment}
             loading={submitting}
             onPress={async () => {
               if (!accessToken) {
@@ -902,23 +976,40 @@ export function TeacherClassDetailScreen() {
               setSubmitError(null);
 
               try {
-                await createAssignment(accessToken, {
-                  title: assignmentForm.title.trim(),
-                  description: assignmentForm.description.trim() || undefined,
-                  deadline: assignmentForm.deadline.toISOString(),
-                  maxScore: Number(assignmentForm.maxScore),
-                  allowLate: assignmentForm.allowLate,
-                  latePenaltyPct: assignmentForm.allowLate ? Number(assignmentForm.latePenaltyPct) : 0,
-                  classId: currentClass.id,
-                  instructionFile: assignmentInstructionFile
-                    ? {
-                        uri: assignmentInstructionFile.uri,
-                        name: assignmentInstructionFile.name,
-                        type: assignmentInstructionFile.type,
-                      }
-                    : undefined,
-                });
+                if (editingAssignmentId) {
+                  await updateAssignment(accessToken, editingAssignmentId, {
+                    title: assignmentForm.title.trim(),
+                    description: assignmentForm.description.trim() || undefined,
+                    deadline: assignmentForm.deadline.toISOString(),
+                    maxScore: Number(assignmentForm.maxScore),
+                    allowLate: assignmentForm.allowLate,
+                    latePenaltyPct: assignmentForm.allowLate ? Number(assignmentForm.latePenaltyPct) : 0,
+                    attachments: retainedAttachments,
+                    instructionFiles: assignmentInstructionFiles.map(f => ({
+                      uri: f.uri,
+                      name: f.name,
+                      type: f.type,
+                    })),
+                  });
+                } else {
+                  await createAssignment(accessToken, {
+                    title: assignmentForm.title.trim(),
+                    description: assignmentForm.description.trim() || undefined,
+                    deadline: assignmentForm.deadline.toISOString(),
+                    maxScore: Number(assignmentForm.maxScore),
+                    allowLate: assignmentForm.allowLate,
+                    latePenaltyPct: assignmentForm.allowLate ? Number(assignmentForm.latePenaltyPct) : 0,
+                    classId: currentClass.id,
+                    instructionFiles: assignmentInstructionFiles.map(f => ({
+                      uri: f.uri,
+                      name: f.name,
+                      type: f.type,
+                    })),
+                  });
+                }
+
                 setShowCreateAssignment(false);
+                setEditingAssignmentId(null);
                 setAssignmentForm({
                   title: '',
                   description: '',
@@ -927,7 +1018,8 @@ export function TeacherClassDetailScreen() {
                   maxScore: '10',
                   latePenaltyPct: '10',
                 });
-                setAssignmentInstructionFile(null);
+                setAssignmentInstructionFiles([]);
+                setRetainedAttachments([]);
                 await reload();
               } catch (err) {
                 setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
@@ -951,7 +1043,7 @@ export function TeacherClassDetailScreen() {
         fileName={previewFileName}
         mimeType={previewMimeType}
       />
-    </Screen>
+    </>
   );
 }
 

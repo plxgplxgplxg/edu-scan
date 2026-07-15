@@ -59,4 +59,17 @@ export class CreateAssignmentDto {
   @IsString()
   @IsNotEmpty()
   classId: string;
+
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch (e) {
+        return value;
+      }
+    }
+    return value;
+  })
+  attachments?: any[];
 }

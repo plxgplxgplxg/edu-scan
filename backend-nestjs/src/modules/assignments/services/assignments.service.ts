@@ -1,8 +1,8 @@
 import {
-  Injectable,
   BadRequestException,
   ForbiddenException,
   Inject,
+  Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { extname } from 'node:path';
@@ -10,6 +10,8 @@ import { PrismaService } from '../../../database/prisma.service';
 import { AssignmentsRepository } from '../repositories/assignments.repository';
 import { CreateAssignmentDto } from '../dtos/create-assignment.dto';
 import { SubmitAssignmentDto } from '../dtos/submit-assignment.dto';
+import { UpdateAssignmentDto } from '../dtos/update-assignment.dto';
+import { UpdateSubmitDto } from '../dtos/update-submit.dto';
 import { GradeSubmitDto } from '../dtos/grade-submit.dto';
 import { GradeStatus, SubmitStatus } from '@prisma/client';
 import {
@@ -49,43 +51,36 @@ export class AssignmentsService {
   async createAssignment(
     teacherId: string,
     dto: CreateAssignmentDto,
-    instructionFile?: Express.Multer.File,
+    instructionFiles?: Express.Multer.File[],
   ) {
     const deadline = new Date(dto.deadline);
-
     if (deadline <= new Date()) {
       throw new BadRequestException('Deadline must be a future date.');
     }
 
     const allowLate = dto.allowLate ?? false;
-    const latePenaltyPct = allowLate ? (dto.latePenaltyPct ?? 0) : 0;
-    if (latePenaltyPct < 0 || latePenaltyPct > 100) {
-      throw new BadRequestException(
-        'Late penalty percentage must be between 0 and 100.',
-      );
-    }
+    const latePenaltyPct = dto.latePenaltyPct ?? 0;
 
-    const ownedClass = await this.prisma.class.findFirst({
+    const classRecord = await this.prisma.class.findFirst({
       where: { teacherId, id: dto.classId },
-      select: { id: true },
+      select: { id: true, name: true },
     });
 
-    if (!ownedClass) {
+    if (!classRecord) {
       throw new ForbiddenException('Class does not belong to this teacher.');
     }
 
-    const uploadedInstruction = instructionFile
-      ? await this.uploadAssignmentFile({
-          file: instructionFile,
+    const uploadedInstructions = instructionFiles?.length
+      ? await this.uploadAssignmentFiles({
+          files: instructionFiles,
           folder: `eduscan/assignments/instructions/${dto.classId}`,
           allowedMimeTypes: ASSIGNMENT_INSTRUCTION_MIME_TYPES,
           allowedExtensions: ASSIGNMENT_INSTRUCTION_EXTENSIONS,
           maxBytes: ASSIGNMENT_INSTRUCTION_MAX_FILE_BYTES,
           unsupportedTypeMessage: 'Unsupported instruction file type.',
-          tooLargeMessage:
-            'Instruction file exceeds the configured size limit.',
+          tooLargeMessage: 'Instruction file exceeds the configured size limit.',
         })
-      : null;
+      : [];
 
     let assignment: Awaited<ReturnType<AssignmentsRepository['create']>>;
     try {
@@ -98,11 +93,11 @@ export class AssignmentsService {
         maxScore: dto.maxScore ?? 10,
         teacherId,
         classId: dto.classId,
-        ...this.toInstructionFileRecord(uploadedInstruction),
+        attachments: dto.attachments ? [...dto.attachments, ...uploadedInstructions] : uploadedInstructions,
       });
     } catch (error) {
-      if (uploadedInstruction?.publicId) {
-        await this.storageService.deleteFile(uploadedInstruction.publicId);
+      for (const file of uploadedInstructions) {
+        if (file.publicId) await this.storageService.deleteFile(file.publicId);
       }
       throw error;
     }
@@ -158,6 +153,81 @@ export class AssignmentsService {
     return assignment;
   }
 
+  async updateAssignment(
+    assignmentId: string,
+    teacherId: string,
+    dto: UpdateAssignmentDto,
+    instructionFiles?: Express.Multer.File[],
+  ) {
+    const assignment = await this.assignmentsRepository.findById(assignmentId);
+    if (!assignment) {
+      throw new NotFoundException('Assignment not found.');
+    }
+    if (assignment.teacherId !== teacherId) {
+      throw new ForbiddenException(
+        'You do not have permission to edit this assignment.',
+      );
+    }
+
+    if (dto.deadline) {
+      const deadline = new Date(dto.deadline);
+      if (deadline <= new Date()) {
+        throw new BadRequestException('Deadline must be a future date.');
+      }
+    }
+
+    if (dto.latePenaltyPct !== undefined) {
+      if (dto.latePenaltyPct < 0 || dto.latePenaltyPct > 100) {
+        throw new BadRequestException(
+          'Late penalty percentage must be between 0 and 100.',
+        );
+      }
+    }
+
+    let uploadedInstructions: any[] = [];
+    if (instructionFiles && instructionFiles.length > 0) {
+      uploadedInstructions = await this.uploadAssignmentFiles({
+          files: instructionFiles,
+          folder: `eduscan/assignments/instructions/${assignment.classId}`,
+          allowedMimeTypes: ASSIGNMENT_INSTRUCTION_MIME_TYPES,
+          allowedExtensions: ASSIGNMENT_INSTRUCTION_EXTENSIONS,
+          maxBytes: ASSIGNMENT_INSTRUCTION_MAX_FILE_BYTES,
+          unsupportedTypeMessage: 'Unsupported instruction file type.',
+          tooLargeMessage: 'Instruction file exceeds the configured size limit.',
+      });
+    }
+
+    const dataToUpdate: any = { ...dto };
+    if (dto.deadline) {
+      dataToUpdate.deadline = new Date(dto.deadline);
+    }
+    
+    let finalAttachments: any[] = [];
+    if (dto.attachments) {
+      finalAttachments = [...dto.attachments];
+    } else if (assignment.attachments) {
+      finalAttachments = assignment.attachments as any[];
+    }
+    if (uploadedInstructions.length > 0) {
+      finalAttachments = [...finalAttachments, ...uploadedInstructions];
+    }
+    
+    const oldAttachments = (assignment.attachments as any[]) || [];
+    const retainedPublicIds = new Set(finalAttachments.map(a => a.publicId).filter(Boolean));
+    for (const old of oldAttachments) {
+      if (old.publicId && !retainedPublicIds.has(old.publicId)) {
+        this.storageService.deleteFile(old.publicId).catch(console.error);
+      }
+    }
+
+    dataToUpdate.attachments = finalAttachments;
+
+    return this.prisma.assignment.update({
+      where: { id: assignmentId },
+      data: dataToUpdate,
+    });
+  }
+
   async listAssignmentsForTeacher(teacherId: string) {
     return this.assignmentsRepository.findAllByTeacher(teacherId);
   }
@@ -170,7 +240,7 @@ export class AssignmentsService {
     assignmentId: string,
     studentId: string,
     dto: SubmitAssignmentDto,
-    file?: Express.Multer.File,
+    files?: Express.Multer.File[],
   ) {
     const assignment = await this.assignmentsRepository.findById(assignmentId);
     if (!assignment) {
@@ -204,9 +274,9 @@ export class AssignmentsService {
     const submitStatus = isLate ? SubmitStatus.LATE : SubmitStatus.ON_TIME;
     const note = dto.note?.trim() || null;
 
-    if (!note && !file) {
+    if (!note && (!files || files.length === 0) && (!dto.attachments || dto.attachments.length === 0)) {
       throw new BadRequestException(
-        'Submission requires either a note or an uploaded file.',
+        'Submission requires either a note or uploaded files.',
       );
     }
 
@@ -216,9 +286,9 @@ export class AssignmentsService {
       );
     }
 
-    const uploadedSubmission = file
-      ? await this.uploadAssignmentFile({
-          file,
+    const uploadedSubmissions = files?.length
+      ? await this.uploadAssignmentFiles({
+          files,
           folder: `eduscan/assignments/${assignmentId}/submissions/${studentId}`,
           allowedMimeTypes: ASSIGNMENT_SUBMISSION_MIME_TYPES,
           allowedExtensions: ASSIGNMENT_SUBMISSION_EXTENSIONS,
@@ -226,11 +296,13 @@ export class AssignmentsService {
           unsupportedTypeMessage: 'Unsupported submission file type.',
           tooLargeMessage: 'Submission file exceeds the configured size limit.',
         })
-      : null;
+      : [];
+      
+    const finalAttachments = dto.attachments ? [...dto.attachments, ...uploadedSubmissions] : uploadedSubmissions;
 
     const submitData = {
       note,
-      ...this.toSubmitFileRecord(uploadedSubmission),
+      attachments: finalAttachments,
       submitStatus,
       gradeStatus: GradeStatus.PENDING,
     };
@@ -242,8 +314,12 @@ export class AssignmentsService {
           assignmentId,
           submitData,
         );
-        if (uploadedSubmission?.publicId && existingSubmit.filePublicId) {
-          await this.storageService.deleteFile(existingSubmit.filePublicId);
+        const oldAttachments = (existingSubmit.attachments as any[]) || [];
+        const retainedIds = new Set(finalAttachments.map(a => a.publicId).filter(Boolean));
+        for (const old of oldAttachments) {
+           if (old.publicId && !retainedIds.has(old.publicId)) {
+             this.storageService.deleteFile(old.publicId).catch(console.error);
+           }
         }
         return updatedSubmit;
       }
@@ -254,11 +330,81 @@ export class AssignmentsService {
         ...submitData,
       });
     } catch (error) {
-      if (uploadedSubmission?.publicId) {
-        await this.storageService.deleteFile(uploadedSubmission.publicId);
+      for (const file of uploadedSubmissions) {
+        if (file.publicId) await this.storageService.deleteFile(file.publicId);
       }
       throw error;
     }
+  }
+
+  async updateStudentSubmit(
+    assignmentId: string,
+    studentId: string,
+    dto: UpdateSubmitDto,
+    files?: Express.Multer.File[],
+  ) {
+    const existingSubmit =
+      await this.assignmentsRepository.findSubmitByStudentAndAssignment(
+        assignmentId,
+        studentId,
+      );
+
+    if (!existingSubmit) {
+      throw new NotFoundException('Submission not found.');
+    }
+
+    if (existingSubmit.gradeStatus !== GradeStatus.PENDING) {
+      throw new BadRequestException(
+        'This submission has already been graded and cannot be updated.',
+      );
+    }
+
+    const dataToUpdate: any = { ...dto };
+    
+    let uploadedSubmissions: any[] = [];
+    if (files && files.length > 0) {
+      uploadedSubmissions = await this.uploadAssignmentFiles({
+          files,
+          folder: `eduscan/assignments/${assignmentId}/submissions/${studentId}`,
+          allowedMimeTypes: ASSIGNMENT_SUBMISSION_MIME_TYPES,
+          allowedExtensions: ASSIGNMENT_SUBMISSION_EXTENSIONS,
+          maxBytes: ASSIGNMENT_SUBMISSION_MAX_FILE_BYTES,
+          unsupportedTypeMessage: 'Unsupported submission file type.',
+          tooLargeMessage: 'Submission file exceeds the configured size limit.',
+      });
+    }
+
+    let finalAttachments: any[] = [];
+    if (dto.attachments) {
+      finalAttachments = [...dto.attachments];
+    } else if (existingSubmit.attachments) {
+      finalAttachments = existingSubmit.attachments as any[];
+    }
+    if (uploadedSubmissions.length > 0) {
+      finalAttachments = [...finalAttachments, ...uploadedSubmissions];
+    }
+
+    if (!dataToUpdate.note && finalAttachments.length === 0) {
+       throw new BadRequestException(
+         'Submission requires either a note or attachments.',
+       );
+    }
+    
+    const oldAttachments = (existingSubmit.attachments as any[]) || [];
+    const retainedIds = new Set(finalAttachments.map(a => a.publicId).filter(Boolean));
+    for (const old of oldAttachments) {
+       if (old.publicId && !retainedIds.has(old.publicId)) {
+         this.storageService.deleteFile(old.publicId).catch(console.error);
+       }
+    }
+    
+    dataToUpdate.attachments = finalAttachments;
+
+    return this.assignmentsRepository.updateSubmit(
+      existingSubmit.id,
+      assignmentId,
+      dataToUpdate,
+    );
   }
 
   async getSubmitsForTeacher(assignmentId: string, teacherId: string, page = 1, limit = 10) {
@@ -327,8 +473,8 @@ export class AssignmentsService {
     });
   }
 
-  private async uploadAssignmentFile(input: {
-    file: Express.Multer.File;
+  private async uploadAssignmentFiles(input: {
+    files: Express.Multer.File[];
     folder: string;
     allowedMimeTypes: Set<string>;
     allowedExtensions: Set<string>;
@@ -336,50 +482,32 @@ export class AssignmentsService {
     unsupportedTypeMessage: string;
     tooLargeMessage: string;
   }) {
-    if (!input.allowedMimeTypes.has(input.file.mimetype)) {
-      throw new BadRequestException(input.unsupportedTypeMessage);
+    const results: any[] = [];
+    for (const file of input.files) {
+      if (!input.allowedMimeTypes.has(file.mimetype)) {
+        throw new BadRequestException(`${input.unsupportedTypeMessage} (${file.originalname})`);
+      }
+
+      const extension = extname(file.originalname).toLowerCase();
+      if (!input.allowedExtensions.has(extension)) {
+        throw new BadRequestException(`Unsupported file extension: ${extension} for file ${file.originalname}`);
+      }
+
+      if (file.size > input.maxBytes) {
+        throw new BadRequestException(`${input.tooLargeMessage} (${file.originalname})`);
+      }
+
+      const stored = await this.storageService.uploadDocument(file, input.folder);
+      results.push({
+        url: stored.url,
+        publicId: stored.publicId,
+        originalName: stored.originalName,
+        mimeType: stored.mimeType,
+        sizeBytes: stored.sizeBytes,
+        uploadedAt: stored.uploadedAt,
+      });
     }
-
-    const extension = extname(input.file.originalname).toLowerCase();
-    if (!input.allowedExtensions.has(extension)) {
-      throw new BadRequestException('Unsupported file extension.');
-    }
-
-    if (input.file.size > input.maxBytes) {
-      throw new BadRequestException(input.tooLargeMessage);
-    }
-
-    return this.storageService.uploadDocument(input.file, input.folder);
-  }
-
-  private toInstructionFileRecord(file: StoredFileMetadata | null) {
-    if (!file) {
-      return {};
-    }
-
-    return {
-      instructionFileUrl: file.url,
-      instructionFilePublicId: file.publicId,
-      instructionFileOriginalName: file.originalName,
-      instructionFileMimeType: file.mimeType,
-      instructionFileSizeBytes: file.sizeBytes,
-      instructionFileUploadedAt: file.uploadedAt,
-    };
-  }
-
-  private toSubmitFileRecord(file: StoredFileMetadata | null) {
-    if (!file) {
-      return {};
-    }
-
-    return {
-      fileUrl: file.url,
-      filePublicId: file.publicId,
-      fileOriginalName: file.originalName,
-      fileMimeType: file.mimeType,
-      fileSizeBytes: file.sizeBytes,
-      fileUploadedAt: file.uploadedAt,
-    };
+    return results;
   }
 
   async deleteAssignment(assignmentId: string, teacherId: string) {

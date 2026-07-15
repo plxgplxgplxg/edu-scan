@@ -35,6 +35,15 @@ export interface StudentRecord {
   joinedAt: string;
 }
 
+export interface AttachmentMetadata {
+  url: string;
+  publicId: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedAt: string;
+}
+
 export interface AssignmentSummary {
   id: string;
   title: string;
@@ -50,18 +59,10 @@ export interface AssignmentSummary {
   maxScore: number;
   allowLate: boolean;
   latePenaltyPct: number;
-  instructionFileUrl?: string | null;
-  instructionFileOriginalName?: string | null;
-  instructionFileMimeType?: string | null;
-  instructionFileSizeBytes?: number | null;
-  instructionFileUploadedAt?: string | null;
+  attachments?: AttachmentMetadata[];
   submittedAt?: string | null;
   submittedNote?: string | null;
-  submittedFileUrl?: string | null;
-  submittedFileOriginalName?: string | null;
-  submittedFileMimeType?: string | null;
-  submittedFileSizeBytes?: number | null;
-  submittedFileUploadedAt?: string | null;
+  submittedAttachments?: AttachmentMetadata[];
 }
 
 export interface ExamSummary {

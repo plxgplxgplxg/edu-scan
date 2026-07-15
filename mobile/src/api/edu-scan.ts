@@ -56,12 +56,14 @@ type AssignmentApi = {
   id: string;
   title: string;
   description: string | null;
-  instructionFileUrl: string | null;
-  instructionFilePublicId: string | null;
-  instructionFileOriginalName: string | null;
-  instructionFileMimeType: string | null;
-  instructionFileSizeBytes: number | null;
-  instructionFileUploadedAt: string | null;
+  attachments?: Array<{
+    url: string;
+    publicId: string;
+    originalName: string;
+    mimeType: string;
+    sizeBytes: number;
+    uploadedAt: string;
+  }>;
   deadline: string;
   allowLate: boolean;
   latePenaltyPct: number;
@@ -76,11 +78,14 @@ type AssignmentApi = {
     gradeStatus: 'PENDING' | 'GRADED';
     score: number | null;
     note?: string | null;
-    fileUrl?: string | null;
-    fileOriginalName?: string | null;
-    fileMimeType?: string | null;
-    fileSizeBytes?: number | null;
-    fileUploadedAt?: string | null;
+    attachments?: Array<{
+      url: string;
+      publicId: string;
+      originalName: string;
+      mimeType: string;
+      sizeBytes: number;
+      uploadedAt: string;
+    }>;
     submittedAt?: string;
   }>;
 };
@@ -90,12 +95,14 @@ export type AssignmentSubmitApi = {
   assignmentId: string;
   studentId: string;
   note: string | null;
-  fileUrl: string | null;
-  filePublicId: string | null;
-  fileOriginalName: string | null;
-  fileMimeType: string | null;
-  fileSizeBytes: number | null;
-  fileUploadedAt: string | null;
+  attachments?: Array<{
+    url: string;
+    publicId: string;
+    originalName: string;
+    mimeType: string;
+    sizeBytes: number;
+    uploadedAt: string;
+  }>;
   submitStatus: 'ON_TIME' | 'LATE';
   gradeStatus: 'PENDING' | 'GRADED';
   score: number | null;
@@ -446,29 +453,30 @@ export async function createAssignment(
     latePenaltyPct?: number;
     maxScore?: number;
     classId: string;
-    instructionFile?: {
+    instructionFiles?: Array<{
       uri: string;
       name: string;
       type?: string;
-    };
+    }>;
   },
 ) {
-  if (payload.instructionFile) {
+  if (payload.instructionFiles && payload.instructionFiles.length > 0) {
     const formData = new FormData();
     formData.append('title', payload.title);
-    if (payload.description) {
-      formData.append('description', payload.description);
-    }
+    if (payload.description) formData.append('description', payload.description);
     formData.append('deadline', payload.deadline);
     formData.append('allowLate', String(!!payload.allowLate));
     formData.append('latePenaltyPct', String(payload.latePenaltyPct ?? 0));
     formData.append('maxScore', String(payload.maxScore ?? 10));
     formData.append('classId', payload.classId);
-    formData.append('instructionFile', {
-      uri: payload.instructionFile.uri,
-      name: payload.instructionFile.name,
-      type: payload.instructionFile.type || 'application/octet-stream',
-    } as unknown as Blob);
+    
+    payload.instructionFiles.forEach(file => {
+      formData.append('instructionFiles', {
+        uri: file.uri,
+        name: file.name,
+        type: file.type || 'application/octet-stream',
+      } as unknown as Blob);
+    });
 
     return requestJson<AssignmentApi>('/assignments', {
       method: 'POST',
@@ -492,34 +500,157 @@ export async function createAssignment(
   });
 }
 
+export async function updateAssignment(
+  token: string,
+  assignmentId: string,
+  payload: {
+    title?: string;
+    description?: string;
+    deadline?: string;
+    allowLate?: boolean;
+    latePenaltyPct?: number;
+    maxScore?: number;
+    instructionFiles?: Array<{
+      uri: string;
+      name: string;
+      type?: string;
+    }>;
+    attachments?: Array<{
+      url: string;
+      publicId: string;
+      originalName: string;
+      mimeType: string;
+      sizeBytes: number;
+      uploadedAt: string;
+    }>;
+  },
+) {
+  if (payload.instructionFiles && payload.instructionFiles.length > 0) {
+    const formData = new FormData();
+    if (payload.title) formData.append('title', payload.title);
+    if (payload.description) formData.append('description', payload.description);
+    if (payload.deadline) formData.append('deadline', payload.deadline);
+    if (payload.allowLate !== undefined) formData.append('allowLate', String(payload.allowLate));
+    if (payload.latePenaltyPct !== undefined) formData.append('latePenaltyPct', String(payload.latePenaltyPct));
+    if (payload.maxScore !== undefined) formData.append('maxScore', String(payload.maxScore));
+    
+    if (payload.attachments) {
+      formData.append('attachments', JSON.stringify(payload.attachments));
+    }
+    
+    payload.instructionFiles.forEach(file => {
+      formData.append('instructionFiles', {
+        uri: file.uri,
+        name: file.name,
+        type: file.type || 'application/octet-stream',
+      } as unknown as Blob);
+    });
+
+    return requestJson<AssignmentApi>(`/assignments/${assignmentId}`, {
+      method: 'PATCH',
+      token,
+      body: formData,
+    });
+  }
+
+  return requestJson<AssignmentApi>(`/assignments/${assignmentId}`, {
+    method: 'PATCH',
+    token,
+    body: {
+      title: payload.title,
+      description: payload.description,
+      deadline: payload.deadline,
+      allowLate: payload.allowLate,
+      latePenaltyPct: payload.latePenaltyPct,
+      maxScore: payload.maxScore,
+      attachments: payload.attachments,
+    },
+  });
+}
+
 export async function submitAssignment(
   token: string,
   assignmentId: string,
   payload: {
     note?: string;
-    file?: {
+    files?: Array<{
       uri: string;
       name: string;
       type?: string;
-    };
+    }>;
   },
 ) {
-  const formData = new FormData();
-  if (payload.note) {
-    formData.append('note', payload.note);
-  }
-  if (payload.file) {
-    formData.append('file', {
-      uri: payload.file.uri,
-      name: payload.file.name,
-      type: payload.file.type || 'application/octet-stream',
-    } as unknown as Blob);
-  }
+  if (payload.files && payload.files.length > 0) {
+    const formData = new FormData();
+    if (payload.note) formData.append('note', payload.note);
+    payload.files.forEach(file => {
+      formData.append('files', {
+        uri: file.uri,
+        name: file.name,
+        type: file.type || 'application/octet-stream',
+      } as unknown as Blob);
+    });
 
+    return requestJson<AssignmentSubmitApi>(`/assignments/${assignmentId}/submits`, {
+      method: 'POST',
+      token,
+      body: formData,
+    });
+  }
+  
   return requestJson<AssignmentSubmitApi>(`/assignments/${assignmentId}/submits`, {
     method: 'POST',
     token,
-    body: formData,
+    body: { note: payload.note },
+  });
+}
+
+export async function updateStudentSubmit(
+  token: string,
+  assignmentId: string,
+  payload: {
+    note?: string;
+    files?: Array<{
+      uri: string;
+      name: string;
+      type?: string;
+    }>;
+    attachments?: Array<{
+      url: string;
+      publicId: string;
+      originalName: string;
+      mimeType: string;
+      sizeBytes: number;
+      uploadedAt: string;
+    }>;
+  },
+) {
+  if (payload.files && payload.files.length > 0) {
+    const formData = new FormData();
+    if (payload.note) formData.append('note', payload.note);
+    if (payload.attachments) formData.append('attachments', JSON.stringify(payload.attachments));
+    payload.files.forEach(file => {
+      formData.append('files', {
+        uri: file.uri,
+        name: file.name,
+        type: file.type || 'application/octet-stream',
+      } as unknown as Blob);
+    });
+
+    return requestJson<AssignmentSubmitApi>(`/assignments/${assignmentId}/submits`, {
+      method: 'PATCH',
+      token,
+      body: formData,
+    });
+  }
+  
+  return requestJson<AssignmentSubmitApi>(`/assignments/${assignmentId}/submits`, {
+    method: 'PATCH',
+    token,
+    body: {
+      note: payload.note,
+      attachments: payload.attachments,
+    },
   });
 }
 
@@ -923,11 +1054,7 @@ export function mapTeacherAssignmentSummary(
     maxScore: item.maxScore,
     allowLate: item.allowLate,
     latePenaltyPct: item.latePenaltyPct,
-    instructionFileUrl: item.instructionFileUrl,
-    instructionFileOriginalName: item.instructionFileOriginalName,
-    instructionFileMimeType: item.instructionFileMimeType,
-    instructionFileSizeBytes: item.instructionFileSizeBytes,
-    instructionFileUploadedAt: item.instructionFileUploadedAt,
+    attachments: item.attachments ?? [],
   };
 }
 
@@ -949,18 +1076,10 @@ export function mapStudentAssignmentSummary(
     maxScore: item.maxScore,
     allowLate: item.allowLate,
     latePenaltyPct: item.latePenaltyPct,
-    instructionFileUrl: item.instructionFileUrl,
-    instructionFileOriginalName: item.instructionFileOriginalName,
-    instructionFileMimeType: item.instructionFileMimeType,
-    instructionFileSizeBytes: item.instructionFileSizeBytes,
-    instructionFileUploadedAt: item.instructionFileUploadedAt,
+    attachments: item.attachments ?? [],
     submittedAt: submit?.submittedAt ?? null,
     submittedNote: submit?.note ?? null,
-    submittedFileUrl: submit?.fileUrl ?? null,
-    submittedFileOriginalName: submit?.fileOriginalName ?? null,
-    submittedFileMimeType: submit?.fileMimeType ?? null,
-    submittedFileSizeBytes: submit?.fileSizeBytes ?? null,
-    submittedFileUploadedAt: submit?.fileUploadedAt ?? null,
+    submittedAttachments: submit?.attachments ?? [],
   };
 }
 

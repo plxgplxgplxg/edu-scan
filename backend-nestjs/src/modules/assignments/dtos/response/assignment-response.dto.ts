@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { GradeStatus, SubmitStatus } from '@prisma/client';
+import { AttachmentDto } from '../attachment.dto';
 
 export class AssignmentTeacherSummaryDto {
   @ApiProperty({ type: Number, example: 12 })
@@ -30,23 +31,12 @@ export class AssignmentResponseDto {
   @ApiProperty({ nullable: true })
   description!: string | null;
 
-  @ApiProperty({ nullable: true })
-  instructionFileUrl!: string | null;
-
-  @ApiProperty({ nullable: true })
-  instructionFilePublicId!: string | null;
-
-  @ApiProperty({ nullable: true })
-  instructionFileOriginalName!: string | null;
-
-  @ApiProperty({ nullable: true })
-  instructionFileMimeType!: string | null;
-
-  @ApiProperty({ nullable: true })
-  instructionFileSizeBytes!: number | null;
-
-  @ApiProperty({ type: String, format: 'date-time', nullable: true })
-  instructionFileUploadedAt!: Date | null;
+  @ApiProperty({
+    type: () => [AttachmentDto],
+    nullable: true,
+    description: 'Array of attachments',
+  })
+  attachments!: AttachmentDto[] | null;
 
   @ApiProperty({ type: String, format: 'date-time' })
   deadline!: Date;
@@ -118,23 +108,12 @@ export class AssignmentSubmitResponseDto {
   @ApiProperty({ nullable: true })
   note!: string | null;
 
-  @ApiProperty({ nullable: true })
-  fileUrl!: string | null;
-
-  @ApiProperty({ nullable: true })
-  filePublicId!: string | null;
-
-  @ApiProperty({ nullable: true })
-  fileOriginalName!: string | null;
-
-  @ApiProperty({ nullable: true })
-  fileMimeType!: string | null;
-
-  @ApiProperty({ nullable: true })
-  fileSizeBytes!: number | null;
-
-  @ApiProperty({ type: String, format: 'date-time', nullable: true })
-  fileUploadedAt!: Date | null;
+  @ApiProperty({
+    type: () => [AttachmentDto],
+    nullable: true,
+    description: 'Array of attachments',
+  })
+  attachments!: AttachmentDto[] | null;
 
   @ApiProperty({ nullable: true })
   feedback!: string | null;

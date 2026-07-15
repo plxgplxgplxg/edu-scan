@@ -166,6 +166,7 @@ export function StudentClassDetailScreen() {
     activeSubmitAssignment.gradeStatus !== 'GRADED';
 
   return (
+    <>
     <Screen refreshing={loading} onRefresh={handleRefresh}>
       <PageHeader
         backLabel={content.student.classes.title}
@@ -328,6 +329,7 @@ export function StudentClassDetailScreen() {
           </View>
         ) : null}
       </View>
+    </Screen>
 
       <ModalSheet
         visible={!!showSubmit}
@@ -410,7 +412,7 @@ export function StudentClassDetailScreen() {
         fileName={previewFileName}
         mimeType={previewMimeType}
       />
-    </Screen>
+    </>
   );
 }
 

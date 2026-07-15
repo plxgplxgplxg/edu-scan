@@ -50,10 +50,12 @@ export function Screen({
   const overlayChildren = childArray.filter(
     child =>
       React.isValidElement(child) &&
-      typeof child.type !== 'string' &&
-      'name' in child.type &&
-      (child.type.name === 'BottomNav' || child.type.name.includes('Modal')),
+      (
+        (typeof child.type !== 'string' && 'name' in child.type && (child.type.name === 'BottomNav' || child.type.name?.includes('Modal'))) ||
+        child.props?.isOverlay === true
+      )
   );
+
   const contentChildren = childArray.filter(
     child => !overlayChildren.includes(child) && child !== headerChild,
   );

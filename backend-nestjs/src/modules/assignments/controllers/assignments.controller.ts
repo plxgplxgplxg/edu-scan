@@ -8,19 +8,21 @@ import {
   Delete,
   Query,
   Req,
-  UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { Role } from '@prisma/client';
 import { Roles } from '../../../common/decorators/auth/roles.decorator';
 import { JwtAuthGuard } from '../../../common/guards/auth/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/auth/roles.guard';
 import { AssignmentsSwagger } from '../docs/assignments.swagger';
 import { CreateAssignmentDto } from '../dtos/create-assignment.dto';
-import { GradeSubmitDto } from '../dtos/grade-submit.dto';
 import { SubmitAssignmentDto } from '../dtos/submit-assignment.dto';
+import { GradeSubmitDto } from '../dtos/grade-submit.dto';
+import { UpdateAssignmentDto } from '../dtos/update-assignment.dto';
+import { UpdateSubmitDto } from '../dtos/update-submit.dto';
 import { AssignmentsService } from '../services/assignments.service';
 
 type AssignmentRequestUser = {
@@ -40,18 +42,30 @@ export class AssignmentsController {
 
   @Post()
   @Roles(Role.TEACHER)
-  @UseInterceptors(FileInterceptor('instructionFile'))
+  @UseInterceptors(FilesInterceptor('instructionFiles', 5))
   @AssignmentsSwagger.TaoBaiTap()
   create(
     @Body() dto: CreateAssignmentDto,
     @Req() req: AssignmentRequest,
-    @UploadedFile() instructionFile?: Express.Multer.File,
+    @UploadedFiles() instructionFiles?: Express.Multer.File[],
   ) {
     return this.assignmentsService.createAssignment(
       req.user.id,
       dto,
-      instructionFile,
+      instructionFiles,
     );
+  }
+
+  @Patch(':id')
+  @Roles(Role.TEACHER)
+  @UseInterceptors(FilesInterceptor('instructionFiles', 5))
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateAssignmentDto,
+    @Req() req: AssignmentRequest,
+    @UploadedFiles() instructionFiles?: Express.Multer.File[],
+  ) {
+    return this.assignmentsService.updateAssignment(id, req.user.id, dto, instructionFiles);
   }
 
   @Get()
@@ -81,15 +95,27 @@ export class AssignmentsController {
 
   @Post(':id/submits')
   @Roles(Role.STUDENT)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FilesInterceptor('files', 5))
   @AssignmentsSwagger.NopBaiTap()
   submit(
     @Param('id') id: string,
     @Body() dto: SubmitAssignmentDto,
     @Req() req: AssignmentRequest,
-    @UploadedFile() file?: Express.Multer.File,
+    @UploadedFiles() files?: Express.Multer.File[],
   ) {
-    return this.assignmentsService.submitAssignment(id, req.user.id, dto, file);
+    return this.assignmentsService.submitAssignment(id, req.user.id, dto, files);
+  }
+
+  @Patch(':id/submits')
+  @Roles(Role.STUDENT)
+  @UseInterceptors(FilesInterceptor('files', 5))
+  updateSubmit(
+    @Param('id') id: string,
+    @Body() dto: UpdateSubmitDto,
+    @Req() req: AssignmentRequest,
+    @UploadedFiles() files?: Express.Multer.File[],
+  ) {
+    return this.assignmentsService.updateStudentSubmit(id, req.user.id, dto, files);
   }
 
   @Get(':id/submits/me')

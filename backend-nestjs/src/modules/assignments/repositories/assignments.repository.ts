@@ -11,12 +11,7 @@ export type CreateAssignmentRecord = {
   maxScore: number;
   teacherId: string;
   classId: string;
-  instructionFileUrl?: string | null;
-  instructionFilePublicId?: string | null;
-  instructionFileOriginalName?: string | null;
-  instructionFileMimeType?: string | null;
-  instructionFileSizeBytes?: number | null;
-  instructionFileUploadedAt?: Date | null;
+  attachments?: any;
 };
 
 @Injectable()
@@ -32,12 +27,7 @@ export class AssignmentsRepository {
         allowLate: data.allowLate,
         latePenaltyPct: data.latePenaltyPct,
         maxScore: data.maxScore,
-        instructionFileUrl: data.instructionFileUrl,
-        instructionFilePublicId: data.instructionFilePublicId,
-        instructionFileOriginalName: data.instructionFileOriginalName,
-        instructionFileMimeType: data.instructionFileMimeType,
-        instructionFileSizeBytes: data.instructionFileSizeBytes,
-        instructionFileUploadedAt: data.instructionFileUploadedAt,
+        attachments: data.attachments ? (data.attachments as Prisma.InputJsonValue) : Prisma.JsonNull,
         teacher: { connect: { id: data.teacherId } },
         class: { connect: { id: data.classId } },
       },
@@ -77,11 +67,7 @@ export class AssignmentsRepository {
             gradeStatus: true,
             score: true,
             note: true,
-            fileUrl: true,
-            fileOriginalName: true,
-            fileMimeType: true,
-            fileSizeBytes: true,
-            fileUploadedAt: true,
+            attachments: true,
             submittedAt: true,
           },
         },
@@ -139,12 +125,7 @@ export class AssignmentsRepository {
     assignmentId: string;
     studentId: string;
     note?: string | null;
-    fileUrl?: string | null;
-    filePublicId?: string | null;
-    fileOriginalName?: string | null;
-    fileMimeType?: string | null;
-    fileSizeBytes?: number | null;
-    fileUploadedAt?: Date | null;
+    attachments?: any;
     submitStatus: SubmitStatus;
     gradeStatus: GradeStatus;
   }) {

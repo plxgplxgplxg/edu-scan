@@ -205,7 +205,6 @@ export function TeacherAssignmentDetailScreen() {
   const submitCount = assignment.submitCount ?? 0;
   const totalStudents = assignment.totalStudents ?? 0;
   const progress = percentage(submitCount, totalStudents);
-  const isImageFile = assignment.instructionFileMimeType?.startsWith('image/');
 
   const renderInfo = () => (
     <SurfaceCard style={styles.assignmentCard}>
@@ -218,46 +217,50 @@ export function TeacherAssignmentDetailScreen() {
         </AppText>
       ) : null}
 
-      {/* File Attachment */}
-      {assignment.instructionFileUrl ? (
+      {/* File Attachments */}
+      {assignment.attachments && assignment.attachments.length > 0 ? (
         <View style={styles.fileSection}>
-          {isImageFile ? (
-            <View style={styles.imagePreviewContainer}>
-              <Image 
-                source={{ uri: assignment.instructionFileUrl }} 
-                style={styles.imagePreview} 
-                resizeMode="contain" 
-              />
-              <View style={styles.fileRow}>
-                <FileText size={15} color={palette.primary} />
-                <View style={styles.flex}>
-                  <AppText variant="label" weight="semibold" color={palette.primary} numberOfLines={1} ellipsizeMode="middle">
-                    {assignment.instructionFileOriginalName ?? 'Hình ảnh'}
-                  </AppText>
-                  <AppText variant="caption" color={palette.mutedForeground}>
-                    {`${assignment.instructionFileMimeType} • ${formatFileSize(assignment.instructionFileSizeBytes)}`}
-                  </AppText>
+          {assignment.attachments.map((attachment, idx) => {
+            const isImage = attachment.mimeType?.startsWith('image/');
+            return isImage ? (
+              <View key={attachment.publicId || idx} style={[styles.imagePreviewContainer, { marginBottom: 8 }]}>
+                <Image 
+                  source={{ uri: attachment.url }} 
+                  style={styles.imagePreview} 
+                  resizeMode="contain" 
+                />
+                <View style={styles.fileRow}>
+                  <FileText size={15} color={palette.primary} />
+                  <View style={styles.flex}>
+                    <AppText variant="label" weight="semibold" color={palette.primary} numberOfLines={1} ellipsizeMode="middle">
+                      {attachment.originalName ?? 'Hình ảnh'}
+                    </AppText>
+                    <AppText variant="caption" color={palette.mutedForeground}>
+                      {`${attachment.mimeType} • ${formatFileSize(attachment.sizeBytes)}`}
+                    </AppText>
+                  </View>
                 </View>
               </View>
-            </View>
-          ) : (
-            <Pressable
-              style={[styles.fileRow, { padding: 12, backgroundColor: palette.background, borderRadius: 8, borderWidth: 1, borderColor: palette.border }]}
-              onPress={() => {
-                openPreview(assignment.instructionFileUrl, assignment.instructionFileOriginalName, assignment.instructionFileMimeType);
-              }}
-            >
-              <FileText size={20} color={palette.primary} />
-              <View style={styles.flex}>
-                <AppText variant="label" weight="semibold" color={palette.primary} numberOfLines={1} ellipsizeMode="middle">
-                  {assignment.instructionFileOriginalName ?? 'File hướng dẫn'}
-                </AppText>
-                <AppText variant="caption" color={palette.mutedForeground}>
-                  {`${assignment.instructionFileMimeType ?? 'Tài liệu'} • ${formatFileSize(assignment.instructionFileSizeBytes)}`}
-                </AppText>
-              </View>
-            </Pressable>
-          )}
+            ) : (
+              <Pressable
+                key={attachment.publicId || idx}
+                style={[styles.fileRow, { padding: 12, backgroundColor: palette.background, borderRadius: 8, borderWidth: 1, borderColor: palette.border, marginBottom: 8 }]}
+                onPress={() => {
+                  openPreview(attachment.url, attachment.originalName, attachment.mimeType);
+                }}
+              >
+                <FileText size={20} color={palette.primary} />
+                <View style={styles.flex}>
+                  <AppText variant="label" weight="semibold" color={palette.primary} numberOfLines={1} ellipsizeMode="middle">
+                    {attachment.originalName ?? 'File hướng dẫn'}
+                  </AppText>
+                  <AppText variant="caption" color={palette.mutedForeground}>
+                    {`${attachment.mimeType ?? 'Tài liệu'} • ${formatFileSize(attachment.sizeBytes)}`}
+                  </AppText>
+                </View>
+              </Pressable>
+            );
+          })}
         </View>
       ) : null}
 
@@ -288,7 +291,6 @@ export function TeacherAssignmentDetailScreen() {
   );
 
   const renderSubmitItem = ({ item: submit }: { item: AssignmentSubmitApi }) => {
-    const isSubmitImage = submit.fileMimeType?.startsWith('image/');
     return (
       <SurfaceCard style={styles.submitCard}>
         <View style={styles.submitHead}>
@@ -323,35 +325,39 @@ export function TeacherAssignmentDetailScreen() {
           </View>
         ) : null}
 
-        {submit.fileUrl ? (
+        {submit.attachments && submit.attachments.length > 0 ? (
           <View style={styles.fileSection}>
-            {isSubmitImage ? (
-              <View style={styles.imagePreviewContainer}>
-                <Image 
-                  source={{ uri: submit.fileUrl }} 
-                  style={styles.imagePreview} 
-                  resizeMode="contain" 
-                />
-                <View style={styles.fileRow}>
-                  <FileText size={15} color={palette.primary} />
-                  <View style={styles.flex}>
-                    <AppText variant="label" weight="semibold" color={palette.primary} numberOfLines={1} ellipsizeMode="middle">
-                      {submit.fileOriginalName ?? 'Hình ảnh đính kèm'}
-                    </AppText>
+            {submit.attachments.map((attachment, idx) => {
+              const isImage = attachment.mimeType?.startsWith('image/');
+              return isImage ? (
+                <View key={attachment.publicId || idx} style={[styles.imagePreviewContainer, { marginBottom: 8 }]}>
+                  <Image 
+                    source={{ uri: attachment.url }} 
+                    style={styles.imagePreview} 
+                    resizeMode="contain" 
+                  />
+                  <View style={styles.fileRow}>
+                    <FileText size={15} color={palette.primary} />
+                    <View style={styles.flex}>
+                      <AppText variant="label" weight="semibold" color={palette.primary} numberOfLines={1} ellipsizeMode="middle">
+                        {attachment.originalName ?? 'Hình ảnh đính kèm'}
+                      </AppText>
+                    </View>
                   </View>
                 </View>
-              </View>
-            ) : (
-              <Pressable
-                style={styles.fileRowOutline}
-                onPress={() => openPreview(submit.fileUrl, submit.fileOriginalName, submit.fileMimeType)}
-              >
-                <FileText size={16} color={palette.primary} />
-                <AppText variant="label" weight="semibold" color={palette.primary} style={{ flex: 1 }} numberOfLines={1} ellipsizeMode="middle">
-                  {submit.fileOriginalName ?? 'Tệp đính kèm'}
-                </AppText>
-              </Pressable>
-            )}
+              ) : (
+                <Pressable
+                  key={attachment.publicId || idx}
+                  style={[styles.fileRowOutline, { marginBottom: 8 }]}
+                  onPress={() => openPreview(attachment.url, attachment.originalName, attachment.mimeType)}
+                >
+                  <FileText size={16} color={palette.primary} />
+                  <AppText variant="label" weight="semibold" color={palette.primary} style={{ flex: 1 }} numberOfLines={1} ellipsizeMode="middle">
+                    {attachment.originalName ?? 'Tệp đính kèm'}
+                  </AppText>
+                </Pressable>
+              );
+            })}
           </View>
         ) : null}
 
@@ -419,7 +425,8 @@ export function TeacherAssignmentDetailScreen() {
   );
 
   return (
-    <Screen refreshing={loadingAssignment || (loadingSubmits && !loadingMore)} onRefresh={handleRefresh}>
+    <>
+    <Screen scrollable={false}>
       <PageHeader
         title={assignment.title}
         subtitle={`${classCode || ''} • Bài tập`}
@@ -436,9 +443,12 @@ export function TeacherAssignmentDetailScreen() {
         ListFooterComponent={activeTab === 'submits' ? renderFooter : null}
         onEndReached={activeTab === 'submits' ? handleLoadMore : null}
         onEndReachedThreshold={0.5}
-        contentContainerStyle={[styles.body, { maxWidth: layout.contentMaxWidth, alignSelf: 'center', width: '100%', paddingHorizontal: layout.horizontalPadding }]}
+        contentContainerStyle={[styles.body, { maxWidth: layout.contentMaxWidth, alignSelf: 'center', width: '100%', paddingHorizontal: layout.horizontalPadding, paddingBottom: 100 }]}
         showsVerticalScrollIndicator={false}
+        refreshing={loadingAssignment || (loadingSubmits && !loadingMore)}
+        onRefresh={handleRefresh}
       />
+    </Screen>
       <DocumentViewerModal
         visible={!!previewUrl}
         onClose={() => setPreviewUrl(null)}
@@ -446,7 +456,7 @@ export function TeacherAssignmentDetailScreen() {
         fileName={previewFileName}
         mimeType={previewMimeType}
       />
-    </Screen>
+    </>
   );
 }
 
