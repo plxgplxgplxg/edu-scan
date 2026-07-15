@@ -85,13 +85,21 @@ def _build_padded_digit_grid_region(value: str, code_length: int) -> np.ndarray:
     grid_width = code_length * 44
     grid_height = 10 * 42
     padding_left = 80
-    padding_top = 55
-    image = np.zeros((grid_height + 120, grid_width + 150), dtype=np.uint8)
+    padding_top = 95
+    header_height = 32
+    image = np.zeros((grid_height + 160, grid_width + 150), dtype=np.uint8)
 
     left = padding_left
     top = padding_top
     right = left + grid_width
     bottom = top + grid_height
+
+    header_top = top - header_height - 10
+    for column_index in range(code_length):
+        x_start = left + int(grid_width * column_index / code_length)
+        x_end = left + int(grid_width * (column_index + 1) / code_length)
+        cv2.rectangle(image, (x_start, header_top), (x_end, header_top + header_height), 255, 2)
+
     cv2.rectangle(image, (left, top), (right, bottom), 255, 2)
 
     for column_index, digit in enumerate(value):

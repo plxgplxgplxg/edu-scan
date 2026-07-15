@@ -107,7 +107,6 @@ export function TeacherOmrExamDetailScreen() {
   const metrics = [
     { value: String(submissionsData?.total || 0), label: 'Đã chấm' },
     { value: summary.avgCorrect.toFixed(1), label: 'Câu đúng TB' },
-    { value: String(submissionsData?.items?.filter(i => i.status === 'NEEDS_REVIEW').length || 0), label: 'Cần xem lại' },
   ];
 
   // Render Tabs Content
@@ -214,7 +213,7 @@ export function TeacherOmrExamDetailScreen() {
   };
 
   return (
-    <Screen scrollable={false}>
+    <Screen scrollable={false} withoutBottomInset>
       <PageHeader
         title={title}
         overline={overline}

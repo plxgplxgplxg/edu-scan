@@ -140,7 +140,11 @@ class StudentIdDetector:
         if id_region.size == 0:
             return (None, []) if capture_debug else None
 
-        id_region = self._normalize_digit_grid_region(id_region)
+        id_region = self._normalize_digit_grid_region(
+            id_region,
+            code_length,
+            row_count,
+        )
 
         digits: list[str] = []
         debug_columns: list[dict[str, object]] = []
@@ -175,10 +179,29 @@ class StudentIdDetector:
 
         return (detected_value, debug_columns) if capture_debug else detected_value
 
-    def _normalize_digit_grid_region(self, image: np.ndarray) -> np.ndarray:
+    def _normalize_digit_grid_region(
+        self,
+        image: np.ndarray,
+        code_length: int,
+        row_count: int,
+    ) -> np.ndarray:
         if image.size == 0:
             return image
 
+        bubble_grid_box = self._find_bubble_grid_box(image, code_length, row_count)
+        if bubble_grid_box is not None:
+            return self._crop_box(image, bubble_grid_box)
+
+        contour_grid_box = self._find_contour_grid_box(image)
+        if contour_grid_box is not None:
+            return self._crop_box(image, contour_grid_box)
+
+        return image
+
+    def _find_contour_grid_box(
+        self,
+        image: np.ndarray,
+    ) -> tuple[int, int, int, int] | None:
         height, width = image.shape[:2]
         contours, _ = cv2.findContours(
             image,
@@ -186,7 +209,7 @@ class StudentIdDetector:
             cv2.CHAIN_APPROX_SIMPLE,
         )
         if not contours:
-            return image
+            return None
 
         candidates: list[tuple[int, int, int, int, int]] = []
         for contour in contours:
@@ -198,7 +221,7 @@ class StudentIdDetector:
             candidates.append((area, x, y, w, h))
 
         if not candidates:
-            return image
+            return None
 
         _, x, y, w, h = max(candidates, key=lambda item: item[0])
         pad_x = max(1, int(w * 0.01))
@@ -209,8 +232,172 @@ class StudentIdDetector:
         bottom = min(height, y + h + pad_y)
 
         if right <= left or bottom <= top:
-            return image
+            return None
 
+        return left, top, right, bottom
+
+    def _find_bubble_grid_box(
+        self,
+        image: np.ndarray,
+        code_length: int,
+        row_count: int,
+    ) -> tuple[int, int, int, int] | None:
+        components = self._find_bubble_like_components(image)
+        if len(components) < code_length * max(2, row_count // 2):
+            return None
+
+        y_groups = self._cluster_components(
+            components,
+            axis="y",
+            tolerance=self._component_tolerance(components, "h"),
+        )
+        row_candidates = [
+            group
+            for group in y_groups
+            if len(group) >= max(2, code_length - 1)
+        ]
+        if len(row_candidates) < row_count:
+            return None
+
+        selected_rows = row_candidates[-row_count:]
+        row_components = [
+            component
+            for group in selected_rows
+            for component in group
+        ]
+
+        x_groups = self._cluster_components(
+            row_components,
+            axis="x",
+            tolerance=self._component_tolerance(row_components, "w"),
+        )
+        column_candidates = [
+            group
+            for group in x_groups
+            if len(group) >= max(2, row_count - 2)
+        ]
+        if len(column_candidates) < code_length:
+            return None
+
+        selected_columns = sorted(
+            sorted(column_candidates, key=len, reverse=True)[:code_length],
+            key=lambda group: self._group_center(group, "x"),
+        )
+        x_centers = [self._group_center(group, "x") for group in selected_columns]
+        y_centers = [self._group_center(group, "y") for group in selected_rows]
+        if len(x_centers) != code_length or len(y_centers) != row_count:
+            return None
+
+        x_spacing = self._median_spacing(x_centers)
+        y_spacing = self._median_spacing(y_centers)
+        if x_spacing <= 0 or y_spacing <= 0:
+            return None
+
+        height, width = image.shape[:2]
+        left = max(0, int(round(min(x_centers) - x_spacing / 2)))
+        right = min(width, int(round(max(x_centers) + x_spacing / 2)))
+        top = max(0, int(round(min(y_centers) - y_spacing / 2)))
+        bottom = min(height, int(round(max(y_centers) + y_spacing / 2)))
+
+        if right <= left or bottom <= top:
+            return None
+
+        return left, top, right, bottom
+
+    def _find_bubble_like_components(
+        self,
+        image: np.ndarray,
+    ) -> list[dict[str, float]]:
+        height, width = image.shape[:2]
+        contours, _ = cv2.findContours(
+            image,
+            cv2.RETR_LIST,
+            cv2.CHAIN_APPROX_SIMPLE,
+        )
+        components: list[dict[str, float]] = []
+        for contour in contours:
+            x, y, w, h = cv2.boundingRect(contour)
+            if w < max(5, width * 0.025) or h < max(5, height * 0.025):
+                continue
+            if w > width * 0.30 or h > height * 0.18:
+                continue
+
+            aspect_ratio = w / max(h, 1)
+            if not (0.55 <= aspect_ratio <= 1.75):
+                continue
+
+            perimeter = cv2.arcLength(contour, True)
+            if perimeter <= 0:
+                continue
+
+            contour_area = cv2.contourArea(contour)
+            circularity = 4 * np.pi * contour_area / (perimeter * perimeter)
+            if circularity < 0.45:
+                continue
+
+            components.append(
+                {
+                    "x": float(x + w / 2),
+                    "y": float(y + h / 2),
+                    "w": float(w),
+                    "h": float(h),
+                }
+            )
+
+        return components
+
+    def _cluster_components(
+        self,
+        components: list[dict[str, float]],
+        *,
+        axis: str,
+        tolerance: float,
+    ) -> list[list[dict[str, float]]]:
+        if not components:
+            return []
+
+        groups: list[list[dict[str, float]]] = []
+        for component in sorted(components, key=lambda item: item[axis]):
+            if not groups:
+                groups.append([component])
+                continue
+
+            current_group = groups[-1]
+            if abs(component[axis] - self._group_center(current_group, axis)) <= tolerance:
+                current_group.append(component)
+            else:
+                groups.append([component])
+
+        return groups
+
+    def _component_tolerance(
+        self,
+        components: list[dict[str, float]],
+        key: str,
+    ) -> float:
+        if not components:
+            return 4.0
+        return max(4.0, float(np.median([component[key] for component in components])) * 0.75)
+
+    def _group_center(
+        self,
+        components: list[dict[str, float]],
+        axis: str,
+    ) -> float:
+        return float(np.median([component[axis] for component in components]))
+
+    def _median_spacing(self, centers: list[float]) -> float:
+        if len(centers) < 2:
+            return 0.0
+        ordered = sorted(centers)
+        return float(np.median(np.diff(ordered)))
+
+    def _crop_box(
+        self,
+        image: np.ndarray,
+        box: tuple[int, int, int, int],
+    ) -> np.ndarray:
+        left, top, right, bottom = box
         return image[top:bottom, left:right]
 
     def _classify_digit_scores(self, scores: list[float]) -> tuple[int | None, bool]:
@@ -294,10 +481,7 @@ class StudentIdDetector:
         margin_x = max(1, int((end - start) * 0.18))
         cropped = image[:, start + margin_x : max(start + margin_x + 1, end - margin_x)]
 
-        height = cropped.shape[0]
-        start_y = int(height * 0.04)
-        end_y = int(height * 0.96)
-        return cropped[start_y:end_y, :]
+        return cropped
 
     def _slice_row(self, image: np.ndarray, index: int, total: int) -> np.ndarray:
         if image.size == 0:
