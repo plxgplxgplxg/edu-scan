@@ -39,9 +39,18 @@ export class AssignmentsController {
 
   @Post()
   @Roles(Role.TEACHER)
+  @UseInterceptors(FileInterceptor('instructionFile'))
   @AssignmentsSwagger.TaoBaiTap()
-  create(@Body() dto: CreateAssignmentDto, @Req() req: AssignmentRequest) {
-    return this.assignmentsService.createAssignment(req.user.id, dto);
+  create(
+    @Body() dto: CreateAssignmentDto,
+    @Req() req: AssignmentRequest,
+    @UploadedFile() instructionFile?: Express.Multer.File,
+  ) {
+    return this.assignmentsService.createAssignment(
+      req.user.id,
+      dto,
+      instructionFile,
+    );
   }
 
   @Get()

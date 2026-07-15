@@ -34,10 +34,15 @@ export class TransformInterceptor<T> implements NestInterceptor<
     return next.handle().pipe(
       map((data) => {
         // Nếu API tự trả về format có data/message rồi thì giữ nguyên, không thì wrap lại
-        const isAlreadyWrapped = data && typeof data === 'object' && 'data' in data && 'message' in data;
+        const isAlreadyWrapped =
+          data &&
+          typeof data === 'object' &&
+          'data' in data &&
+          'message' in data;
         const returnData = isAlreadyWrapped ? data.data : data;
         const message = isAlreadyWrapped ? data.message : 'Thành công';
-        const finalStatusCode = isAlreadyWrapped && data.statusCode ? data.statusCode : statusCode;
+        const finalStatusCode =
+          isAlreadyWrapped && data.statusCode ? data.statusCode : statusCode;
 
         return {
           data: returnData,

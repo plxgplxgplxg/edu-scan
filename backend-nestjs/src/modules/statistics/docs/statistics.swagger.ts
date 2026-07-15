@@ -11,9 +11,7 @@ import {
 
 export const StatisticsSwagger = {
   Controller() {
-    return applyDecorators(
-      ApiModuleTag(SWAGGER_MODULES_METADATA.statistics),
-    );
+    return applyDecorators(ApiModuleTag(SWAGGER_MODULES_METADATA.statistics));
   },
   GetTeacherStats() {
     return applyDecorators(
@@ -72,5 +70,5 @@ export const StatisticsSwagger = {
       ApiWrappedOkResponse({ description: 'Thành công' }),
       ApiStandardErrorResponses(401, 403, 500),
     );
-  }
+  },
 };

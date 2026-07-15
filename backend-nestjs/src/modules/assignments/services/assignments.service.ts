@@ -12,8 +12,14 @@ import { CreateAssignmentDto } from '../dtos/create-assignment.dto';
 import { SubmitAssignmentDto } from '../dtos/submit-assignment.dto';
 import { GradeSubmitDto } from '../dtos/grade-submit.dto';
 import { GradeStatus, SubmitStatus } from '@prisma/client';
-import { IStorageService } from '../../../storage/storage.interface';
 import {
+  IStorageService,
+  StoredFileMetadata,
+} from '../../../storage/storage.interface';
+import {
+  ASSIGNMENT_INSTRUCTION_EXTENSIONS,
+  ASSIGNMENT_INSTRUCTION_MAX_FILE_BYTES,
+  ASSIGNMENT_INSTRUCTION_MIME_TYPES,
   ASSIGNMENT_SUBMISSION_EXTENSIONS,
   ASSIGNMENT_SUBMISSION_MAX_FILE_BYTES,
   ASSIGNMENT_SUBMISSION_MIME_TYPES,
@@ -40,7 +46,11 @@ export class AssignmentsService {
     private readonly notificationsQueue: Queue,
   ) {}
 
-  async createAssignment(teacherId: string, dto: CreateAssignmentDto) {
+  async createAssignment(
+    teacherId: string,
+    dto: CreateAssignmentDto,
+    instructionFile?: Express.Multer.File,
+  ) {
     const deadline = new Date(dto.deadline);
 
     if (deadline <= new Date()) {
@@ -64,16 +74,38 @@ export class AssignmentsService {
       throw new ForbiddenException('Class does not belong to this teacher.');
     }
 
-    const assignment = await this.assignmentsRepository.create({
-      title: dto.title,
-      description: dto.description,
-      deadline,
-      allowLate,
-      latePenaltyPct,
-      maxScore: dto.maxScore ?? 10,
-      teacherId,
-      classId: dto.classId,
-    });
+    const uploadedInstruction = instructionFile
+      ? await this.uploadAssignmentFile({
+          file: instructionFile,
+          folder: `eduscan/assignments/instructions/${dto.classId}`,
+          allowedMimeTypes: ASSIGNMENT_INSTRUCTION_MIME_TYPES,
+          allowedExtensions: ASSIGNMENT_INSTRUCTION_EXTENSIONS,
+          maxBytes: ASSIGNMENT_INSTRUCTION_MAX_FILE_BYTES,
+          unsupportedTypeMessage: 'Unsupported instruction file type.',
+          tooLargeMessage:
+            'Instruction file exceeds the configured size limit.',
+        })
+      : null;
+
+    let assignment: Awaited<ReturnType<AssignmentsRepository['create']>>;
+    try {
+      assignment = await this.assignmentsRepository.create({
+        title: dto.title,
+        description: dto.description,
+        deadline,
+        allowLate,
+        latePenaltyPct,
+        maxScore: dto.maxScore ?? 10,
+        teacherId,
+        classId: dto.classId,
+        ...this.toInstructionFileRecord(uploadedInstruction),
+      });
+    } catch (error) {
+      if (uploadedInstruction?.publicId) {
+        await this.storageService.deleteFile(uploadedInstruction.publicId);
+      }
+      throw error;
+    }
 
     const enrollments = await this.prisma.classEnrollment.findMany({
       where: { classId: dto.classId },
@@ -168,27 +200,65 @@ export class AssignmentsService {
         assignmentId,
         studentId,
       );
-    if (existingSubmit) {
+
+    const submitStatus = isLate ? SubmitStatus.LATE : SubmitStatus.ON_TIME;
+    const note = dto.note?.trim() || null;
+
+    if (!note && !file) {
       throw new BadRequestException(
-        'You have already submitted this assignment.',
+        'Submission requires either a note or an uploaded file.',
       );
     }
 
-    const submitStatus = isLate ? SubmitStatus.LATE : SubmitStatus.ON_TIME;
-    const fileUrl = await this.resolveSubmissionFileUrl(
-      assignmentId,
-      studentId,
-      dto,
-      file,
-    );
+    if (existingSubmit && existingSubmit.gradeStatus !== GradeStatus.PENDING) {
+      throw new BadRequestException(
+        'This submission can no longer be updated.',
+      );
+    }
 
-    return this.assignmentsRepository.createSubmit({
-      assignmentId,
-      studentId,
-      fileUrl,
+    const uploadedSubmission = file
+      ? await this.uploadAssignmentFile({
+          file,
+          folder: `eduscan/assignments/${assignmentId}/submissions/${studentId}`,
+          allowedMimeTypes: ASSIGNMENT_SUBMISSION_MIME_TYPES,
+          allowedExtensions: ASSIGNMENT_SUBMISSION_EXTENSIONS,
+          maxBytes: ASSIGNMENT_SUBMISSION_MAX_FILE_BYTES,
+          unsupportedTypeMessage: 'Unsupported submission file type.',
+          tooLargeMessage: 'Submission file exceeds the configured size limit.',
+        })
+      : null;
+
+    const submitData = {
+      note,
+      ...this.toSubmitFileRecord(uploadedSubmission),
       submitStatus,
       gradeStatus: GradeStatus.PENDING,
-    });
+    };
+
+    try {
+      if (existingSubmit) {
+        const updatedSubmit = await this.assignmentsRepository.updateSubmit(
+          existingSubmit.id,
+          assignmentId,
+          submitData,
+        );
+        if (uploadedSubmission?.publicId && existingSubmit.filePublicId) {
+          await this.storageService.deleteFile(existingSubmit.filePublicId);
+        }
+        return updatedSubmit;
+      }
+
+      return await this.assignmentsRepository.createSubmit({
+        assignmentId,
+        studentId,
+        ...submitData,
+      });
+    } catch (error) {
+      if (uploadedSubmission?.publicId) {
+        await this.storageService.deleteFile(uploadedSubmission.publicId);
+      }
+      throw error;
+    }
   }
 
   async getSubmitsForTeacher(assignmentId: string, teacherId: string) {
@@ -257,39 +327,59 @@ export class AssignmentsService {
     });
   }
 
-  private async resolveSubmissionFileUrl(
-    assignmentId: string,
-    studentId: string,
-    dto: SubmitAssignmentDto,
-    file?: Express.Multer.File,
-  ) {
-    if (file) {
-      if (!ASSIGNMENT_SUBMISSION_MIME_TYPES.has(file.mimetype)) {
-        throw new BadRequestException('Unsupported submission file type.');
-      }
-      const extension = extname(file.originalname).toLowerCase();
-      if (!ASSIGNMENT_SUBMISSION_EXTENSIONS.has(extension)) {
-        throw new BadRequestException('Unsupported submission file extension.');
-      }
-      if (file.size > ASSIGNMENT_SUBMISSION_MAX_FILE_BYTES) {
-        throw new BadRequestException(
-          'Submission file exceeds the configured size limit.',
-        );
-      }
-
-      return this.storageService.uploadFile(
-        file,
-        `eduscan/assignments/${assignmentId}/${studentId}`,
-      );
+  private async uploadAssignmentFile(input: {
+    file: Express.Multer.File;
+    folder: string;
+    allowedMimeTypes: Set<string>;
+    allowedExtensions: Set<string>;
+    maxBytes: number;
+    unsupportedTypeMessage: string;
+    tooLargeMessage: string;
+  }) {
+    if (!input.allowedMimeTypes.has(input.file.mimetype)) {
+      throw new BadRequestException(input.unsupportedTypeMessage);
     }
 
-    if (!dto.fileUrl?.trim()) {
-      throw new BadRequestException(
-        'Submission requires either an uploaded file or fileUrl.',
-      );
+    const extension = extname(input.file.originalname).toLowerCase();
+    if (!input.allowedExtensions.has(extension)) {
+      throw new BadRequestException('Unsupported file extension.');
     }
 
-    return dto.fileUrl.trim();
+    if (input.file.size > input.maxBytes) {
+      throw new BadRequestException(input.tooLargeMessage);
+    }
+
+    return this.storageService.uploadDocument(input.file, input.folder);
+  }
+
+  private toInstructionFileRecord(file: StoredFileMetadata | null) {
+    if (!file) {
+      return {};
+    }
+
+    return {
+      instructionFileUrl: file.url,
+      instructionFilePublicId: file.publicId,
+      instructionFileOriginalName: file.originalName,
+      instructionFileMimeType: file.mimeType,
+      instructionFileSizeBytes: file.sizeBytes,
+      instructionFileUploadedAt: file.uploadedAt,
+    };
+  }
+
+  private toSubmitFileRecord(file: StoredFileMetadata | null) {
+    if (!file) {
+      return {};
+    }
+
+    return {
+      fileUrl: file.url,
+      filePublicId: file.publicId,
+      fileOriginalName: file.originalName,
+      fileMimeType: file.mimeType,
+      fileSizeBytes: file.sizeBytes,
+      fileUploadedAt: file.uploadedAt,
+    };
   }
 
   async deleteAssignment(assignmentId: string, teacherId: string) {

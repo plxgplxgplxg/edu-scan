@@ -27,7 +27,12 @@ export class ClassesService {
     });
   }
 
-  async listTeacherClasses(teacherId: string, page = 1, limit = 10, keyword?: string) {
+  async listTeacherClasses(
+    teacherId: string,
+    page = 1,
+    limit = 10,
+    keyword?: string,
+  ) {
     const [classes, total] = await this.classesRepository.listTeacherClasses(
       teacherId,
       page,
@@ -45,7 +50,12 @@ export class ClassesService {
     };
   }
 
-  async listClasses(currentUser: AuthenticatedUser, page = 1, limit = 10, keyword?: string) {
+  async listClasses(
+    currentUser: AuthenticatedUser,
+    page = 1,
+    limit = 10,
+    keyword?: string,
+  ) {
     let classes: ClassLightweight[] = [];
     let total = 0;
     if (currentUser.role === Role.TEACHER) {
@@ -63,7 +73,11 @@ export class ClassesService {
         keyword,
       );
     } else {
-      [classes, total] = await this.classesRepository.listAllClasses(page, limit, keyword);
+      [classes, total] = await this.classesRepository.listAllClasses(
+        page,
+        limit,
+        keyword,
+      );
     }
     return {
       data: classes.map((item) => this.mapClassLightweightToResponse(item)),

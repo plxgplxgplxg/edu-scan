@@ -1,11 +1,13 @@
 /* eslint-disable react/no-unstable-nested-components, no-void, react-native/no-inline-styles */
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import {
   BookOpen,
   Clock,
+  FileText,
   Link,
   Upload,
+  X,
 } from 'lucide-react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -35,6 +37,7 @@ import { primaryHeroGradient } from '../../theme/header';
 import { formatVietnameseDate, isExpired } from '../../utils/format';
 import type { RootStackParamList } from '../../navigation/types';
 import { useAssignmentSubmission } from '../../features/assignments/application/useAssignmentSubmission';
+import { formatFileSize } from '../../features/assignments/domain/assignment-file-utils';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type TabKey = 'assignments' | 'info';
@@ -51,6 +54,7 @@ export function StudentClassDetailScreen() {
   
   const [tab, setTab] = useState<TabKey>('assignments');
   const [showSubmit, setShowSubmit] = useState<string | null>(null);
+  const [submitNote, setSubmitNote] = useState('');
 
   const { data, loading, error, reload } = useAsyncResource(
     async () => {
@@ -84,7 +88,7 @@ export function StudentClassDetailScreen() {
     submitError,
     pickFile,
     clearSelectedFile,
-    submitSelectedFile,
+    submitAssignmentContent,
   } = useAssignmentSubmission({
     accessToken,
     onSubmitted: reload,
@@ -140,6 +144,14 @@ export function StudentClassDetailScreen() {
   }
 
   const { currentClass } = data;
+  const activeSubmitAssignment = classAssignments.find(item => item.id === showSubmit) ?? null;
+  const activeSubmitExpired = activeSubmitAssignment ? isExpired(activeSubmitAssignment.deadline) : false;
+  const canSubmitActiveAssignment =
+    !!activeSubmitAssignment &&
+    !submitting &&
+    (!!submitNote.trim() || !!selectedFile) &&
+    (!activeSubmitExpired || activeSubmitAssignment.allowLate) &&
+    activeSubmitAssignment.gradeStatus !== 'GRADED';
 
   return (
     <Screen refreshing={loading} onRefresh={handleRefresh}>
@@ -211,6 +223,55 @@ export function StudentClassDetailScreen() {
                       {`${content.common.messages.lateAllowed} • ${String(item.latePenaltyPct)}%`}
                     </AppText>
                   ) : null}
+                  {item.instructionFileUrl ? (
+                    <Pressable
+                      style={styles.fileRow}
+                      onPress={() => {
+                        void Linking.openURL(item.instructionFileUrl || '');
+                      }}
+                    >
+                      <FileText size={16} color={palette.primary} />
+                      <View style={styles.flex}>
+                        <AppText variant="label" weight="semibold" color={palette.primary}>
+                          {item.instructionFileOriginalName ?? 'File hướng dẫn'}
+                        </AppText>
+                        <AppText variant="caption" color={palette.mutedForeground}>
+                          {`${item.instructionFileMimeType ?? 'Tài liệu'} • ${formatFileSize(item.instructionFileSizeBytes)}`}
+                        </AppText>
+                      </View>
+                    </Pressable>
+                  ) : null}
+                  {item.submitted ? (
+                    <View style={styles.submittedBox}>
+                      <AppText variant="label" weight="semibold" color={palette.success}>
+                        Đã nộp {item.submittedAt ? `• ${formatVietnameseDate(item.submittedAt)}` : ''}
+                      </AppText>
+                      {item.submitStatus ? <StatusBadge status={item.submitStatus} /> : null}
+                      {item.submittedNote ? (
+                        <AppText variant="caption" color={palette.mutedForeground}>
+                          {item.submittedNote}
+                        </AppText>
+                      ) : null}
+                      {item.submittedFileUrl ? (
+                        <Pressable
+                          style={styles.fileRow}
+                          onPress={() => {
+                            void Linking.openURL(item.submittedFileUrl || '');
+                          }}
+                        >
+                          <FileText size={16} color={palette.primary} />
+                          <View style={styles.flex}>
+                            <AppText variant="label" weight="semibold" color={palette.primary}>
+                              {item.submittedFileOriginalName ?? 'File bài làm'}
+                            </AppText>
+                            <AppText variant="caption" color={palette.mutedForeground}>
+                              {`${item.submittedFileMimeType ?? 'Tài liệu'} • ${formatFileSize(item.submittedFileSizeBytes)}`}
+                            </AppText>
+                          </View>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  ) : null}
                   {!item.submitted && (!expired || item.allowLate) ? (
                     <PrimaryButton
                       label={content.common.buttons.submitAssignment}
@@ -256,15 +317,28 @@ export function StudentClassDetailScreen() {
         ) : null}
       </View>
 
-      <ModalSheet visible={!!showSubmit} onClose={() => setShowSubmit(null)}>
+      <ModalSheet
+        visible={!!showSubmit}
+        onClose={() => {
+          setShowSubmit(null);
+          setSubmitNote('');
+          clearSelectedFile();
+        }}
+      >
         <AppText variant="headline" weight="bold" style={styles.sheetTitle}>
           {content.common.buttons.submitAssignment}
         </AppText>
         <AppText variant="body" color={palette.mutedForeground} style={styles.sheetSubtitle}>
-          {classAssignments.find(item => item.id === showSubmit)?.title ?? ''}
+          {activeSubmitAssignment?.title ?? ''}
         </AppText>
         <TextInputField
-          label="Tệp đã chọn"
+          label="Ghi chú"
+          value={submitNote}
+          onChangeText={setSubmitNote}
+          placeholder="Nhập ghi chú bài làm"
+        />
+        <TextInputField
+          label="File bài làm"
           value={selectedFile?.name ?? ''}
           editable={false}
           placeholder="Chưa có tệp nào được chọn"
@@ -277,18 +351,16 @@ export function StudentClassDetailScreen() {
                 {selectedFile.name}
               </AppText>
               <AppText variant="caption" color={palette.mutedForeground}>
-                {`${selectedFile.type || 'application/octet-stream'} • ${selectedFile.size ? `${String(Math.max(1, Math.round(selectedFile.size / 1024)))} KB` : 'Không rõ dung lượng'}`}
+                {`${selectedFile.type || 'application/octet-stream'} • ${formatFileSize(selectedFile.size)}`}
               </AppText>
             </View>
             <Pressable onPress={clearSelectedFile}>
-              <AppText variant="label" weight="semibold" color={palette.destructive}>
-                Xoá tệp
-              </AppText>
+              <X size={18} color={palette.destructive} />
             </Pressable>
           </SurfaceCard>
         ) : null}
         <AppText variant="caption" color={palette.mutedForeground} style={styles.sheetHint}>
-          PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, JPG/PNG hoặc ZIP • tối đa 25MB
+          PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, TXT hoặc ZIP • tối đa 20MB
         </AppText>
         <PrimaryButton
           label="Chọn tệp"
@@ -300,14 +372,16 @@ export function StudentClassDetailScreen() {
         <PrimaryButton
           label={content.common.buttons.submitAssignment}
           loading={submitting}
+          disabled={!canSubmitActiveAssignment}
           onPress={async () => {
             if (!showSubmit) {
               return;
             }
 
-            const submitted = await submitSelectedFile(showSubmit);
+            const submitted = await submitAssignmentContent(showSubmit, submitNote);
             if (submitted) {
               setShowSubmit(null);
+              setSubmitNote('');
             }
           }}
         />
@@ -352,6 +426,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+  },
+  fileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: appTheme.spacing.sm,
+    paddingVertical: appTheme.spacing.xs,
+  },
+  submittedBox: {
+    gap: appTheme.spacing.xs,
+    paddingTop: appTheme.spacing.xs,
   },
   expiredState: {
     backgroundColor: palette.destructiveSoft,

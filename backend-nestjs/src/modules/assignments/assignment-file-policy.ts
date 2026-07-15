@@ -1,6 +1,7 @@
-export const ASSIGNMENT_SUBMISSION_MAX_FILE_BYTES = 25 * 1024 * 1024;
+export const ASSIGNMENT_INSTRUCTION_MAX_FILE_BYTES = 10 * 1024 * 1024;
+export const ASSIGNMENT_SUBMISSION_MAX_FILE_BYTES = 20 * 1024 * 1024;
 
-export const ASSIGNMENT_SUBMISSION_MIME_TYPES = new Set([
+export const ASSIGNMENT_ATTACHMENT_MIME_TYPES = new Set([
   'application/pdf',
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -8,13 +9,12 @@ export const ASSIGNMENT_SUBMISSION_MIME_TYPES = new Set([
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'application/vnd.ms-powerpoint',
   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  'image/jpeg',
-  'image/png',
+  'text/plain',
   'application/zip',
   'application/x-zip-compressed',
 ]);
 
-export const ASSIGNMENT_SUBMISSION_EXTENSIONS = new Set([
+export const ASSIGNMENT_ATTACHMENT_EXTENSIONS = new Set([
   '.pdf',
   '.doc',
   '.docx',
@@ -22,8 +22,15 @@ export const ASSIGNMENT_SUBMISSION_EXTENSIONS = new Set([
   '.xlsx',
   '.ppt',
   '.pptx',
-  '.jpg',
-  '.jpeg',
-  '.png',
+  '.txt',
   '.zip',
 ]);
+
+export const ASSIGNMENT_INSTRUCTION_MIME_TYPES =
+  ASSIGNMENT_ATTACHMENT_MIME_TYPES;
+export const ASSIGNMENT_INSTRUCTION_EXTENSIONS =
+  ASSIGNMENT_ATTACHMENT_EXTENSIONS;
+export const ASSIGNMENT_SUBMISSION_MIME_TYPES =
+  ASSIGNMENT_ATTACHMENT_MIME_TYPES;
+export const ASSIGNMENT_SUBMISSION_EXTENSIONS =
+  ASSIGNMENT_ATTACHMENT_EXTENSIONS;

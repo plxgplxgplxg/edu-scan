@@ -259,18 +259,22 @@ export class ExamsRepository {
       const existingVariants = await tx.examVariant.findMany({
         where: { examId },
       });
-      const existingVariantsMap = new Map(existingVariants.map(v => [v.testCode, v.id]));
-      const payloadTestCodes = new Set(data.variants.map(v => v.testCode));
+      const existingVariantsMap = new Map(
+        existingVariants.map((v) => [v.testCode, v.id]),
+      );
+      const payloadTestCodes = new Set(data.variants.map((v) => v.testCode));
 
       // Xoá các variants không còn trong payload
-      const variantsToDelete = existingVariants.filter(v => !payloadTestCodes.has(v.testCode));
+      const variantsToDelete = existingVariants.filter(
+        (v) => !payloadTestCodes.has(v.testCode),
+      );
       if (variantsToDelete.length > 0) {
         await tx.examVariant.deleteMany({
           where: {
             id: {
-              in: variantsToDelete.map(v => v.id)
-            }
-          }
+              in: variantsToDelete.map((v) => v.id),
+            },
+          },
         });
       }
 
@@ -286,7 +290,7 @@ export class ExamsRepository {
       // Đồng bộ variants và answerKeys
       for (const variant of data.variants) {
         let variantId = existingVariantsMap.get(variant.testCode);
-        
+
         if (!variantId) {
           const created = await tx.examVariant.create({
             data: {
@@ -434,7 +438,13 @@ export class ExamsRepository {
 
       // Tự động khôi phục resolvedVariantId nếu bị null hoặc không tìm thấy trong DB hiện tại
       if (!variantId || !variantAnswerKeysMap.has(variantId)) {
-        const lookupCode = (sub.resolvedTestCode || sub.detectedTestId || 'DEFAULT').trim().toUpperCase();
+        const lookupCode = (
+          sub.resolvedTestCode ||
+          sub.detectedTestId ||
+          'DEFAULT'
+        )
+          .trim()
+          .toUpperCase();
         let matchedVariantId = variantTestCodeMap.get(lookupCode);
 
         if (!matchedVariantId && exam.variants.length === 1) {
@@ -450,7 +460,9 @@ export class ExamsRepository {
         }
       }
 
-      const answerKeysMap = variantId ? variantAnswerKeysMap.get(variantId) : null;
+      const answerKeysMap = variantId
+        ? variantAnswerKeysMap.get(variantId)
+        : null;
 
       let correctCount = 0;
       let wrongCount = 0;
@@ -460,11 +472,16 @@ export class ExamsRepository {
 
       for (const detail of sub.details) {
         const finalAnswer = detail.finalAnswer;
-        const correctAnswer = answerKeysMap ? (answerKeysMap.get(detail.questionNumber) ?? null) : null;
-        
+        const correctAnswer = answerKeysMap
+          ? (answerKeysMap.get(detail.questionNumber) ?? null)
+          : null;
+
         // So sánh không phân biệt hoa thường và khoảng trắng để tránh lỗi lệch kiểu
-        const isCorrect = finalAnswer !== null && correctAnswer !== null && 
-          String(finalAnswer).trim().toUpperCase() === String(correctAnswer).trim().toUpperCase();
+        const isCorrect =
+          finalAnswer !== null &&
+          correctAnswer !== null &&
+          String(finalAnswer).trim().toUpperCase() ===
+            String(correctAnswer).trim().toUpperCase();
 
         let needsReview = detail.needsReview;
         let reviewReason = detail.reviewReason;
@@ -501,16 +518,20 @@ export class ExamsRepository {
               needsReview,
               reviewReason,
             },
-          })
+          }),
         );
       }
 
-      const totalQuestions = answerKeysMap ? answerKeysMap.size : sub.details.length;
-      const score = totalQuestions > 0 && answerKeysMap && answerKeysMap.size > 0
-        ? (correctCount / answerKeysMap.size) * exam.maxScore
-        : 0;
+      const totalQuestions = answerKeysMap
+        ? answerKeysMap.size
+        : sub.details.length;
+      const score =
+        totalQuestions > 0 && answerKeysMap && answerKeysMap.size > 0
+          ? (correctCount / answerKeysMap.size) * exam.maxScore
+          : 0;
 
-      const subNeedsReview = sub.details.some(d => d.needsReview) || reviewCount > 0;
+      const subNeedsReview =
+        sub.details.some((d) => d.needsReview) || reviewCount > 0;
 
       await Promise.all(detailUpdates);
 

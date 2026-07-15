@@ -8,7 +8,23 @@ import {
   Max,
   IsDateString,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
+
+function toOptionalBoolean(value: unknown) {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'string') {
+    return value.toLowerCase() === 'true';
+  }
+  if (typeof value === 'number') {
+    return value === 1;
+  }
+  return false;
+}
 
 export class CreateAssignmentDto {
   @IsString()
@@ -24,6 +40,7 @@ export class CreateAssignmentDto {
 
   @IsOptional()
   @IsBoolean()
+  @Transform(({ value }) => toOptionalBoolean(value))
   allowLate?: boolean;
 
   @IsOptional()

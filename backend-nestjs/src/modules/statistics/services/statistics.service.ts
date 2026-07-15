@@ -58,54 +58,58 @@ export class StatisticsService {
       },
     });
 
-    const [classesData, studentCountsByClass, examsData, gradedSubmissionsByExam] =
-      await this.prisma.$transaction([
-        this.prisma.class.findMany({
-          where: { teacherId },
-          select: {
-            id: true,
-            name: true,
-          },
-          orderBy: {
-            createdAt: 'asc',
-          },
-        }),
-        this.prisma.classEnrollment.groupBy({
-          by: ['classId'],
-          orderBy: {
-            classId: 'asc',
-          },
-          where: {
-            class: { teacherId },
-          },
-          _count: {
-            _all: true,
-          },
-        }),
-        this.prisma.exam.findMany({
-          where: { teacherId },
-          select: {
-            id: true,
-            title: true,
-          },
-          orderBy: {
-            createdAt: 'asc',
-          },
-        }),
-        this.prisma.submission.groupBy({
-          by: ['examId'],
-          orderBy: {
-            examId: 'asc',
-          },
-          where: {
-            exam: { teacherId },
-            status: SubmissionStatus.GRADED,
-          },
-          _count: {
-            _all: true,
-          },
-        }),
-      ]);
+    const [
+      classesData,
+      studentCountsByClass,
+      examsData,
+      gradedSubmissionsByExam,
+    ] = await this.prisma.$transaction([
+      this.prisma.class.findMany({
+        where: { teacherId },
+        select: {
+          id: true,
+          name: true,
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      }),
+      this.prisma.classEnrollment.groupBy({
+        by: ['classId'],
+        orderBy: {
+          classId: 'asc',
+        },
+        where: {
+          class: { teacherId },
+        },
+        _count: {
+          _all: true,
+        },
+      }),
+      this.prisma.exam.findMany({
+        where: { teacherId },
+        select: {
+          id: true,
+          title: true,
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      }),
+      this.prisma.submission.groupBy({
+        by: ['examId'],
+        orderBy: {
+          examId: 'asc',
+        },
+        where: {
+          exam: { teacherId },
+          status: SubmissionStatus.GRADED,
+        },
+        _count: {
+          _all: true,
+        },
+      }),
+    ]);
 
     const groupedStudentCounts = studentCountsByClass as Array<{
       classId: string;
@@ -286,7 +290,12 @@ export class StatisticsService {
 
   async getTeacherLateMissingStudents(
     teacherId: string,
-    query: { classId?: string; timeRange?: string; page?: number; limit?: number },
+    query: {
+      classId?: string;
+      timeRange?: string;
+      page?: number;
+      limit?: number;
+    },
   ) {
     const { classId, timeRange, page = 1, limit = 10 } = query;
     const now = new Date();
@@ -388,12 +397,14 @@ export class StatisticsService {
       return { classes, exams, omrBatches };
     }
     if (role === Role.STUDENT) {
-      const classes = await this.prisma.classEnrollment.count({ where: { studentId: userId } });
+      const classes = await this.prisma.classEnrollment.count({
+        where: { studentId: userId },
+      });
       const pendingAssignments = await this.prisma.assignment.count({
         where: {
           class: { enrollments: { some: { studentId: userId } } },
-          submits: { none: { studentId: userId } }
-        }
+          submits: { none: { studentId: userId } },
+        },
       });
       return { classes, assignments: pendingAssignments };
     }

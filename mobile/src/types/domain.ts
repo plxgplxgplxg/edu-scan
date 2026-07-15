@@ -50,6 +50,18 @@ export interface AssignmentSummary {
   maxScore: number;
   allowLate: boolean;
   latePenaltyPct: number;
+  instructionFileUrl?: string | null;
+  instructionFileOriginalName?: string | null;
+  instructionFileMimeType?: string | null;
+  instructionFileSizeBytes?: number | null;
+  instructionFileUploadedAt?: string | null;
+  submittedAt?: string | null;
+  submittedNote?: string | null;
+  submittedFileUrl?: string | null;
+  submittedFileOriginalName?: string | null;
+  submittedFileMimeType?: string | null;
+  submittedFileSizeBytes?: number | null;
+  submittedFileUploadedAt?: string | null;
 }
 
 export interface ExamSummary {

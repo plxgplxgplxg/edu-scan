@@ -75,8 +75,8 @@ export class StatisticsController {
     assertUserRole(currentUser, [Role.TEACHER]);
     return this.statisticsService.getTeacherLateMissingStudents(
       currentUser.id,
-      { 
-        classId, 
+      {
+        classId,
         timeRange,
         page: page ? parseInt(page, 10) : undefined,
         limit: limit ? parseInt(limit, 10) : undefined,
@@ -87,6 +87,9 @@ export class StatisticsController {
   @Get('profile')
   @Roles(Role.TEACHER, Role.STUDENT, Role.ADMIN)
   async getProfileStats(@CurrentUser() currentUser: AuthenticatedUser) {
-    return this.statisticsService.getProfileStats(currentUser.id, currentUser.role);
+    return this.statisticsService.getProfileStats(
+      currentUser.id,
+      currentUser.role,
+    );
   }
 }

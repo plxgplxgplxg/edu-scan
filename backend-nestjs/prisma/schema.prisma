@@ -189,38 +189,50 @@ model SubmissionDetail {
 }
 
 model Assignment {
-  id             String             @id @default(uuid()) @db.Uuid
-  title          String
-  description    String?
-  deadline       DateTime
-  allowLate      Boolean            @default(false)
-  latePenaltyPct Float              @default(0)
-  maxScore       Float              @default(10)
-  teacherId      String             @db.Uuid
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  classId        String             @db.Uuid
-  class          Class              @relation(fields: [classId], references: [id])
-  teacher        User               @relation("TeacherAssignments", fields: [teacherId], references: [id])
-  submits        AssignmentSubmit[]
+  id                              String             @id @default(uuid()) @db.Uuid
+  title                           String
+  description                     String?
+  instructionFileUrl              String?
+  instructionFilePublicId         String?
+  instructionFileOriginalName     String?
+  instructionFileMimeType         String?
+  instructionFileSizeBytes        Int?
+  instructionFileUploadedAt       DateTime?
+  deadline                        DateTime
+  allowLate                       Boolean            @default(false)
+  latePenaltyPct                  Float              @default(0)
+  maxScore                        Float              @default(10)
+  teacherId                       String             @db.Uuid
+  createdAt                       DateTime           @default(now())
+  updatedAt                       DateTime           @updatedAt
+  classId                         String             @db.Uuid
+  class                           Class              @relation(fields: [classId], references: [id])
+  teacher                         User               @relation("TeacherAssignments", fields: [teacherId], references: [id])
+  submits                         AssignmentSubmit[]
 
   @@index([teacherId])
   @@index([classId])
 }
 
 model AssignmentSubmit {
-  id           String       @id @default(uuid()) @db.Uuid
-  assignmentId String       @db.Uuid
-  studentId    String       @db.Uuid
-  fileUrl      String
-  submitStatus SubmitStatus
-  gradeStatus  GradeStatus  @default(PENDING)
-  score        Float?
-  feedback     String?
-  submittedAt  DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  assignment   Assignment   @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  student      User         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  id                   String       @id @default(uuid()) @db.Uuid
+  assignmentId         String       @db.Uuid
+  studentId            String       @db.Uuid
+  note                 String?
+  fileUrl              String?
+  filePublicId         String?
+  fileOriginalName     String?
+  fileMimeType         String?
+  fileSizeBytes        Int?
+  fileUploadedAt       DateTime?
+  submitStatus         SubmitStatus
+  gradeStatus          GradeStatus  @default(PENDING)
+  score                Float?
+  feedback             String?
+  submittedAt          DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  assignment           Assignment   @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student              User         @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([assignmentId, studentId])
   @@index([studentId])

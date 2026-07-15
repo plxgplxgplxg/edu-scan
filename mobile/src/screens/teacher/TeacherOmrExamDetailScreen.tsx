@@ -1,6 +1,6 @@
 /* eslint-disable react/no-unstable-nested-components, no-void, react-native/no-inline-styles */
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, View, Image, Modal, Alert, ScrollView, RefreshControl } from 'react-native';
+import { Pressable, StyleSheet, View, Image, Modal, Alert, ScrollView, RefreshControl, TextInput } from 'react-native';
 import { ArrowLeft, ImageIcon, ScanLine, ChevronRight, Pencil, Settings } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -40,9 +40,9 @@ export function TeacherOmrExamDetailScreen() {
   const { showToast } = useToast();
 
   const [tab, setTab] = useState<'overview' | 'submissions' | 'settings'>('overview');
-  const [page] = useState(1);
-  const [keyword] = useState('');
-  const [sortScore] = useState<'asc'|'desc'>('desc');
+  const [page, setPage] = useState(1);
+  const [keyword, setKeyword] = useState('');
+  const [sortScore, setSortScore] = useState<'asc'|'desc' | undefined>(undefined);
   const [showUpload, setShowUpload] = useState(false);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
 
@@ -163,6 +163,27 @@ export function TeacherOmrExamDetailScreen() {
   const renderSubmissions = () => {
     return (
       <View style={{ gap: appTheme.spacing.md }}>
+        <TextInput
+          placeholder="Tìm theo số báo danh..."
+          placeholderTextColor={palette.mutedForeground}
+          value={keyword}
+          onChangeText={(txt) => {
+            setKeyword(txt);
+            setPage(1);
+          }}
+          style={{
+            height: 48,
+            backgroundColor: palette.card,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: palette.border,
+            paddingHorizontal: 16,
+            fontSize: 15,
+            color: palette.foreground,
+            marginBottom: 8,
+          }}
+        />
+
         {submissionsData?.items?.map(sub => (
           <Pressable key={sub.id} onPress={() => setSelectedSubmissionId(sub.id)}>
             <SurfaceCard style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
@@ -178,10 +199,31 @@ export function TeacherOmrExamDetailScreen() {
             </SurfaceCard>
           </Pressable>
         ))}
+
         {(!submissionsData?.items || submissionsData?.items?.length === 0) && !loading && (
           <AppText variant="body" color={palette.mutedForeground} style={{ textAlign: 'center', marginTop: appTheme.spacing.xl }}>
             Chưa có lượt chấm nào.
           </AppText>
+        )}
+
+        {submissionsData && submissionsData.totalPages > 1 && (
+          <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16, marginTop: 16 }}>
+            <Pressable 
+              disabled={page <= 1} 
+              onPress={() => setPage(page - 1)}
+              style={{ paddingHorizontal: 16, paddingVertical: 10, backgroundColor: page <= 1 ? palette.border : palette.primary, borderRadius: 12 }}
+            >
+              <AppText variant="body" weight="bold" color={page <= 1 ? palette.mutedForeground : palette.white}>Trước</AppText>
+            </Pressable>
+            <AppText variant="body" weight="bold" color={palette.foreground}>{page} / {submissionsData.totalPages}</AppText>
+            <Pressable 
+              disabled={page >= submissionsData.totalPages} 
+              onPress={() => setPage(page + 1)}
+              style={{ paddingHorizontal: 16, paddingVertical: 10, backgroundColor: page >= submissionsData.totalPages ? palette.border : palette.primary, borderRadius: 12 }}
+            >
+              <AppText variant="body" weight="bold" color={page >= submissionsData.totalPages ? palette.mutedForeground : palette.white}>Sau</AppText>
+            </Pressable>
+          </View>
         )}
       </View>
     );

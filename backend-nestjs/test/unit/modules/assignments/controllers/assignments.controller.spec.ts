@@ -69,7 +69,11 @@ describe('AssignmentsController', () => {
 
       const result = await controller.create(dto, mockTeacherReq);
 
-      expect(service.createAssignment).toHaveBeenCalledWith(TEACHER_ID, dto);
+      expect(service.createAssignment).toHaveBeenCalledWith(
+        TEACHER_ID,
+        dto,
+        undefined,
+      );
       expect(result).toEqual(mockAssignment);
     });
   });
@@ -116,7 +120,7 @@ describe('AssignmentsController', () => {
 
   describe('POST /assignments/:id/submits (submitAssignment)', () => {
     it('should call service.submitAssignment with studentId from request', async () => {
-      const dto = { fileUrl: 'https://cloudinary.com/file.pdf' };
+      const dto = { note: 'Bài làm của em' };
       const file = {
         originalname: 'essay.pdf',
       } as Express.Multer.File;

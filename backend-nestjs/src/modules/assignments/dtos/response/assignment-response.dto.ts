@@ -30,6 +30,24 @@ export class AssignmentResponseDto {
   @ApiProperty({ nullable: true })
   description!: string | null;
 
+  @ApiProperty({ nullable: true })
+  instructionFileUrl!: string | null;
+
+  @ApiProperty({ nullable: true })
+  instructionFilePublicId!: string | null;
+
+  @ApiProperty({ nullable: true })
+  instructionFileOriginalName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  instructionFileMimeType!: string | null;
+
+  @ApiProperty({ nullable: true })
+  instructionFileSizeBytes!: number | null;
+
+  @ApiProperty({ type: String, format: 'date-time', nullable: true })
+  instructionFileUploadedAt!: Date | null;
+
   @ApiProperty({ type: String, format: 'date-time' })
   deadline!: Date;
 
@@ -88,9 +106,6 @@ export class AssignmentSubmitResponseDto {
   @ApiProperty({ format: 'uuid' })
   studentId!: string;
 
-  @ApiProperty()
-  fileUrl!: string;
-
   @ApiProperty({ enum: SubmitStatus, enumName: 'SubmitStatus' })
   submitStatus!: SubmitStatus;
 
@@ -99,6 +114,27 @@ export class AssignmentSubmitResponseDto {
 
   @ApiProperty({ nullable: true })
   score!: number | null;
+
+  @ApiProperty({ nullable: true })
+  note!: string | null;
+
+  @ApiProperty({ nullable: true })
+  fileUrl!: string | null;
+
+  @ApiProperty({ nullable: true })
+  filePublicId!: string | null;
+
+  @ApiProperty({ nullable: true })
+  fileOriginalName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  fileMimeType!: string | null;
+
+  @ApiProperty({ nullable: true })
+  fileSizeBytes!: number | null;
+
+  @ApiProperty({ type: String, format: 'date-time', nullable: true })
+  fileUploadedAt!: Date | null;
 
   @ApiProperty({ nullable: true })
   feedback!: string | null;

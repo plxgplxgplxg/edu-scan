@@ -7,9 +7,11 @@ import {
   Clock,
   Copy,
   ClipboardList,
+  FileText,
   Trash2,
   UserPlus,
   Users,
+  X,
 } from 'lucide-react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -55,6 +57,17 @@ import { useResponsiveLayout } from '../../theme/responsive';
 import { primaryHeroGradient } from '../../theme/header';
 import { formatVietnameseDate, percentage } from '../../utils/format';
 import type { RootStackParamList } from '../../navigation/types';
+import type { NativeFile } from '../../features/shared/domain/native-file';
+import { pickSingleDocument } from '../../features/shared/infrastructure/document-picker/document-picker-adapter';
+import {
+  ASSIGNMENT_INSTRUCTION_EXTENSIONS,
+  ASSIGNMENT_INSTRUCTION_MAX_FILE_BYTES,
+  ASSIGNMENT_INSTRUCTION_MIME_TYPES,
+} from '../../features/assignments/domain/assignment-file-policy';
+import {
+  formatFileSize,
+  getFileExtension,
+} from '../../features/assignments/domain/assignment-file-utils';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type DetailTab = 'students' | 'assignments' | 'info';
@@ -95,6 +108,7 @@ export function TeacherClassDetailScreen() {
     maxScore: '10',
     latePenaltyPct: '10',
   });
+  const [assignmentInstructionFile, setAssignmentInstructionFile] = useState<NativeFile | null>(null);
   const { data, loading, error, reload } = useAsyncResource(
     async () => {
       if (!accessToken || !classId) {
@@ -309,6 +323,26 @@ export function TeacherClassDetailScreen() {
     );
   };
 
+  const pickInstructionFile = async () => {
+    const file = await pickSingleDocument(ASSIGNMENT_INSTRUCTION_MIME_TYPES);
+    if (!file) {
+      return;
+    }
+
+    if (!ASSIGNMENT_INSTRUCTION_EXTENSIONS.has(getFileExtension(file.name))) {
+      setSubmitError('Định dạng file hướng dẫn không được hỗ trợ');
+      return;
+    }
+
+    if (file.size !== null && file.size > ASSIGNMENT_INSTRUCTION_MAX_FILE_BYTES) {
+      setSubmitError('File hướng dẫn vượt quá giới hạn 10MB');
+      return;
+    }
+
+    setAssignmentInstructionFile(file);
+    setSubmitError(null);
+  };
+
   const tabItems = useMemo(
     () => [
       { id: 'students' as const, label: `${content.common.tabs.students} (${String(classStudents.length)})` },
@@ -476,6 +510,24 @@ export function TeacherClassDetailScreen() {
                         <AppText variant="caption" color={palette.mutedForeground}>
                           {item.description}
                         </AppText>
+                      ) : null}
+                      {item.instructionFileUrl ? (
+                        <Pressable
+                          style={styles.fileRow}
+                          onPress={() => {
+                            void Linking.openURL(item.instructionFileUrl || '');
+                          }}
+                        >
+                          <FileText size={15} color={palette.primary} />
+                          <View style={styles.flex}>
+                            <AppText variant="label" weight="semibold" color={palette.primary}>
+                              {item.instructionFileOriginalName ?? 'File hướng dẫn'}
+                            </AppText>
+                            <AppText variant="caption" color={palette.mutedForeground}>
+                              {`${item.instructionFileMimeType ?? 'Tài liệu'} • ${formatFileSize(item.instructionFileSizeBytes)}`}
+                            </AppText>
+                          </View>
+                        </Pressable>
                       ) : null}
                     </View>
                     <View style={styles.scoreBadge}>
@@ -648,7 +700,10 @@ export function TeacherClassDetailScreen() {
 
       <ModalSheet
         visible={showCreateAssignment}
-        onClose={() => setShowCreateAssignment(false)}
+        onClose={() => {
+          setShowCreateAssignment(false);
+          setAssignmentInstructionFile(null);
+        }}
       >
         <AppText variant="headline" weight="bold" style={styles.sheetTitle}>
           {content.teacher.classes.newAssignment}
@@ -670,6 +725,36 @@ export function TeacherClassDetailScreen() {
             }
             placeholder={content.common.placeholders.assignmentDescription}
           />
+          <View style={styles.filePickerBlock}>
+            <AppText variant="label" weight="semibold">
+              File hướng dẫn
+            </AppText>
+            {assignmentInstructionFile ? (
+              <SurfaceCard style={styles.selectedFileCard}>
+                <View style={styles.flex}>
+                  <AppText variant="body" weight="medium">
+                    {assignmentInstructionFile.name}
+                  </AppText>
+                  <AppText variant="caption" color={palette.mutedForeground}>
+                    {`${assignmentInstructionFile.type || 'application/octet-stream'} • ${formatFileSize(assignmentInstructionFile.size)}`}
+                  </AppText>
+                </View>
+                <Pressable onPress={() => setAssignmentInstructionFile(null)}>
+                  <X size={18} color={palette.destructive} />
+                </Pressable>
+              </SurfaceCard>
+            ) : null}
+            <PrimaryButton
+              label="Chọn file"
+              variant="outline"
+              onPress={() => {
+                void pickInstructionFile();
+              }}
+            />
+            <AppText variant="caption" color={palette.mutedForeground}>
+              PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, TXT hoặc ZIP • tối đa 10MB
+            </AppText>
+          </View>
           <TextInputField
             label={content.common.form.deadline}
             value={assignmentForm.deadline}
@@ -725,6 +810,13 @@ export function TeacherClassDetailScreen() {
                   allowLate: assignmentForm.allowLate,
                   latePenaltyPct: assignmentForm.allowLate ? Number(assignmentForm.latePenaltyPct) : 0,
                   classId: currentClass.id,
+                  instructionFile: assignmentInstructionFile
+                    ? {
+                        uri: assignmentInstructionFile.uri,
+                        name: assignmentInstructionFile.name,
+                        type: assignmentInstructionFile.type,
+                      }
+                    : undefined,
                 });
                 setShowCreateAssignment(false);
                 setAssignmentForm({
@@ -735,6 +827,7 @@ export function TeacherClassDetailScreen() {
                   maxScore: '10',
                   latePenaltyPct: '10',
                 });
+                setAssignmentInstructionFile(null);
                 await reload();
               } catch (err) {
                 setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
@@ -776,23 +869,51 @@ export function TeacherClassDetailScreen() {
                       {student.name}
                     </AppText>
                     <AppText variant="caption" color={palette.mutedForeground}>
-                      {`${student.studentCode || student.email} • ${submitLabel}`}
+                      {`${student.studentCode || student.email} • ${submitLabel}${submit?.submittedAt ? ` • ${formatVietnameseDate(submit.submittedAt)}` : ''}`}
                     </AppText>
                   </View>
                   {submit?.fileUrl ? (
                     <Pressable
-                      onPress={() => {
-                        void Linking.openURL(submit.fileUrl);
-                      }}
+	                      onPress={() => {
+	                        void Linking.openURL(submit.fileUrl || '');
+	                      }}
                     >
                       <AppText variant="label" weight="semibold" color={palette.primary}>
-                        Tải file
+                        Mở file
                       </AppText>
                     </Pressable>
                   ) : null}
                 </View>
                 {submit && form ? (
                   <View style={styles.gradeForm}>
+                    {submit.note ? (
+                      <View style={styles.submissionInfoBlock}>
+                        <AppText variant="caption" color={palette.mutedForeground}>
+                          Ghi chú
+                        </AppText>
+                        <AppText variant="body">
+                          {submit.note}
+                        </AppText>
+                      </View>
+                    ) : null}
+                    {submit.fileUrl ? (
+                      <Pressable
+                        style={styles.fileRow}
+                        onPress={() => {
+                          void Linking.openURL(submit.fileUrl || '');
+                        }}
+                      >
+                        <FileText size={16} color={palette.primary} />
+                        <View style={styles.flex}>
+                          <AppText variant="label" weight="semibold" color={palette.primary}>
+                            {submit.fileOriginalName ?? 'File bài làm'}
+                          </AppText>
+                          <AppText variant="caption" color={palette.mutedForeground}>
+                            {`${submit.fileMimeType ?? 'Tài liệu'} • ${formatFileSize(submit.fileSizeBytes)}`}
+                          </AppText>
+                        </View>
+                      </Pressable>
+                    ) : null}
                     <TextInputField
                       label="Điểm"
                       value={form.score}
@@ -931,6 +1052,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
+  fileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: appTheme.spacing.sm,
+    paddingVertical: appTheme.spacing.xs,
+  },
   progressRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -958,10 +1085,21 @@ const styles = StyleSheet.create({
   sheetForm: {
     gap: appTheme.spacing.lg,
   },
+  filePickerBlock: {
+    gap: appTheme.spacing.sm,
+  },
+  selectedFileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: appTheme.spacing.md,
+  },
   submitCard: {
     gap: appTheme.spacing.md,
   },
   gradeForm: {
     gap: appTheme.spacing.sm,
+  },
+  submissionInfoBlock: {
+    gap: 4,
   },
 });

@@ -117,6 +117,7 @@ describe('Cross-module hardening flows', () => {
       };
 
       const moduleRef: TestingModule = await Test.createTestingModule({
+        imports: [EventEmitterModule.forRoot()],
         providers: [
           ExamsService,
           { provide: ExamsRepository, useValue: examsRepository },

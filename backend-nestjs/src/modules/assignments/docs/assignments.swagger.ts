@@ -1,5 +1,5 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiBody, ApiParam } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiParam } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 import { ApiModuleTag } from '../../../common/swagger/decorators/api-module-tag.decorator';
 import { ApiBearerOperation } from '../../../common/swagger/decorators/api-auth.decorator';
@@ -29,6 +29,7 @@ export const AssignmentsSwagger = {
         notes:
           'Giáo viên tạo bài tập, hạn nộp và cấu hình chấm điểm cho học sinh trong lớp.',
       }),
+      ApiConsumes('multipart/form-data'),
       ApiBody({ type: CreateAssignmentDto }),
       ApiWrappedCreatedResponse({
         type: AssignmentResponseDto,
@@ -79,6 +80,7 @@ export const AssignmentsSwagger = {
           'Học sinh nộp bài cho đúng bài tập theo `id`. Dữ liệu nộp phải tuân theo cấu trúc của `SubmitAssignmentDto`.',
       }),
       ApiParam({ name: 'id', description: 'ID bài tập', format: 'uuid' }),
+      ApiConsumes('multipart/form-data'),
       ApiBody({ type: SubmitAssignmentDto }),
       ApiWrappedCreatedResponse({
         type: AssignmentSubmitResponseDto,

@@ -118,7 +118,17 @@ describe('SubmissionsService', () => {
 
   describe('manualOverride', () => {
     it('should update submission correctly', async () => {
-      const mockSubmission = { id: 'sub-1', details: [] };
+      const mockSubmission = {
+        id: 'sub-1',
+        details: [
+          {
+            submissionId: 'sub-1',
+            questionNumber: 1,
+            finalAnswer: AnswerChoice.A,
+          },
+        ],
+        exam: { maxScore: 10 },
+      };
       jest
         .spyOn(repository, 'findOneWithDetails')
         .mockResolvedValue(mockSubmission as any);
@@ -133,7 +143,18 @@ describe('SubmissionsService', () => {
           }),
         },
         submissionDetail: {
-          update: jest.fn().mockResolvedValue({}),
+          update: jest.fn().mockResolvedValue({
+            questionNumber: 1,
+            finalAnswer: AnswerChoice.B,
+            isCorrect: true,
+            needsReview: false,
+          }),
+        },
+        examVariant: {
+          findUnique: jest.fn().mockResolvedValue({
+            id: 'variant-1',
+            answerKeys: [{ questionNumber: 1, correctAnswer: AnswerChoice.B }],
+          }),
         },
       };
       (prisma.$transaction as jest.Mock).mockImplementation(async (cb: any) =>
@@ -151,13 +172,18 @@ describe('SubmissionsService', () => {
       expect(tx.user.findUnique).toHaveBeenCalledWith({
         where: { studentCode: '12345' },
       });
-      expect(tx.submission.update).toHaveBeenCalledWith({
+      expect(tx.submission.update).toHaveBeenNthCalledWith(1, {
         where: { id: 'sub-1' },
         data: expect.objectContaining({
           studentId: 'student-1',
           studentCode: '12345',
           resolvedVariantId: 'variant-1',
           testCodeResolutionStatus: TestCodeResolutionStatus.MATCHED,
+        }),
+      });
+      expect(tx.submission.update).toHaveBeenNthCalledWith(2, {
+        where: { id: 'sub-1' },
+        data: expect.objectContaining({
           status: SubmissionStatus.GRADED,
         }),
       });
@@ -168,9 +194,9 @@ describe('SubmissionsService', () => {
             questionNumber: 1,
           },
         },
-        data: {
+        data: expect.objectContaining({
           finalAnswer: AnswerChoice.B,
-        },
+        }),
       });
     });
   });

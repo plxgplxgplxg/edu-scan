@@ -117,16 +117,15 @@ class StudentIdDetector:
     ) -> np.ndarray:
         if field_name in located_boxes:
             region = self._extract_box(processed_image, located_boxes[field_name])
+            if template and template.name == TnTeamBlockLocator.TEMPLATE_NAME and region.size > 0:
+                h = region.shape[0]
+                region = region[int(h / 11):, :]
         else:
             region = (
                 self.anchor_locator.locate(processed_image, fallback_region)
                 if template.use_anchor_locator
                 else self._extract_region(processed_image, fallback_region)
             )
-
-        if template and template.name == TnTeamBlockLocator.TEMPLATE_NAME and region.size > 0:
-            h = region.shape[0]
-            region = region[int(h / 11):, :]
 
         return region
 
@@ -437,6 +436,9 @@ class StudentIdDetector:
             located_boxes = self.tnteam_block_locator.locate_blocks(processed_image)
             if "roll_no" in located_boxes:
                 region = self._extract_box(processed_image, located_boxes["roll_no"])
+                if region.size > 0:
+                    h = region.shape[0]
+                    region = region[int(h / 11):, :]
 
         if region is None:
             if template and template.student_id_region:
@@ -446,10 +448,6 @@ class StudentIdDetector:
                 top = int(height * 0.05)
                 bottom = int(height * self.region_height_ratio)
                 region = processed_image[top:bottom, :]
-
-        if template and template.name == TnTeamBlockLocator.TEMPLATE_NAME and region is not None and region.size > 0:
-            h = region.shape[0]
-            region = region[int(h / 11):, :]
 
         return region
 

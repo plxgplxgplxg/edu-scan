@@ -1,13 +1,26 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { Prisma } from '@prisma/client';
+import { GetSubmissionsQueryDto } from '../dtos/get-submissions-query.dto';
 
 @Injectable()
 export class SubmissionsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(query: any) {
-    const { page = 1, limit = 10, keyword, sortScore, variantCode, examId, classId, batchId, studentId, status, testCodeResolutionStatus } = query;
+  async findAll(query: GetSubmissionsQueryDto) {
+    const {
+      page = 1,
+      limit = 10,
+      keyword,
+      sortScore,
+      variantCode,
+      examId,
+      classId,
+      batchId,
+      studentId,
+      status,
+      testCodeResolutionStatus,
+    } = query;
     const skip = (page - 1) * limit;
 
     const where: Prisma.SubmissionWhereInput = {
@@ -58,7 +71,13 @@ export class SubmissionsRepository {
       this.prisma.submission.count({ where }),
     ]);
 
-    return { items: data, total, page, limit, totalPages: Math.ceil(total / limit) };
+    return {
+      items: data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findOneWithDetails(id: string) {

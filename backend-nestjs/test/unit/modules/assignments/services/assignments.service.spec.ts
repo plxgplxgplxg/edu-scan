@@ -10,7 +10,11 @@ import { AssignmentsRepository } from '../../../../../src/modules/assignments/re
 import { PrismaService } from '../../../../../src/database/prisma.service';
 import { GradeStatus, SubmitStatus } from '@prisma/client';
 import { IStorageService } from '../../../../../src/storage/storage.interface';
-import { NotificationsService } from '../../../../../src/modules/notifications/services/notifications.service';
+import {
+  NOTIFICATIONS_QUEUE_NAME,
+  NotificationsService,
+} from '../../../../../src/modules/notifications/services/notifications.service';
+import { getQueueToken } from '@nestjs/bull';
 
 const mockAssignmentsRepository = () => ({
   create: jest.fn(),
@@ -35,11 +39,16 @@ const mockPrismaService = () => ({
 
 const mockStorageService = () => ({
   uploadFile: jest.fn(),
+  uploadDocument: jest.fn(),
   deleteFile: jest.fn(),
 });
 
 const mockNotificationsService = () => ({
   createAssignmentCreatedNotifications: jest.fn(),
+});
+
+const mockNotificationsQueue = () => ({
+  add: jest.fn(),
 });
 
 describe('AssignmentsService', () => {
@@ -96,6 +105,10 @@ describe('AssignmentsService', () => {
         { provide: PrismaService, useFactory: mockPrismaService },
         { provide: IStorageService, useFactory: mockStorageService },
         { provide: NotificationsService, useFactory: mockNotificationsService },
+        {
+          provide: getQueueToken(NOTIFICATIONS_QUEUE_NAME),
+          useFactory: mockNotificationsQueue,
+        },
       ],
     }).compile();
 
@@ -222,7 +235,7 @@ describe('AssignmentsService', () => {
   });
 
   describe('submitAssignment', () => {
-    const submitDto = { fileUrl: 'https://cloudinary.com/file.pdf' };
+    const submitDto = { note: 'Bài làm của em' };
     const multipartFile = {
       originalname: 'essay.pdf',
       mimetype: 'application/pdf',
@@ -274,19 +287,22 @@ describe('AssignmentsService', () => {
       );
     });
 
-    it('should throw BadRequestException when student has already submitted', async () => {
+    it('should throw BadRequestException when submitted work can no longer be updated', async () => {
       repository.findById.mockResolvedValue(mockAssignment);
       prisma.classEnrollment.findFirst.mockResolvedValue({
         id: 'enrollment-1',
       });
-      repository.findSubmitByStudentAndAssignment.mockResolvedValue(mockSubmit);
+      repository.findSubmitByStudentAndAssignment.mockResolvedValue({
+        ...mockSubmit,
+        gradeStatus: GradeStatus.GRADED,
+      });
 
       await expect(
         service.submitAssignment(ASSIGNMENT_ID, STUDENT_ID, submitDto),
       ).rejects.toThrow(BadRequestException);
       await expect(
         service.submitAssignment(ASSIGNMENT_ID, STUDENT_ID, submitDto),
-      ).rejects.toThrow('You have already submitted this assignment.');
+      ).rejects.toThrow('This submission can no longer be updated.');
     });
 
     it('should create ON_TIME submit when within deadline', async () => {
@@ -313,7 +329,7 @@ describe('AssignmentsService', () => {
         expect.objectContaining({
           assignmentId: ASSIGNMENT_ID,
           studentId: STUDENT_ID,
-          fileUrl: submitDto.fileUrl,
+          note: submitDto.note,
           submitStatus: SubmitStatus.ON_TIME,
           gradeStatus: GradeStatus.PENDING,
         }),
@@ -355,9 +371,14 @@ describe('AssignmentsService', () => {
         id: 'enrollment-1',
       });
       repository.findSubmitByStudentAndAssignment.mockResolvedValue(null);
-      storageService.uploadFile.mockResolvedValue(
-        'https://cloudinary.com/uploaded.pdf',
-      );
+      storageService.uploadDocument.mockResolvedValue({
+        url: 'https://cloudinary.com/uploaded.pdf',
+        publicId: 'eduscan/assignments/uploaded.pdf',
+        originalName: 'essay.pdf',
+        mimeType: 'application/pdf',
+        sizeBytes: 4,
+        uploadedAt: expect.any(Date),
+      });
       repository.createSubmit.mockResolvedValue(mockSubmit);
 
       await service.submitAssignment(
@@ -367,31 +388,42 @@ describe('AssignmentsService', () => {
         multipartFile,
       );
 
-      expect(storageService.uploadFile).toHaveBeenCalledWith(
+      expect(storageService.uploadDocument).toHaveBeenCalledWith(
         multipartFile,
-        `eduscan/assignments/${ASSIGNMENT_ID}/${STUDENT_ID}`,
+        `eduscan/assignments/${ASSIGNMENT_ID}/submissions/${STUDENT_ID}`,
       );
       expect(repository.createSubmit).toHaveBeenCalledWith(
         expect.objectContaining({
           fileUrl: 'https://cloudinary.com/uploaded.pdf',
+          filePublicId: 'eduscan/assignments/uploaded.pdf',
+          fileOriginalName: 'essay.pdf',
         }),
       );
     });
 
-    it('should reject unsupported multipart file type', async () => {
+    it('should accept supported text submission file type', async () => {
       repository.findById.mockResolvedValue(mockAssignment);
       prisma.classEnrollment.findFirst.mockResolvedValue({
         id: 'enrollment-1',
       });
       repository.findSubmitByStudentAndAssignment.mockResolvedValue(null);
+      storageService.uploadDocument.mockResolvedValue({
+        url: 'https://cloudinary.com/essay.txt',
+        publicId: 'eduscan/assignments/essay.txt',
+        originalName: 'essay.txt',
+        mimeType: 'text/plain',
+        sizeBytes: 4,
+        uploadedAt: expect.any(Date),
+      });
+      repository.createSubmit.mockResolvedValue(mockSubmit);
 
-      await expect(
-        service.submitAssignment(ASSIGNMENT_ID, STUDENT_ID, {}, {
-          ...multipartFile,
-          originalname: 'essay.txt',
-          mimetype: 'text/plain',
-        } as Express.Multer.File),
-      ).rejects.toThrow(BadRequestException);
+      await service.submitAssignment(ASSIGNMENT_ID, STUDENT_ID, {}, {
+        ...multipartFile,
+        originalname: 'essay.txt',
+        mimetype: 'text/plain',
+      } as Express.Multer.File);
+
+      expect(storageService.uploadDocument).toHaveBeenCalled();
     });
   });
 

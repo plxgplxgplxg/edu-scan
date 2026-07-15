@@ -44,9 +44,7 @@ describe('StatisticsService', () => {
       { studentId: 'student-1' },
       { studentId: 'student-2' },
     ]);
-    prisma.assignment.count
-      .mockResolvedValueOnce(1)
-      .mockResolvedValueOnce(0);
+    prisma.assignment.count.mockResolvedValueOnce(1).mockResolvedValueOnce(0);
     prisma.exam.count.mockResolvedValue(2);
     prisma.submission.count.mockResolvedValue(3);
     prisma.$transaction.mockResolvedValue([
@@ -54,16 +52,12 @@ describe('StatisticsService', () => {
         { id: 'class-1', name: '12A1' },
         { id: 'class-2', name: '12A2' },
       ],
-      [
-        { classId: 'class-1', _count: { _all: 2 } },
-      ],
+      [{ classId: 'class-1', _count: { _all: 2 } }],
       [
         { id: 'exam-1', title: 'Giua ky' },
         { id: 'exam-2', title: 'Cuoi ky' },
       ],
-      [
-        { examId: 'exam-1', _count: { _all: 3 } },
-      ],
+      [{ examId: 'exam-1', _count: { _all: 3 } }],
     ]);
 
     const result = await service.getTeacherStats('teacher-1', 'month');

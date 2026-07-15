@@ -139,10 +139,7 @@ export class ExamsService {
     const hasDependentData =
       dependencies.submissionCount > 0 || dependencies.batchCount > 0;
 
-    if (
-      hasDependentData &&
-      updateExamDto.classIds !== undefined
-    ) {
+    if (hasDependentData && updateExamDto.classIds !== undefined) {
       throw new BadRequestException(
         'Cannot change classes after submissions or OMR batches already exist',
       );
@@ -178,8 +175,6 @@ export class ExamsService {
     );
     if (!exam) throw new NotFoundException('Exam not found');
 
-
-
     const updated = await this.examsRepository.upsertExamQuestionAnswer({
       examId,
       testCode: this.normalizeTestCode(
@@ -204,8 +199,6 @@ export class ExamsService {
       teacherId,
     );
     if (!exam) throw new NotFoundException('Exam not found');
-
-
 
     const updated = await this.examsRepository.removeExamQuestionAnswer({
       examId,

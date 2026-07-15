@@ -9,11 +9,7 @@ import {
   ASSIGNMENT_SUBMISSION_MAX_FILE_BYTES,
   ASSIGNMENT_SUBMISSION_MIME_TYPES,
 } from '../domain/assignment-file-policy';
-
-function getFileExtension(name: string) {
-  const dotIndex = name.lastIndexOf('.');
-  return dotIndex >= 0 ? name.slice(dotIndex).toLowerCase() : '';
-}
+import { getFileExtension } from '../domain/assignment-file-utils';
 
 export function useAssignmentSubmission({
   accessToken,
@@ -35,7 +31,7 @@ export function useAssignmentSubmission({
         return;
       }
       if (file.size !== null && file.size > ASSIGNMENT_SUBMISSION_MAX_FILE_BYTES) {
-        setSubmitError('Tệp vượt quá giới hạn 25MB');
+        setSubmitError('Tệp vượt quá giới hạn 20MB');
         return;
       }
       setSelectedFile(file);
@@ -47,13 +43,14 @@ export function useAssignmentSubmission({
     setSelectedFile(null);
   };
 
-  const submitSelectedFile = async (assignmentId: string) => {
+  const submitAssignmentContent = async (assignmentId: string, note: string) => {
     if (!accessToken) {
       return false;
     }
 
-    if (!selectedFile) {
-      setSubmitError('Vui lòng chọn tệp để nộp bài');
+    const trimmedNote = note.trim();
+    if (!trimmedNote && !selectedFile) {
+      setSubmitError('Vui lòng nhập ghi chú hoặc chọn tệp để nộp bài');
       return false;
     }
 
@@ -62,9 +59,14 @@ export function useAssignmentSubmission({
 
     try {
       await submitAssignment(accessToken, assignmentId, {
-        uri: selectedFile.uri,
-        name: selectedFile.name,
-        type: selectedFile.type,
+        note: trimmedNote || undefined,
+        file: selectedFile
+          ? {
+              uri: selectedFile.uri,
+              name: selectedFile.name,
+              type: selectedFile.type,
+            }
+          : undefined,
       });
       setSelectedFile(null);
       await onSubmitted();
@@ -84,6 +86,6 @@ export function useAssignmentSubmission({
     submitError,
     pickFile,
     clearSelectedFile,
-    submitSelectedFile,
+    submitAssignmentContent,
   };
 }

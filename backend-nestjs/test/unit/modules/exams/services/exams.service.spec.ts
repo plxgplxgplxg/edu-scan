@@ -1,4 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AnswerChoice } from '@prisma/client';
 import { CreateExamDto } from '../../../../../src/modules/exams/dto/request/create-exam.dto';
 import { ExamsService } from '../../../../../src/modules/exams/services/exams.service';
@@ -21,10 +22,16 @@ describe('ExamsService', () => {
 
   const teacherId = 'teacher-1';
   const examId = 'exam-1';
+  const eventEmitter = {
+    emit: jest.fn(),
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new ExamsService(examsRepository as never);
+    service = new ExamsService(
+      examsRepository as never,
+      eventEmitter as unknown as EventEmitter2,
+    );
   });
 
   it('normalizes and creates an OMR exam without question bank mapping', async () => {
