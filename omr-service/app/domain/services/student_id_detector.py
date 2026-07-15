@@ -1,3 +1,4 @@
+import cv2
 import numpy as np
 
 from app.domain.layouts.template_models import OmrLayoutTemplate
@@ -115,13 +116,19 @@ class StudentIdDetector:
         located_boxes: dict[str, tuple[int, int, int, int]],
     ) -> np.ndarray:
         if field_name in located_boxes:
-            return self._extract_box(processed_image, located_boxes[field_name])
+            region = self._extract_box(processed_image, located_boxes[field_name])
+        else:
+            region = (
+                self.anchor_locator.locate(processed_image, fallback_region)
+                if template.use_anchor_locator
+                else self._extract_region(processed_image, fallback_region)
+            )
 
-        return (
-            self.anchor_locator.locate(processed_image, fallback_region)
-            if template.use_anchor_locator
-            else self._extract_region(processed_image, fallback_region)
-        )
+        if template and template.name == TnTeamBlockLocator.TEMPLATE_NAME and region.size > 0:
+            h = region.shape[0]
+            region = region[int(h / 11):, :]
+
+        return region
 
     def _detect_from_region(
         self,
@@ -133,8 +140,12 @@ class StudentIdDetector:
         if id_region.size == 0:
             return (None, []) if capture_debug else None
 
+        id_region = self._normalize_digit_grid_region(id_region)
+
         digits: list[str] = []
         debug_columns: list[dict[str, object]] = []
+        has_invalid = False
+
         for column_index in range(code_length):
             column = self._slice_column(id_region, column_index, code_length)
             fill_scores = [
@@ -152,31 +163,74 @@ class StudentIdDetector:
                     "needsReview": needs_review,
                 }
             )
-            if needs_review or best_row is None:
-                return (None, debug_columns) if capture_debug else None
-
-            digits.append(str(best_row))
+            if best_row is not None:
+                digits.append(str(best_row))
+            else:
+                digits.append("0")
+                has_invalid = True
 
         detected_value = "".join(digits)
+        if has_invalid and not digits:
+            return (None, debug_columns) if capture_debug else None
+
         return (detected_value, debug_columns) if capture_debug else detected_value
+
+    def _normalize_digit_grid_region(self, image: np.ndarray) -> np.ndarray:
+        if image.size == 0:
+            return image
+
+        height, width = image.shape[:2]
+        contours, _ = cv2.findContours(
+            image,
+            cv2.RETR_EXTERNAL,
+            cv2.CHAIN_APPROX_SIMPLE,
+        )
+        if not contours:
+            return image
+
+        candidates: list[tuple[int, int, int, int, int]] = []
+        for contour in contours:
+            x, y, w, h = cv2.boundingRect(contour)
+            if w < width * 0.45 or h < height * 0.45:
+                continue
+
+            area = w * h
+            candidates.append((area, x, y, w, h))
+
+        if not candidates:
+            return image
+
+        _, x, y, w, h = max(candidates, key=lambda item: item[0])
+        pad_x = max(1, int(w * 0.01))
+        pad_y = max(1, int(h * 0.01))
+        left = max(0, x - pad_x)
+        top = max(0, y - pad_y)
+        right = min(width, x + w + pad_x)
+        bottom = min(height, y + h + pad_y)
+
+        if right <= left or bottom <= top:
+            return image
+
+        return image[top:bottom, left:right]
 
     def _classify_digit_scores(self, scores: list[float]) -> tuple[int | None, bool]:
         if not scores:
             return None, True
 
-        best_index = int(np.argmax(scores))
-        best_score = scores[best_index]
-        sorted_scores = sorted(scores, reverse=True)
+        background_score = float(np.median(scores))
+        corrected_scores = [max(0.0, float(score) - background_score) for score in scores]
+
+        best_index = int(np.argmax(corrected_scores))
+        best_score = corrected_scores[best_index]
+        sorted_scores = sorted(corrected_scores, reverse=True)
         best_score = sorted_scores[0] if sorted_scores else 0.0
         second_score = sorted_scores[1] if len(sorted_scores) > 1 else 0.0
-        needs_review = (
-            best_score < self.fill_threshold
-            or (best_score - second_score) < self.confidence_margin
-        )
-        if needs_review:
-            return None, True
 
-        return best_index, False
+        needs_review = (
+            best_score < 0.08
+            or (best_score - second_score) < 0.05
+        )
+        return best_index, needs_review
 
     def _extract_box(
         self,
@@ -191,18 +245,26 @@ class StudentIdDetector:
         processed_image: np.ndarray,
         template: OmrLayoutTemplate | None = None,
     ) -> np.ndarray:
+        region = None
         if template and template.name == TnTeamBlockLocator.TEMPLATE_NAME:
             located_boxes = self.tnteam_block_locator.locate_blocks(processed_image)
             if "roll_no" in located_boxes:
-                return self._extract_box(processed_image, located_boxes["roll_no"])
+                region = self._extract_box(processed_image, located_boxes["roll_no"])
 
-        if template and template.student_id_region:
-            return self._extract_region(processed_image, template.student_id_region)
+        if region is None:
+            if template and template.student_id_region:
+                region = self._extract_region(processed_image, template.student_id_region)
+            else:
+                height = processed_image.shape[0]
+                top = int(height * 0.05)
+                bottom = int(height * self.region_height_ratio)
+                region = processed_image[top:bottom, :]
 
-        height = processed_image.shape[0]
-        top = int(height * 0.05)
-        bottom = int(height * self.region_height_ratio)
-        return processed_image[top:bottom, :]
+        if template and template.name == TnTeamBlockLocator.TEMPLATE_NAME and region is not None and region.size > 0:
+            h = region.shape[0]
+            region = region[int(h / 11):, :]
+
+        return region
 
     def _extract_region(
         self,

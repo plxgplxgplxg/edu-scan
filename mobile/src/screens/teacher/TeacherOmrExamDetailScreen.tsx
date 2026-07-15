@@ -94,19 +94,19 @@ export function TeacherOmrExamDetailScreen() {
 
   const summary = React.useMemo(() => {
     if (!submissionsData?.items || submissionsData.items.length === 0) {
-      return { average: 0, max: 0, min: 0 };
+      return { avgCorrect: 0, maxCorrect: 0, minCorrect: 0 };
     }
-    const scores = submissionsData.items.map(s => s.score).filter(s => typeof s === 'number');
-    if (scores.length === 0) return { average: 0, max: 0, min: 0 };
-    const max = Math.max(...scores);
-    const min = Math.min(...scores);
-    const average = scores.reduce((a, b) => a + b, 0) / scores.length;
-    return { average, max, min };
+    const counts = submissionsData.items.map(s => s.correctCount ?? 0);
+    if (counts.length === 0) return { avgCorrect: 0, maxCorrect: 0, minCorrect: 0 };
+    const maxCorrect = Math.max(...counts);
+    const minCorrect = Math.min(...counts);
+    const avgCorrect = counts.reduce((a, b) => a + b, 0) / counts.length;
+    return { avgCorrect, maxCorrect, minCorrect };
   }, [submissionsData?.items]);
 
   const metrics = [
     { value: String(submissionsData?.total || 0), label: 'Đã chấm' },
-    { value: summary.average.toFixed(1), label: 'Điểm TB' },
+    { value: summary.avgCorrect.toFixed(1), label: 'Câu đúng TB' },
     { value: String(submissionsData?.items?.filter(i => i.status === 'NEEDS_REVIEW').length || 0), label: 'Cần xem lại' },
   ];
 
@@ -127,15 +127,15 @@ export function TeacherOmrExamDetailScreen() {
               <AppText variant="body" color={palette.mutedForeground}>Số bài</AppText>
             </View>
             <View style={{ flex: 1, minWidth: '45%', backgroundColor: palette.background, padding: 16, borderRadius: 12 }}>
-              <AppText variant="title" weight="bold" color={palette.primary}>{summary.average.toFixed(1)}</AppText>
-              <AppText variant="body" color={palette.mutedForeground}>Điểm TB</AppText>
+              <AppText variant="title" weight="bold" color={palette.primary}>{summary.avgCorrect.toFixed(1)}</AppText>
+              <AppText variant="body" color={palette.mutedForeground}>Câu đúng TB</AppText>
             </View>
             <View style={{ flex: 1, minWidth: '45%', backgroundColor: palette.background, padding: 16, borderRadius: 12 }}>
-              <AppText variant="title" weight="bold" color={palette.primary}>{summary.max.toFixed(1)}</AppText>
+              <AppText variant="title" weight="bold" color={palette.primary}>{summary.maxCorrect}</AppText>
               <AppText variant="body" color={palette.mutedForeground}>Cao nhất</AppText>
             </View>
             <View style={{ flex: 1, minWidth: '45%', backgroundColor: palette.background, padding: 16, borderRadius: 12 }}>
-              <AppText variant="title" weight="bold" color={palette.primary}>{summary.min.toFixed(1)}</AppText>
+              <AppText variant="title" weight="bold" color={palette.primary}>{summary.minCorrect}</AppText>
               <AppText variant="body" color={palette.mutedForeground}>Thấp nhất</AppText>
             </View>
           </View>
@@ -168,17 +168,13 @@ export function TeacherOmrExamDetailScreen() {
           <Pressable key={sub.id} onPress={() => setSelectedSubmissionId(sub.id)}>
             <SurfaceCard style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
               <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: '#F3E8FF', alignItems: 'center', justifyContent: 'center' }}>
-                <AppText variant="headline" weight="bold" color={palette.primary}>{sub.score ?? '-'}</AppText>
+                <AppText variant="headline" weight="bold" color={palette.primary}>{sub.correctCount ?? '-'}</AppText>
               </View>
               <View style={{ flex: 1 }}>
                 <AppText variant="body" weight="bold">SBD: {sub.studentCode || 'Chưa nhận diện'}</AppText>
-                <AppText variant="caption" color={palette.mutedForeground}>{sub.correctCount ?? 0}/{sub.maxScore ?? 0} đúng</AppText>
+                <AppText variant="caption" color={palette.mutedForeground}>{sub.correctCount ?? 0}/{exam?.questionCount ?? sub.maxScore ?? 0} câu đúng</AppText>
               </View>
-              {sub.status === 'NEEDS_REVIEW' && (
-                <View style={{ backgroundColor: '#FFF1DB', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 }}>
-                  <AppText variant="caption" weight="bold" color={palette.warning}>Cần xem</AppText>
-                </View>
-              )}
+
               <ChevronRight size={20} color={palette.mutedForeground} />
             </SurfaceCard>
           </Pressable>
