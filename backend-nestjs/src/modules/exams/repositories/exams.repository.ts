@@ -412,12 +412,14 @@ export class ExamsRepository {
     if (!exam) return;
 
     const variantAnswerKeysMap = new Map<string, Map<number, AnswerChoice>>();
+    const variantTestCodeMap = new Map<string, string>();
     for (const variant of exam.variants) {
       const keysMap = new Map<number, AnswerChoice>();
       for (const key of variant.answerKeys) {
         keysMap.set(key.questionNumber, key.correctAnswer);
       }
       variantAnswerKeysMap.set(variant.id, keysMap);
+      variantTestCodeMap.set(variant.testCode, variant.id);
     }
 
     const submissions = await this.prismaService.submission.findMany({
@@ -428,7 +430,26 @@ export class ExamsRepository {
     });
 
     for (const sub of submissions) {
-      const variantId = sub.resolvedVariantId;
+      let variantId = sub.resolvedVariantId;
+
+      // Tự động khôi phục resolvedVariantId nếu bị null hoặc không tìm thấy trong DB hiện tại
+      if (!variantId || !variantAnswerKeysMap.has(variantId)) {
+        const lookupCode = (sub.resolvedTestCode || sub.detectedTestId || 'DEFAULT').trim().toUpperCase();
+        let matchedVariantId = variantTestCodeMap.get(lookupCode);
+
+        if (!matchedVariantId && exam.variants.length === 1) {
+          matchedVariantId = exam.variants[0].id;
+        }
+
+        if (matchedVariantId) {
+          variantId = matchedVariantId;
+          await this.prismaService.submission.update({
+            where: { id: sub.id },
+            data: { resolvedVariantId: matchedVariantId },
+          });
+        }
+      }
+
       const answerKeysMap = variantId ? variantAnswerKeysMap.get(variantId) : null;
 
       let correctCount = 0;
@@ -440,7 +461,10 @@ export class ExamsRepository {
       for (const detail of sub.details) {
         const finalAnswer = detail.finalAnswer;
         const correctAnswer = answerKeysMap ? (answerKeysMap.get(detail.questionNumber) ?? null) : null;
-        const isCorrect = finalAnswer !== null && correctAnswer !== null && finalAnswer === correctAnswer;
+        
+        // So sánh không phân biệt hoa thường và khoảng trắng để tránh lỗi lệch kiểu
+        const isCorrect = finalAnswer !== null && correctAnswer !== null && 
+          String(finalAnswer).trim().toUpperCase() === String(correctAnswer).trim().toUpperCase();
 
         let needsReview = detail.needsReview;
         let reviewReason = detail.reviewReason;
