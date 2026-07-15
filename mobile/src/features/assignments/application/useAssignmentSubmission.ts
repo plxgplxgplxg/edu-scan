@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { submitAssignment } from '../../../api/edu-scan';
-import { pickSingleDocument } from '../../shared/infrastructure/document-picker/document-picker-adapter';
+import { pickSingleDocument, documentTypes } from '../../shared/infrastructure/document-picker/document-picker-adapter';
 import type { NativeFile } from '../../shared/domain/native-file';
 import { useToast } from '../../../app/ToastProvider';
 import {
@@ -24,7 +24,10 @@ export function useAssignmentSubmission({
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const pickFile = async () => {
-    const file = await pickSingleDocument(ASSIGNMENT_SUBMISSION_MIME_TYPES);
+    const file = await pickSingleDocument([
+      ...ASSIGNMENT_SUBMISSION_MIME_TYPES,
+      documentTypes.images,
+    ]);
     if (file) {
       if (!ASSIGNMENT_SUBMISSION_EXTENSIONS.has(getFileExtension(file.name))) {
         setSubmitError('Định dạng tệp không được hỗ trợ');

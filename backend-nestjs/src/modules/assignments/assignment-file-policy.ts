@@ -12,6 +12,10 @@ export const ASSIGNMENT_ATTACHMENT_MIME_TYPES = new Set([
   'text/plain',
   'application/zip',
   'application/x-zip-compressed',
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
 ]);
 
 export const ASSIGNMENT_ATTACHMENT_EXTENSIONS = new Set([
@@ -24,6 +28,11 @@ export const ASSIGNMENT_ATTACHMENT_EXTENSIONS = new Set([
   '.pptx',
   '.txt',
   '.zip',
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.gif',
+  '.webp',
 ]);
 
 export const ASSIGNMENT_INSTRUCTION_MIME_TYPES =

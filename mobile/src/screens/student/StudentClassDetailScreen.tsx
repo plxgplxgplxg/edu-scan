@@ -360,7 +360,7 @@ export function StudentClassDetailScreen() {
           </SurfaceCard>
         ) : null}
         <AppText variant="caption" color={palette.mutedForeground} style={styles.sheetHint}>
-          PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, TXT hoặc ZIP • tối đa 20MB
+          PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, TXT, ZIP hoặc ẢNH • tối đa 20MB
         </AppText>
         <PrimaryButton
           label="Chọn tệp"

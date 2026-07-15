@@ -58,7 +58,7 @@ import { primaryHeroGradient } from '../../theme/header';
 import { formatVietnameseDate, percentage } from '../../utils/format';
 import type { RootStackParamList } from '../../navigation/types';
 import type { NativeFile } from '../../features/shared/domain/native-file';
-import { pickSingleDocument } from '../../features/shared/infrastructure/document-picker/document-picker-adapter';
+import { pickSingleDocument, documentTypes } from '../../features/shared/infrastructure/document-picker/document-picker-adapter';
 import {
   ASSIGNMENT_INSTRUCTION_EXTENSIONS,
   ASSIGNMENT_INSTRUCTION_MAX_FILE_BYTES,
@@ -324,7 +324,10 @@ export function TeacherClassDetailScreen() {
   };
 
   const pickInstructionFile = async () => {
-    const file = await pickSingleDocument(ASSIGNMENT_INSTRUCTION_MIME_TYPES);
+    const file = await pickSingleDocument([
+      ...ASSIGNMENT_INSTRUCTION_MIME_TYPES,
+      documentTypes.images,
+    ]);
     if (!file) {
       return;
     }
@@ -752,7 +755,7 @@ export function TeacherClassDetailScreen() {
               }}
             />
             <AppText variant="caption" color={palette.mutedForeground}>
-              PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, TXT hoặc ZIP • tối đa 10MB
+              PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, TXT, ZIP hoặc ẢNH • tối đa 10MB
             </AppText>
           </View>
           <TextInputField
