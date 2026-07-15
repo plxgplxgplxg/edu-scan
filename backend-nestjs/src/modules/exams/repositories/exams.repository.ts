@@ -246,18 +246,6 @@ export class ExamsRepository {
         where: { examId },
       });
 
-      await tx.answerKey.deleteMany({
-        where: {
-          variant: {
-            examId,
-          },
-        },
-      });
-
-      await tx.examVariant.deleteMany({
-        where: { examId },
-      });
-
       if (data.classIds.length > 0) {
         await tx.examClass.createMany({
           data: data.classIds.map((classId) => ({
@@ -267,17 +255,51 @@ export class ExamsRepository {
         });
       }
 
-      for (const variant of data.variants) {
-        const createdVariant = await tx.examVariant.create({
-          data: {
-            examId,
-            testCode: variant.testCode,
-          },
+      // Lấy các variants hiện có
+      const existingVariants = await tx.examVariant.findMany({
+        where: { examId },
+      });
+      const existingVariantsMap = new Map(existingVariants.map(v => [v.testCode, v.id]));
+      const payloadTestCodes = new Set(data.variants.map(v => v.testCode));
+
+      // Xoá các variants không còn trong payload
+      const variantsToDelete = existingVariants.filter(v => !payloadTestCodes.has(v.testCode));
+      if (variantsToDelete.length > 0) {
+        await tx.examVariant.deleteMany({
+          where: {
+            id: {
+              in: variantsToDelete.map(v => v.id)
+            }
+          }
         });
+      }
+
+      // Xoá toàn bộ answerKeys của các variants thuộc exam để nạp lại
+      await tx.answerKey.deleteMany({
+        where: {
+          variant: {
+            examId,
+          },
+        },
+      });
+
+      // Đồng bộ variants và answerKeys
+      for (const variant of data.variants) {
+        let variantId = existingVariantsMap.get(variant.testCode);
+        
+        if (!variantId) {
+          const created = await tx.examVariant.create({
+            data: {
+              examId,
+              testCode: variant.testCode,
+            },
+          });
+          variantId = created.id;
+        }
 
         await tx.answerKey.createMany({
           data: variant.answerKeys.map((item) => ({
-            variantId: createdVariant.id,
+            variantId,
             questionNumber: item.questionNumber,
             correctAnswer: item.correctAnswer,
           })),
@@ -413,72 +435,70 @@ export class ExamsRepository {
       let wrongCount = 0;
       let reviewCount = 0;
 
-      await this.prismaService.$transaction(async (tx) => {
-        const detailUpdates: any[] = [];
+      const detailUpdates: any[] = [];
 
-        for (const detail of sub.details) {
-          const finalAnswer = detail.finalAnswer;
-          const correctAnswer = answerKeysMap ? (answerKeysMap.get(detail.questionNumber) ?? null) : null;
-          const isCorrect = finalAnswer !== null && correctAnswer !== null && finalAnswer === correctAnswer;
+      for (const detail of sub.details) {
+        const finalAnswer = detail.finalAnswer;
+        const correctAnswer = answerKeysMap ? (answerKeysMap.get(detail.questionNumber) ?? null) : null;
+        const isCorrect = finalAnswer !== null && correctAnswer !== null && finalAnswer === correctAnswer;
 
-          let needsReview = detail.needsReview;
-          let reviewReason = detail.reviewReason;
+        let needsReview = detail.needsReview;
+        let reviewReason = detail.reviewReason;
 
-          if (finalAnswer === null) {
-            needsReview = true;
-            reviewReason = 'MANUAL_BLANK';
-          } else {
-            if (correctAnswer !== null) {
-              needsReview = false;
-              reviewReason = null;
-            }
+        if (finalAnswer === null) {
+          needsReview = true;
+          reviewReason = 'MANUAL_BLANK';
+        } else {
+          if (correctAnswer !== null) {
+            needsReview = false;
+            reviewReason = null;
           }
-
-          if (needsReview) {
-            reviewCount++;
-          } else if (isCorrect) {
-            correctCount++;
-          } else {
-            wrongCount++;
-          }
-
-          detailUpdates.push(
-            tx.submissionDetail.update({
-              where: {
-                submissionId_questionNumber: {
-                  submissionId: sub.id,
-                  questionNumber: detail.questionNumber,
-                },
-              },
-              data: {
-                correctAnswer,
-                isCorrect,
-                needsReview,
-                reviewReason,
-              },
-            })
-          );
         }
 
-        const totalQuestions = answerKeysMap ? answerKeysMap.size : sub.details.length;
-        const score = totalQuestions > 0 && answerKeysMap && answerKeysMap.size > 0
-          ? (correctCount / answerKeysMap.size) * exam.maxScore
-          : 0;
+        if (needsReview) {
+          reviewCount++;
+        } else if (isCorrect) {
+          correctCount++;
+        } else {
+          wrongCount++;
+        }
 
-        const subNeedsReview = sub.details.some(d => d.needsReview) || reviewCount > 0;
+        detailUpdates.push(
+          this.prismaService.submissionDetail.update({
+            where: {
+              submissionId_questionNumber: {
+                submissionId: sub.id,
+                questionNumber: detail.questionNumber,
+              },
+            },
+            data: {
+              correctAnswer,
+              isCorrect,
+              needsReview,
+              reviewReason,
+            },
+          })
+        );
+      }
 
-        await Promise.all(detailUpdates);
+      const totalQuestions = answerKeysMap ? answerKeysMap.size : sub.details.length;
+      const score = totalQuestions > 0 && answerKeysMap && answerKeysMap.size > 0
+        ? (correctCount / answerKeysMap.size) * exam.maxScore
+        : 0;
 
-        await tx.submission.update({
-          where: { id: sub.id },
-          data: {
-            correctCount,
-            wrongCount,
-            reviewCount,
-            score,
-            status: subNeedsReview ? 'NEEDS_REVIEW' : 'GRADED',
-          },
-        });
+      const subNeedsReview = sub.details.some(d => d.needsReview) || reviewCount > 0;
+
+      await Promise.all(detailUpdates);
+
+      await this.prismaService.submission.update({
+        where: { id: sub.id },
+        data: {
+          correctCount,
+          wrongCount,
+          reviewCount,
+          score,
+          status: subNeedsReview ? 'NEEDS_REVIEW' : 'GRADED',
+        },
       });
     }
   }

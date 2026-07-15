@@ -263,11 +263,10 @@ function SubmissionDetailModal({
                   </AppText>
                   <View style={styles.rowSpace}>
                     <AppText variant="body" color={palette.mutedForeground}>
-                      Điểm:
+                      Kết quả:
                     </AppText>
                     <AppText variant="title" weight="bold" color={palette.primary}>
-                      {submission.score ?? '-'}
-                      /{submission.maxScore ?? '-'}
+                      {submission.correctCount ?? 0}/{submission.details?.length ?? 0} câu đúng
                     </AppText>
                   </View>
                   <View style={styles.rowSpace}>

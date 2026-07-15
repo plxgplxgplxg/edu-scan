@@ -1,6 +1,6 @@
 /* eslint-disable react/no-unstable-nested-components, no-void, react-native/no-inline-styles */
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, View, Image, Modal, Alert, ScrollView } from 'react-native';
+import { Pressable, StyleSheet, View, Image, Modal, Alert, ScrollView, RefreshControl } from 'react-native';
 import { ArrowLeft, ImageIcon, ScanLine, ChevronRight, Pencil, Settings } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -214,7 +214,7 @@ export function TeacherOmrExamDetailScreen() {
   };
 
   return (
-    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
+    <Screen scrollable={false}>
       <PageHeader
         title={title}
         overline={overline}
@@ -225,7 +225,7 @@ export function TeacherOmrExamDetailScreen() {
         metrics={metrics}
       />
 
-      <View style={{ flex: 1, paddingHorizontal: layout.horizontalPadding, paddingTop: 16, paddingBottom: 100, maxWidth: layout.contentMaxWidth, alignSelf: 'center', width: '100%' }}>
+      <View style={{ flex: 1, paddingHorizontal: layout.horizontalPadding, paddingTop: 16, maxWidth: layout.contentMaxWidth, alignSelf: 'center', width: '100%' }}>
         
         {/* Segmented Control */}
         <View style={{ flexDirection: 'row', backgroundColor: '#F9F9FF', borderRadius: 24, padding: 4, marginBottom: 24 }}>
@@ -244,25 +244,48 @@ export function TeacherOmrExamDetailScreen() {
           })}
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+        <ScrollView 
+          showsVerticalScrollIndicator={false} 
+          contentContainerStyle={{ paddingBottom: 120 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={() => void reload()}
+              tintColor={palette.primary}
+            />
+          }
+        >
           {tab === 'overview' && renderOverview()}
           {tab === 'submissions' && renderSubmissions()}
           {tab === 'settings' && renderSettings()}
         </ScrollView>
       </View>
 
-      {/* Floating Bottom Bar */}
-      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: layout.horizontalPadding, paddingVertical: 24, paddingBottom: insets.bottom + 24, flexDirection: 'row', gap: 16, backgroundColor: 'rgba(255,255,255,0.9)' }}>
-        <Pressable style={{ flex: 1, paddingVertical: 16, borderRadius: 24, backgroundColor: palette.white, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E5E7EB' }}>
-          <AppText variant="body" weight="bold" color={palette.foreground}>Kết quả</AppText>
-        </Pressable>
-        <Pressable 
-          onPress={() => setShowUpload(true)}
-          style={{ flex: 1, paddingVertical: 16, borderRadius: 24, backgroundColor: palette.primary, alignItems: 'center', justifyContent: 'center' }}
-        >
-          <AppText variant="body" weight="bold" color={palette.white}>Chấm bài mới</AppText>
-        </Pressable>
-      </View>
+      {/* Floating Action Button (Chấm bài mới) */}
+      <Pressable 
+        onPress={() => setShowUpload(true)}
+        style={{
+          position: 'absolute',
+          bottom: Math.max(insets.bottom, 16) + 16,
+          right: 20,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          paddingHorizontal: 24,
+          paddingVertical: 16,
+          borderRadius: 30,
+          backgroundColor: palette.primary,
+          elevation: 8,
+          shadowColor: palette.primary,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+          zIndex: 99,
+        }}
+      >
+        <ScanLine size={20} color={palette.white} />
+        <AppText variant="body" weight="bold" color={palette.white}>Chấm bài mới</AppText>
+      </Pressable>
 
       {/* Upload Modal */}
       <ModalSheet visible={showUpload} onClose={() => setShowUpload(false)}>
@@ -348,8 +371,8 @@ function SubmissionDetailModal({ submissionId, onClose }: { submissionId: string
                 <SurfaceCard style={{ gap: appTheme.spacing.md }}>
                   <AppText variant="headline" weight="bold">SBD: {sub.studentCode || 'Chưa nhận diện'}</AppText>
                   <View style={styles.rowSpace}>
-                    <AppText variant="body" color={palette.mutedForeground}>Điểm:</AppText>
-                    <AppText variant="title" weight="bold" color={palette.primary}>{sub.score ?? '-'}/{sub.maxScore ?? '-'}</AppText>
+                    <AppText variant="body" color={palette.mutedForeground}>Kết quả:</AppText>
+                    <AppText variant="title" weight="bold" color={palette.primary}>{sub.correctCount ?? 0}/{sub.details?.length ?? 0} câu đúng</AppText>
                   </View>
                   <View style={styles.rowSpace}>
                     <AppText variant="body" color={palette.mutedForeground}>Mã đề:</AppText>
