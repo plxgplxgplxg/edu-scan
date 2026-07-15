@@ -261,7 +261,7 @@ export class AssignmentsService {
     }
   }
 
-  async getSubmitsForTeacher(assignmentId: string, teacherId: string) {
+  async getSubmitsForTeacher(assignmentId: string, teacherId: string, page = 1, limit = 10) {
     const assignment = await this.assignmentsRepository.findById(assignmentId);
     if (!assignment) {
       throw new NotFoundException('Assignment not found.');
@@ -271,7 +271,7 @@ export class AssignmentsService {
         'You do not have permission to view submissions for this assignment.',
       );
     }
-    return this.assignmentsRepository.findSubmitsByAssignment(assignmentId);
+    return this.assignmentsRepository.findSubmitsByAssignment(assignmentId, page, limit);
   }
 
   async getMySubmit(assignmentId: string, studentId: string) {

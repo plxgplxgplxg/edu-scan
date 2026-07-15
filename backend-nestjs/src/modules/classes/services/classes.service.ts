@@ -193,6 +193,23 @@ export class ClassesService {
     return { id: classId, deleted: true };
   }
 
+  async searchAvailableStudents(
+    classId: string,
+    teacherId: string,
+    keyword: string,
+    page = 1,
+    limit = 10
+  ) {
+    const classEntity = await this.classesRepository.findById(classId);
+    if (!classEntity) {
+      throw new NotFoundException('Class not found');
+    }
+    if (classEntity.teacherId !== teacherId) {
+      throw new BadRequestException('Not allowed');
+    }
+    return this.classesRepository.searchAvailableStudents(classId, keyword, page, limit);
+  }
+
   async addStudentToClass(
     classId: string,
     teacherId: string,

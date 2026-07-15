@@ -175,7 +175,7 @@ type NotificationApi = {
   routeIntent?: NotificationItem['routeIntent'];
 };
 
-type UserApi = {
+export type UserApi = {
   id: string;
   email: string;
   name: string;
@@ -358,6 +358,18 @@ export async function addStudentToClass(
   });
 }
 
+export async function searchAvailableStudents(
+  token: string,
+  classId: string,
+  query: string,
+  page = 1,
+  limit = 10,
+) {
+  return requestJson<PaginatedResponse<UserApi>>(`/classes/${classId}/available-students?q=${encodeURIComponent(query)}&page=${page}&limit=${limit}`, {
+    token,
+  });
+}
+
 export async function removeStudentFromClass(
   token: string,
   classId: string,
@@ -394,8 +406,16 @@ export async function listAssignments(token: string) {
   return requestJson<AssignmentApi[]>('/assignments', { token });
 }
 
-export async function getAssignmentSubmits(token: string, assignmentId: string) {
-  return requestJson<AssignmentSubmitApi[]>(`/assignments/${assignmentId}/submits`, {
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export async function getAssignmentSubmits(token: string, assignmentId: string, page = 1, limit = 10) {
+  return requestJson<PaginatedResponse<AssignmentSubmitApi>>(`/assignments/${assignmentId}/submits?page=${page}&limit=${limit}`, {
     token,
   });
 }

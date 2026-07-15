@@ -99,16 +99,31 @@ export class AssignmentsRepository {
     });
   }
 
-  async findSubmitsByAssignment(assignmentId: string) {
-    return this.prisma.assignmentSubmit.findMany({
-      where: { assignmentId },
-      include: {
-        student: {
-          select: { id: true, name: true, email: true, studentCode: true },
+  async findSubmitsByAssignment(assignmentId: string, page = 1, limit = 10) {
+    const skip = (page - 1) * limit;
+    
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.assignmentSubmit.findMany({
+        where: { assignmentId },
+        include: {
+          student: {
+            select: { id: true, name: true, email: true, studentCode: true },
+          },
         },
-      },
-      orderBy: { submittedAt: 'asc' },
-    });
+        orderBy: { submittedAt: 'asc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.assignmentSubmit.count({ where: { assignmentId } })
+    ]);
+
+    return {
+      items: data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findSubmitByStudentAndAssignment(

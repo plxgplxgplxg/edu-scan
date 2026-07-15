@@ -1,6 +1,6 @@
 /* eslint-disable react/no-unstable-nested-components, no-void, react-native/no-inline-styles */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, View, Switch } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, View, Switch, FlatList } from 'react-native';
 import {
   BookOpen,
   CheckCircle,
@@ -30,7 +30,9 @@ import {
   mapClassDetail,
   mapTeacherAssignmentSummary,
   removeStudentFromClass,
+  searchAvailableStudents,
   type AssignmentSubmitApi,
+  type UserApi,
 } from '../../api/edu-scan';
 import type { AssignmentSummary } from '../../types/domain';
 import { AppText } from '../../components/AppText';
@@ -85,10 +87,13 @@ export function TeacherClassDetailScreen() {
   const [activeTab, setActiveTab] = useState<DetailTab>('students');
   const [showAddStudent, setShowAddStudent] = useState(false);
   const [studentLookup, setStudentLookup] = useState('');
+  const [availableStudents, setAvailableStudents] = useState<UserApi[]>([]);
+  const [availableStudentsPage, setAvailableStudentsPage] = useState(1);
+  const [availableStudentsTotalPages, setAvailableStudentsTotalPages] = useState(1);
+  const [availableStudentsLoading, setAvailableStudentsLoading] = useState(false);
+  const [availableStudentsLoadingMore, setAvailableStudentsLoadingMore] = useState(false);
+  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
   const [showCreateAssignment, setShowCreateAssignment] = useState(false);
-  const [selectedAssignment, setSelectedAssignment] = useState<AssignmentSummary | null>(null);
-  const [assignmentSubmits, setAssignmentSubmits] = useState<AssignmentSubmitApi[]>([]);
-  const [gradeForms, setGradeForms] = useState<Record<string, { score: string; feedback: string }>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const reportJobUnsubscribeRef = useRef<(() => void) | null>(null);
@@ -139,6 +144,45 @@ export function TeacherClassDetailScreen() {
   const classStudents = currentClass?.students ?? [];
   const teacherAssignments = data?.assignments ?? [];
 
+  const fetchAvailableStudents = async (query: string, page: number, isLoadMore = false) => {
+    if (!accessToken || !currentClassId) return;
+    
+    if (isLoadMore) {
+      setAvailableStudentsLoadingMore(true);
+    } else {
+      setAvailableStudentsLoading(true);
+    }
+    
+    try {
+      const res = await searchAvailableStudents(accessToken, currentClassId, query, page, 10);
+      setAvailableStudents(prev => isLoadMore ? [...prev, ...res.items] : res.items);
+      setAvailableStudentsPage(res.page);
+      setAvailableStudentsTotalPages(res.totalPages);
+    } catch (err) {
+      // Ignore
+    } finally {
+      setAvailableStudentsLoading(false);
+      setAvailableStudentsLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!showAddStudent || !currentClassId) return;
+    
+    const timeout = setTimeout(() => {
+      void fetchAvailableStudents(studentLookup, 1);
+    }, 500);
+    
+    return () => clearTimeout(timeout);
+  }, [showAddStudent, studentLookup, currentClassId]);
+
+  useEffect(() => {
+    if (!showAddStudent) {
+      setStudentLookup('');
+      setSelectedStudentIds(new Set());
+      setAvailableStudents([]);
+    }
+  }, [showAddStudent]);
 
 
   useEffect(() => {
@@ -644,49 +688,102 @@ export function TeacherClassDetailScreen() {
         ) : null}
       </View>
 
-      <ModalSheet visible={showAddStudent} onClose={() => setShowAddStudent(false)}>
-        <AppText variant="headline" weight="bold" style={styles.sheetTitle}>
+      <ModalSheet visible={showAddStudent} onClose={() => setShowAddStudent(false)} scrollable={false}>
+        <AppText variant="headline" weight="bold" style={[styles.sheetTitle, { paddingHorizontal: layout.isCompact ? 0 : 4 }]}>
           {content.teacher.classes.addStudent}
         </AppText>
-        <TextInputField
-          label={content.teacher.classes.studentsByCode}
-          value={studentLookup}
-          onChangeText={setStudentLookup}
-          placeholder={content.common.placeholders.studentLookup}
-        />
-        <PrimaryButton
-          label={content.teacher.classes.addStudent}
-          loading={submitting}
-          onPress={async () => {
-            if (!accessToken) {
-              return;
-            }
+        <View style={{ paddingHorizontal: layout.isCompact ? 0 : 4, marginBottom: 12 }}>
+          <TextInputField
+            label="Email, mã học sinh, hoặc tên"
+            value={studentLookup}
+            onChangeText={setStudentLookup}
+            placeholder="Nhập từ khóa tìm kiếm..."
+          />
+        </View>
 
-            setSubmitting(true);
-            setSubmitError(null);
+        {availableStudentsLoading ? (
+          <View style={{ padding: 24 }}>
+            <LoadingState label="Đang tìm kiếm..." />
+          </View>
+        ) : availableStudents.length === 0 ? (
+          <View style={{ padding: 24, alignItems: 'center' }}>
+            <AppText variant="body" color={palette.mutedForeground}>
+              Không tìm thấy học sinh nào phù hợp.
+            </AppText>
+          </View>
+        ) : (
+          <View style={{ flex: 1 }}>
+            <FlatList
+              data={availableStudents}
+              keyExtractor={item => item.id}
+              contentContainerStyle={{ gap: 8, paddingHorizontal: layout.isCompact ? 0 : 4, paddingBottom: 20 }}
+              onEndReached={() => {
+                if (!availableStudentsLoadingMore && availableStudentsPage < availableStudentsTotalPages) {
+                  void fetchAvailableStudents(studentLookup, availableStudentsPage + 1, true);
+                }
+              }}
+              onEndReachedThreshold={0.5}
+              renderItem={({ item }) => {
+                const isSelected = selectedStudentIds.has(item.id);
+                return (
+                  <Pressable
+                    style={[styles.availableStudentRow, isSelected && styles.availableStudentRowSelected]}
+                    onPress={() => {
+                      setSelectedStudentIds(prev => {
+                        const next = new Set(prev);
+                        if (next.has(item.id)) next.delete(item.id);
+                        else next.add(item.id);
+                        return next;
+                      });
+                    }}
+                  >
+                    <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+                      {isSelected ? <CheckCircle size={16} color={palette.white} /> : null}
+                    </View>
+                    <View style={styles.flex}>
+                      <AppText variant="body" weight="medium">{item.name}</AppText>
+                      <AppText variant="caption" color={palette.mutedForeground}>{item.studentCode || item.email}</AppText>
+                    </View>
+                  </Pressable>
+                );
+              }}
+              ListFooterComponent={availableStudentsLoadingMore ? <LoadingState label="" /> : null}
+            />
+          </View>
+        )}
 
-            try {
-              const value = studentLookup.trim();
-              await addStudentToClass(accessToken, currentClass.id, {
-                email: value.includes('@') ? value : undefined,
-                studentCode: value.includes('@') ? undefined : value,
-              });
-              setStudentLookup('');
-              setShowAddStudent(false);
-              await reload();
-            } catch (err) {
-              setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
-            } finally {
-              setSubmitting(false);
-            }
-          }}
-          style={styles.sheetButton}
-        />
-        {submitError ? (
-          <AppText variant="caption" color={palette.destructive}>
-            {submitError}
-          </AppText>
-        ) : null}
+        <View style={{ paddingTop: 16, borderTopWidth: 1, borderTopColor: palette.border, paddingHorizontal: layout.isCompact ? 0 : 4 }}>
+          {submitError ? (
+            <AppText variant="caption" color={palette.destructive} style={{ marginBottom: 8 }}>
+              {submitError}
+            </AppText>
+          ) : null}
+          <PrimaryButton
+            label={`Thêm ${selectedStudentIds.size > 0 ? `(${selectedStudentIds.size})` : ''} học sinh`}
+            loading={submitting}
+            disabled={selectedStudentIds.size === 0}
+            onPress={async () => {
+              if (!accessToken || !currentClassId || selectedStudentIds.size === 0) return;
+              setSubmitting(true);
+              setSubmitError(null);
+              try {
+                // Call add student for each selected id sequentially or Promise.all
+                const promises = Array.from(selectedStudentIds).map(studentId => 
+                  addStudentToClass(accessToken, currentClassId, { studentId })
+                );
+                await Promise.all(promises);
+                
+                setShowAddStudent(false);
+                await reload();
+              } catch (err) {
+                setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+              } finally {
+                setSubmitting(false);
+              }
+            }}
+            style={styles.sheetButton}
+          />
+        </View>
       </ModalSheet>
 
       <ModalSheet
@@ -835,135 +932,6 @@ export function TeacherClassDetailScreen() {
         </View>
       </ModalSheet>
 
-      <ModalSheet
-        visible={!!selectedAssignment}
-        onClose={() => setSelectedAssignment(null)}
-      >
-        <AppText variant="headline" weight="bold" style={styles.sheetTitle}>
-          {selectedAssignment?.title ?? ''}
-        </AppText>
-        <View style={styles.sheetForm}>
-          {classStudents.map((student) => {
-            const submit = assignmentSubmits.find((item) => item.studentId === student.id);
-            const form = submit ? gradeForms[submit.id] ?? { score: '', feedback: '' } : null;
-            const submitLabel = submit
-              ? submit.submitStatus === 'LATE'
-                ? 'Trễ'
-                : 'Đúng hạn'
-              : 'Chưa nộp';
-
-            return (
-              <SurfaceCard key={student.id} style={styles.submitCard}>
-                <View style={styles.assignmentHead}>
-                  <View style={styles.flex}>
-                    <AppText variant="body" weight="medium">
-                      {student.name}
-                    </AppText>
-                    <AppText variant="caption" color={palette.mutedForeground}>
-                      {`${student.studentCode || student.email} • ${submitLabel}${submit?.submittedAt ? ` • ${formatVietnameseDate(submit.submittedAt)}` : ''}`}
-                    </AppText>
-                  </View>
-                  {submit?.fileUrl ? (
-                    <Pressable
-	                      onPress={() => {
-	                        void Linking.openURL(submit.fileUrl || '');
-	                      }}
-                    >
-                      <AppText variant="label" weight="semibold" color={palette.primary}>
-                        Mở file
-                      </AppText>
-                    </Pressable>
-                  ) : null}
-                </View>
-                {submit && form ? (
-                  <View style={styles.gradeForm}>
-                    {submit.note ? (
-                      <View style={styles.submissionInfoBlock}>
-                        <AppText variant="caption" color={palette.mutedForeground}>
-                          Ghi chú
-                        </AppText>
-                        <AppText variant="body">
-                          {submit.note}
-                        </AppText>
-                      </View>
-                    ) : null}
-                    {submit.fileUrl ? (
-                      <Pressable
-                        style={styles.fileRow}
-                        onPress={() => {
-                          void Linking.openURL(submit.fileUrl || '');
-                        }}
-                      >
-                        <FileText size={16} color={palette.primary} />
-                        <View style={styles.flex}>
-                          <AppText variant="label" weight="semibold" color={palette.primary}>
-                            {submit.fileOriginalName ?? 'File bài làm'}
-                          </AppText>
-                          <AppText variant="caption" color={palette.mutedForeground}>
-                            {`${submit.fileMimeType ?? 'Tài liệu'} • ${formatFileSize(submit.fileSizeBytes)}`}
-                          </AppText>
-                        </View>
-                      </Pressable>
-                    ) : null}
-                    <TextInputField
-                      label="Điểm"
-                      value={form.score}
-                      keyboardType="numeric"
-                      onChangeText={(value) =>
-                        setGradeForms((current) => ({
-                          ...current,
-                          [submit.id]: { ...form, score: value },
-                        }))
-                      }
-                      placeholder={`0-${String(selectedAssignment?.maxScore ?? 10)}`}
-                    />
-                    <TextInputField
-                      label="Nhận xét"
-                      value={form.feedback}
-                      onChangeText={(value) =>
-                        setGradeForms((current) => ({
-                          ...current,
-                          [submit.id]: { ...form, feedback: value },
-                        }))
-                      }
-                      placeholder="Nhận xét nhanh"
-                    />
-                    <PrimaryButton
-                      label="Lưu điểm"
-                      loading={submitting}
-                      onPress={async () => {
-                        if (!accessToken || !selectedAssignment) {
-                          return;
-                        }
-
-                        setSubmitting(true);
-                        setSubmitError(null);
-
-                        try {
-                          await gradeAssignmentSubmit(accessToken, selectedAssignment.id, submit.id, {
-                            score: Number(form.score),
-                            feedback: form.feedback.trim() || undefined,
-                          });
-                          await openAssignmentSubmits(selectedAssignment);
-                        } catch (err) {
-                          setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
-                        } finally {
-                          setSubmitting(false);
-                        }
-                      }}
-                    />
-                  </View>
-                ) : null}
-              </SurfaceCard>
-            );
-          })}
-          {submitError ? (
-            <AppText variant="caption" color={palette.destructive}>
-              {submitError}
-            </AppText>
-          ) : null}
-        </View>
-      </ModalSheet>
     </Screen>
   );
 }
@@ -1092,5 +1060,32 @@ const styles = StyleSheet.create({
   },
   submissionInfoBlock: {
     gap: 4,
+  },
+  availableStudentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.background,
+  },
+  availableStudentRowSelected: {
+    borderColor: palette.primary,
+    backgroundColor: `${palette.primary}10`,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: palette.mutedForeground,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxSelected: {
+    backgroundColor: palette.primary,
+    borderColor: palette.primary,
   },
 });

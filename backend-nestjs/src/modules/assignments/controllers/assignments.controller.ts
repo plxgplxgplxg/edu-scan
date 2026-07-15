@@ -67,8 +67,15 @@ export class AssignmentsController {
   @Get(':id/submits')
   @Roles(Role.TEACHER)
   @AssignmentsSwagger.LayDanhSachBaiNop()
-  getSubmits(@Param('id') id: string, @Req() req: AssignmentRequest) {
-    return this.assignmentsService.getSubmitsForTeacher(id, req.user.id);
+  getSubmits(
+    @Param('id') id: string,
+    @Req() req: AssignmentRequest,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const pageNum = page ? parseInt(page, 10) : 1;
+    const limitNum = limit ? parseInt(limit, 10) : 10;
+    return this.assignmentsService.getSubmitsForTeacher(id, req.user.id, pageNum, limitNum);
   }
 
   @Post(':id/submits')

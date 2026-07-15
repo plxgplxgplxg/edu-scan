@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Linking, Image, Pressable } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, StyleSheet, Linking, Image, Pressable, FlatList, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import {
   FileText,
@@ -27,6 +27,7 @@ import { SurfaceCard } from '../../components/SurfaceCard';
 import { TextInputField } from '../../components/TextInputField';
 import { Screen } from '../../components/Screen';
 import { ErrorState, LoadingState } from '../../components/RequestState';
+import { FilterChips } from '../../components/FilterChips';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { useAuth } from '../../store/auth-store';
 import { useAppContent } from '../../hooks/useAppContent';
@@ -48,18 +49,27 @@ export function TeacherAssignmentDetailScreen() {
 
   const { assignmentId, classId, classCode } = route.params;
 
+  const [activeTab, setActiveTab] = useState<'info' | 'submits'>('info');
+
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  
+  // Pagination State for Submits
+  const [submits, setSubmits] = useState<AssignmentSubmitApi[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loadingSubmits, setLoadingSubmits] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
   const [gradeForms, setGradeForms] = useState<Record<string, { score: string; feedback: string }>>({});
 
-  const { data, loading, error, reload } = useAsyncResource(
+  const { data: assignmentData, loading: loadingAssignment, error: assignmentError, reload: reloadAssignment } = useAsyncResource(
     async () => {
       if (!accessToken || !classId) return null;
 
-      const [classItem, assignments, submits] = await Promise.all([
+      const [classItem, assignments] = await Promise.all([
         getClassDetail(accessToken, classId),
         listAssignments(accessToken),
-        getAssignmentSubmits(accessToken, assignmentId),
       ]);
 
       const detail = mapClassDetail(classItem);
@@ -70,27 +80,68 @@ export function TeacherAssignmentDetailScreen() {
 
       const assignment = assignmentList.find(a => a.id === assignmentId);
 
-      // Initialize grade forms
-      const initialForms: Record<string, { score: string; feedback: string }> = {};
-      submits.forEach(s => {
-        initialForms[s.id] = {
-          score: s.score === null ? '' : String(s.score),
-          feedback: s.feedback ?? '',
-        };
-      });
-      setGradeForms(initialForms);
-
       return {
         currentClass: detail,
         assignment,
-        submits,
       };
     },
     [accessToken, classId, assignmentId],
   );
 
-  const assignment = data?.assignment;
-  const submits = data?.submits ?? [];
+  const assignment = assignmentData?.assignment;
+
+  const fetchSubmits = useCallback(async (pageNum: number, isLoadMore = false) => {
+    if (!accessToken) return;
+    
+    if (isLoadMore) {
+      setLoadingMore(true);
+    } else {
+      setLoadingSubmits(true);
+    }
+
+    try {
+      const res = await getAssignmentSubmits(accessToken, assignmentId, pageNum, 10);
+      
+      setSubmits(prev => isLoadMore ? [...prev, ...res.items] : res.items);
+      setTotalPages(res.totalPages);
+      setPage(res.page);
+
+      // Initialize grade forms for new items
+      setGradeForms(prev => {
+        const newForms = { ...prev };
+        res.items.forEach(s => {
+          if (!newForms[s.id]) {
+            newForms[s.id] = {
+              score: s.score === null ? '' : String(s.score),
+              feedback: s.feedback ?? '',
+            };
+          }
+        });
+        return newForms;
+      });
+
+    } catch (err) {
+      // ignore
+    } finally {
+      setLoadingSubmits(false);
+      setLoadingMore(false);
+    }
+  }, [accessToken, assignmentId]);
+
+  useEffect(() => {
+    void fetchSubmits(1);
+  }, [fetchSubmits]);
+
+  const handleLoadMore = () => {
+    if (!loadingMore && page < totalPages) {
+      void fetchSubmits(page + 1, true);
+    }
+  };
+
+  const handleRefresh = async () => {
+    await reloadAssignment();
+    await fetchSubmits(1);
+  };
 
   const handleGrade = async (submitId: string) => {
     if (!accessToken) return;
@@ -105,7 +156,9 @@ export function TeacherAssignmentDetailScreen() {
         score: Number(form.score),
         feedback: form.feedback || undefined,
       });
-      await reload();
+      // Refresh only the submit item locally or re-fetch current page?
+      // Re-fetch page 1 to simple refresh or update local state
+      await fetchSubmits(1);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
     } finally {
@@ -113,19 +166,19 @@ export function TeacherAssignmentDetailScreen() {
     }
   };
 
-  if (!data && loading) {
+  if (!assignmentData && loadingAssignment) {
     return (
-      <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
+      <Screen refreshing={loadingAssignment} onRefresh={handleRefresh}>
         <LoadingState label={content.common.labels.loading} />
       </Screen>
     );
   }
 
-  if (error || (!assignment && !loading)) {
+  if (assignmentError || (!assignment && !loadingAssignment)) {
     return (
-      <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
+      <Screen refreshing={loadingAssignment} onRefresh={handleRefresh}>
         <ErrorState
-          message={error || "Không tìm thấy bài tập"}
+          message={assignmentError || "Không tìm thấy bài tập"}
           retryLabel={content.common.buttons.back}
           onRetry={() => navigation.goBack()}
         />
@@ -138,11 +191,221 @@ export function TeacherAssignmentDetailScreen() {
   const submitCount = assignment.submitCount ?? 0;
   const totalStudents = assignment.totalStudents ?? 0;
   const progress = percentage(submitCount, totalStudents);
-
   const isImageFile = assignment.instructionFileMimeType?.startsWith('image/');
 
+  const renderInfo = () => (
+    <SurfaceCard style={styles.assignmentCard}>
+      <AppText variant="headline" weight="bold" style={{ marginBottom: 8 }}>
+        {assignment.title}
+      </AppText>
+      {assignment.description ? (
+        <AppText variant="body" color={palette.mutedForeground} style={{ marginBottom: 16 }}>
+          {assignment.description}
+        </AppText>
+      ) : null}
+
+      {/* File Attachment */}
+      {assignment.instructionFileUrl ? (
+        <View style={styles.fileSection}>
+          {isImageFile ? (
+            <View style={styles.imagePreviewContainer}>
+              <Image 
+                source={{ uri: assignment.instructionFileUrl }} 
+                style={styles.imagePreview} 
+                resizeMode="contain" 
+              />
+              <View style={styles.fileRow}>
+                <FileText size={15} color={palette.primary} />
+                <View style={styles.flex}>
+                  <AppText variant="label" weight="semibold" color={palette.primary}>
+                    {assignment.instructionFileOriginalName ?? 'Hình ảnh'}
+                  </AppText>
+                  <AppText variant="caption" color={palette.mutedForeground}>
+                    {`${assignment.instructionFileMimeType} • ${formatFileSize(assignment.instructionFileSizeBytes)}`}
+                  </AppText>
+                </View>
+              </View>
+            </View>
+          ) : (
+            <Pressable
+              style={[styles.fileRow, { padding: 12, backgroundColor: palette.background, borderRadius: 8, borderWidth: 1, borderColor: palette.border }]}
+              onPress={() => {
+                void Linking.openURL(assignment.instructionFileUrl || '');
+              }}
+            >
+              <FileText size={20} color={palette.primary} />
+              <View style={styles.flex}>
+                <AppText variant="label" weight="semibold" color={palette.primary}>
+                  {assignment.instructionFileOriginalName ?? 'File hướng dẫn'}
+                </AppText>
+                <AppText variant="caption" color={palette.mutedForeground}>
+                  {`${assignment.instructionFileMimeType ?? 'Tài liệu'} • ${formatFileSize(assignment.instructionFileSizeBytes)}`}
+                </AppText>
+              </View>
+            </Pressable>
+          )}
+        </View>
+      ) : null}
+
+      <View style={styles.assignmentMeta}>
+        <View style={styles.inlineMeta}>
+          <Clock size={16} color={palette.mutedForeground} />
+          <AppText variant="body" color={palette.mutedForeground}>
+            {`${content.common.form.deadline}: ${formatVietnameseDate(assignment.deadline)}`}
+          </AppText>
+        </View>
+        <View style={styles.inlineMeta}>
+          <CheckCircle size={16} color={palette.success} />
+          <AppText variant="body" color={palette.mutedForeground}>
+            {`${submitCount}/${totalStudents} đã nộp`}
+          </AppText>
+        </View>
+      </View>
+
+      <View style={styles.progressRow}>
+        <View style={styles.flex}>
+          <ProgressBar progress={progress} color={progress === 100 ? palette.success : palette.primary} />
+        </View>
+        <AppText variant="caption" color={palette.mutedForeground}>
+          {`${progress}%`}
+        </AppText>
+      </View>
+    </SurfaceCard>
+  );
+
+  const renderSubmitItem = ({ item: submit }: { item: AssignmentSubmitApi }) => {
+    const isSubmitImage = submit.fileMimeType?.startsWith('image/');
+    return (
+      <SurfaceCard style={styles.submitCard}>
+        <View style={styles.submitHead}>
+          <View style={styles.avatarCircle}>
+            <AppText variant="label" weight="bold" color={palette.secondaryForeground}>
+              {submit.student?.name?.charAt(0) || '?'}
+            </AppText>
+          </View>
+          <View style={styles.flex}>
+            <AppText variant="body" weight="medium">
+              {submit.student?.name || 'Unknown student'}
+            </AppText>
+            <AppText variant="caption" color={palette.mutedForeground}>
+              {submit.student?.studentCode || 'No code'} • {formatVietnameseDate(submit.submittedAt)}
+            </AppText>
+          </View>
+          {submit.score !== null ? (
+            <View style={styles.scoreBadge}>
+              <AppText variant="label" weight="bold" color={palette.primary}>
+                {submit.score}
+              </AppText>
+            </View>
+          ) : null}
+        </View>
+
+        {submit.note ? (
+          <View style={styles.noteBox}>
+            <MessageSquare size={14} color={palette.mutedForeground} style={{ marginTop: 2 }} />
+            <AppText variant="body" color={palette.foreground} style={{ flex: 1 }}>
+              {submit.note}
+            </AppText>
+          </View>
+        ) : null}
+
+        {submit.fileUrl ? (
+          <View style={styles.fileSection}>
+            {isSubmitImage ? (
+              <View style={styles.imagePreviewContainer}>
+                <Image 
+                  source={{ uri: submit.fileUrl }} 
+                  style={styles.imagePreview} 
+                  resizeMode="contain" 
+                />
+                <View style={styles.fileRow}>
+                  <FileText size={15} color={palette.primary} />
+                  <View style={styles.flex}>
+                    <AppText variant="label" weight="semibold" color={palette.primary}>
+                      {submit.fileOriginalName ?? 'Hình ảnh đính kèm'}
+                    </AppText>
+                  </View>
+                </View>
+              </View>
+            ) : (
+              <Pressable
+                style={styles.fileRowOutline}
+                onPress={() => Linking.openURL(submit.fileUrl || '')}
+              >
+                <FileText size={16} color={palette.primary} />
+                <AppText variant="label" weight="semibold" color={palette.primary} style={{ flex: 1 }} numberOfLines={1}>
+                  {submit.fileOriginalName ?? 'Tệp đính kèm'}
+                </AppText>
+              </Pressable>
+            )}
+          </View>
+        ) : null}
+
+        {/* Grading Area */}
+        <View style={styles.gradeArea}>
+          <AppText variant="label" weight="semibold" style={{ marginBottom: 8 }}>
+            Chấm điểm & Nhận xét
+          </AppText>
+          <TextInputField
+            label="Điểm"
+            value={gradeForms[submit.id]?.score || ''}
+            onChangeText={(val) => setGradeForms(cur => ({ ...cur, [submit.id]: { ...cur[submit.id], score: val } }))}
+            keyboardType="numeric"
+            placeholder={`/ ${assignment.maxScore}`}
+          />
+          <TextInputField
+            label="Nhận xét"
+            value={gradeForms[submit.id]?.feedback || ''}
+            onChangeText={(val) => setGradeForms(cur => ({ ...cur, [submit.id]: { ...cur[submit.id], feedback: val } }))}
+            placeholder="Nhập nhận xét..."
+          />
+          <PrimaryButton
+            label={submit.score !== null ? 'Cập nhật điểm' : 'Chấm điểm'}
+            onPress={() => handleGrade(submit.id)}
+            loading={submitting}
+            icon={<Edit2 size={16} color={palette.white} />}
+            style={{ marginTop: 8 }}
+          />
+        </View>
+      </SurfaceCard>
+    );
+  };
+
+  const renderHeader = () => (
+    <View style={{ gap: layout.sectionGap, marginBottom: 16 }}>
+      <FilterChips
+        items={[
+          { label: 'Thông tin bài tập', id: 'info' },
+          { label: `Bài nộp (${submitCount})`, id: 'submits' },
+        ]}
+        value={activeTab}
+        onChange={(val) => setActiveTab(val as 'info' | 'submits')}
+      />
+
+      {activeTab === 'info' ? renderInfo() : (
+        submitError ? (
+          <AppText variant="caption" color={palette.destructive} style={{ marginTop: 8 }}>
+            {submitError}
+          </AppText>
+        ) : null
+      )}
+    </View>
+  );
+
+  const renderEmptySubmits = () => (
+    <SurfaceCard style={{ padding: 24, alignItems: 'center' }}>
+      <AppText variant="body" color={palette.mutedForeground}>
+        Chưa có học sinh nào nộp bài.
+      </AppText>
+    </SurfaceCard>
+  );
+
+  const renderFooter = () => (
+    loadingMore ? <ActivityIndicator size="small" color={palette.primary} style={{ padding: 16 }} /> : null
+  );
+
   return (
-    <Screen refreshing={loading} onRefresh={() => { void reload(); }}>
+    <Screen refreshing={loadingAssignment || (loadingSubmits && !loadingMore)} onRefresh={handleRefresh}>
       <PageHeader
         title={assignment.title}
         subtitle={`${classCode || ''} • Bài tập`}
@@ -150,203 +413,18 @@ export function TeacherAssignmentDetailScreen() {
         leadingVisual={<ChevronLeft size={24} color={palette.foreground} />}
       />
 
-      <ScrollView contentContainerStyle={[styles.body, { maxWidth: layout.contentMaxWidth, alignSelf: 'center', width: '100%', paddingHorizontal: layout.horizontalPadding, gap: layout.sectionGap }]}>
-        
-        {/* Assignment Detail Card */}
-        <SurfaceCard style={styles.assignmentCard}>
-          <AppText variant="headline" weight="bold" style={{ marginBottom: 8 }}>
-            {assignment.title}
-          </AppText>
-          {assignment.description ? (
-            <AppText variant="body" color={palette.mutedForeground} style={{ marginBottom: 16 }}>
-              {assignment.description}
-            </AppText>
-          ) : null}
-
-          {/* File Attachment */}
-          {assignment.instructionFileUrl ? (
-            <View style={styles.fileSection}>
-              {isImageFile ? (
-                <View style={styles.imagePreviewContainer}>
-                  <Image 
-                    source={{ uri: assignment.instructionFileUrl }} 
-                    style={styles.imagePreview} 
-                    resizeMode="contain" 
-                  />
-                  <View style={styles.fileRow}>
-                    <FileText size={15} color={palette.primary} />
-                    <View style={styles.flex}>
-                      <AppText variant="label" weight="semibold" color={palette.primary}>
-                        {assignment.instructionFileOriginalName ?? 'Hình ảnh'}
-                      </AppText>
-                      <AppText variant="caption" color={palette.mutedForeground}>
-                        {`${assignment.instructionFileMimeType} • ${formatFileSize(assignment.instructionFileSizeBytes)}`}
-                      </AppText>
-                    </View>
-                  </View>
-                </View>
-              ) : (
-                <Pressable
-                  style={[styles.fileRow, { padding: 12, backgroundColor: palette.background, borderRadius: 8, borderWidth: 1, borderColor: palette.border }]}
-                  onPress={() => {
-                    void Linking.openURL(assignment.instructionFileUrl || '');
-                  }}
-                >
-                  <FileText size={20} color={palette.primary} />
-                  <View style={styles.flex}>
-                    <AppText variant="label" weight="semibold" color={palette.primary}>
-                      {assignment.instructionFileOriginalName ?? 'File hướng dẫn'}
-                    </AppText>
-                    <AppText variant="caption" color={palette.mutedForeground}>
-                      {`${assignment.instructionFileMimeType ?? 'Tài liệu'} • ${formatFileSize(assignment.instructionFileSizeBytes)}`}
-                    </AppText>
-                  </View>
-                </Pressable>
-              )}
-            </View>
-          ) : null}
-
-          <View style={styles.assignmentMeta}>
-            <View style={styles.inlineMeta}>
-              <Clock size={16} color={palette.mutedForeground} />
-              <AppText variant="body" color={palette.mutedForeground}>
-                {`${content.common.form.deadline}: ${formatVietnameseDate(assignment.deadline)}`}
-              </AppText>
-            </View>
-            <View style={styles.inlineMeta}>
-              <CheckCircle size={16} color={palette.success} />
-              <AppText variant="body" color={palette.mutedForeground}>
-                {`${submitCount}/${totalStudents} đã nộp`}
-              </AppText>
-            </View>
-          </View>
-
-          <View style={styles.progressRow}>
-            <View style={styles.flex}>
-              <ProgressBar progress={progress} color={progress === 100 ? palette.success : palette.primary} />
-            </View>
-            <AppText variant="caption" color={palette.mutedForeground}>
-              {`${progress}%`}
-            </AppText>
-          </View>
-        </SurfaceCard>
-
-        {/* Submissions Section */}
-        <AppText variant="headline" weight="bold">
-          Danh sách bài nộp ({submits.length})
-        </AppText>
-        {submitError ? (
-          <AppText variant="caption" color={palette.destructive}>
-            {submitError}
-          </AppText>
-        ) : null}
-
-        {submits.length === 0 ? (
-          <SurfaceCard style={{ padding: 24, alignItems: 'center' }}>
-            <AppText variant="body" color={palette.mutedForeground}>
-              Chưa có học sinh nào nộp bài.
-            </AppText>
-          </SurfaceCard>
-        ) : (
-          submits.map((submit) => {
-            const isSubmitImage = submit.fileMimeType?.startsWith('image/');
-            return (
-              <SurfaceCard key={submit.id} style={styles.submitCard}>
-                <View style={styles.submitHead}>
-                  <View style={styles.avatarCircle}>
-                    <AppText variant="label" weight="bold" color={palette.secondaryForeground}>
-                      {submit.student?.name?.charAt(0) || '?'}
-                    </AppText>
-                  </View>
-                  <View style={styles.flex}>
-                    <AppText variant="body" weight="medium">
-                      {submit.student?.name || 'Unknown student'}
-                    </AppText>
-                    <AppText variant="caption" color={palette.mutedForeground}>
-                      {submit.student?.studentCode || 'No code'} • {formatVietnameseDate(submit.submittedAt)}
-                    </AppText>
-                  </View>
-                  {submit.score !== null ? (
-                    <View style={styles.scoreBadge}>
-                      <AppText variant="label" weight="bold" color={palette.primary}>
-                        {submit.score}
-                      </AppText>
-                    </View>
-                  ) : null}
-                </View>
-
-                {submit.note ? (
-                  <View style={styles.noteBox}>
-                    <MessageSquare size={14} color={palette.mutedForeground} style={{ marginTop: 2 }} />
-                    <AppText variant="body" color={palette.foreground} style={{ flex: 1 }}>
-                      {submit.note}
-                    </AppText>
-                  </View>
-                ) : null}
-
-                {submit.fileUrl ? (
-                  <View style={styles.fileSection}>
-                    {isSubmitImage ? (
-                      <View style={styles.imagePreviewContainer}>
-                        <Image 
-                          source={{ uri: submit.fileUrl }} 
-                          style={styles.imagePreview} 
-                          resizeMode="contain" 
-                        />
-                        <View style={styles.fileRow}>
-                          <FileText size={15} color={palette.primary} />
-                          <View style={styles.flex}>
-                            <AppText variant="label" weight="semibold" color={palette.primary}>
-                              {submit.fileOriginalName ?? 'Hình ảnh đính kèm'}
-                            </AppText>
-                          </View>
-                        </View>
-                      </View>
-                    ) : (
-                      <Pressable
-                        style={styles.fileRowOutline}
-                        onPress={() => Linking.openURL(submit.fileUrl || '')}
-                      >
-                        <FileText size={16} color={palette.primary} />
-                        <AppText variant="label" weight="semibold" color={palette.primary} style={{ flex: 1 }} numberOfLines={1}>
-                          {submit.fileOriginalName ?? 'Tệp đính kèm'}
-                        </AppText>
-                      </Pressable>
-                    )}
-                  </View>
-                ) : null}
-
-                {/* Grading Area */}
-                <View style={styles.gradeArea}>
-                  <AppText variant="label" weight="semibold" style={{ marginBottom: 8 }}>
-                    Chấm điểm & Nhận xét
-                  </AppText>
-                  <TextInputField
-                    label="Điểm"
-                    value={gradeForms[submit.id]?.score || ''}
-                    onChangeText={(val) => setGradeForms(cur => ({ ...cur, [submit.id]: { ...cur[submit.id], score: val } }))}
-                    keyboardType="numeric"
-                    placeholder={`/ ${assignment.maxScore}`}
-                  />
-                  <TextInputField
-                    label="Nhận xét"
-                    value={gradeForms[submit.id]?.feedback || ''}
-                    onChangeText={(val) => setGradeForms(cur => ({ ...cur, [submit.id]: { ...cur[submit.id], feedback: val } }))}
-                    placeholder="Nhập nhận xét..."
-                  />
-                  <PrimaryButton
-                    label={submit.score !== null ? 'Cập nhật điểm' : 'Chấm điểm'}
-                    onPress={() => handleGrade(submit.id)}
-                    loading={submitting}
-                    icon={<Edit2 size={16} color={palette.white} />}
-                    style={{ marginTop: 8 }}
-                  />
-                </View>
-              </SurfaceCard>
-            );
-          })
-        )}
-      </ScrollView>
+      <FlatList
+        data={activeTab === 'submits' ? submits : []}
+        keyExtractor={(item) => item.id}
+        renderItem={renderSubmitItem}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={activeTab === 'submits' && !loadingSubmits ? renderEmptySubmits : null}
+        ListFooterComponent={activeTab === 'submits' ? renderFooter : null}
+        onEndReached={activeTab === 'submits' ? handleLoadMore : null}
+        onEndReachedThreshold={0.5}
+        contentContainerStyle={[styles.body, { maxWidth: layout.contentMaxWidth, alignSelf: 'center', width: '100%', paddingHorizontal: layout.horizontalPadding }]}
+        showsVerticalScrollIndicator={false}
+      />
     </Screen>
   );
 }

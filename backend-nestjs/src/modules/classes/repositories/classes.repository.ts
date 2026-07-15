@@ -282,6 +282,43 @@ export class ClassesRepository {
     return !!enrollment;
   }
 
+  async searchAvailableStudents(classId: string, keyword: string, page = 1, limit = 10) {
+    const skip = (page - 1) * limit;
+    const where: Prisma.UserWhereInput = {
+      role: Role.STUDENT,
+      isActive: true,
+      enrollments: {
+        none: { classId }
+      }
+    };
+
+    if (keyword) {
+      where.OR = [
+        { name: { contains: keyword, mode: 'insensitive' } },
+        { email: { contains: keyword, mode: 'insensitive' } },
+        { studentCode: { contains: keyword, mode: 'insensitive' } },
+      ];
+    }
+
+    const [items, total] = await this.prismaService.$transaction([
+      this.prismaService.user.findMany({
+        where,
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          studentCode: true,
+        },
+        skip,
+        take: limit,
+        orderBy: { name: 'asc' },
+      }),
+      this.prismaService.user.count({ where }),
+    ]);
+
+    return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
+  }
+
   async addStudentToClass(classId: string, studentId: string) {
     return this.prismaService.classEnrollment.create({
       data: {

@@ -117,6 +117,20 @@ export class ClassesController {
     return this.classesService.deleteClass(classId, currentUser.id);
   }
 
+  @Get(':id/available-students')
+  @Roles(Role.TEACHER)
+  async searchAvailableStudents(
+    @Param('id') classId: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Query('q') query?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const pageNum = page ? parseInt(page, 10) : 1;
+    const limitNum = limit ? parseInt(limit, 10) : 10;
+    return this.classesService.searchAvailableStudents(classId, currentUser.id, query || '', pageNum, limitNum);
+  }
+
   @Post(':id/students')
   @Roles(Role.TEACHER)
   @ClassesSwagger.ThemHocSinh()
