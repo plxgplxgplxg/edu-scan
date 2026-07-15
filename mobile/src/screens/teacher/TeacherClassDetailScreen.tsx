@@ -42,6 +42,7 @@ import { ErrorState, LoadingState } from '../../components/RequestState';
 import { Screen } from '../../components/Screen';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { TextInputField } from '../../components/TextInputField';
+import { DateTimePickerField } from '../../components/DateTimePickerField';
 import { FilterChips } from '../../components/FilterChips';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { useAppContent } from '../../hooks/useAppContent';
@@ -103,7 +104,7 @@ export function TeacherClassDetailScreen() {
   const [assignmentForm, setAssignmentForm] = useState({
     title: '',
     description: '',
-    deadline: '',
+    deadline: new Date(Date.now() + 24 * 60 * 60 * 1000), // Default 1 day later
     allowLate: false,
     maxScore: '10',
     latePenaltyPct: '10',
@@ -138,35 +139,7 @@ export function TeacherClassDetailScreen() {
   const classStudents = currentClass?.students ?? [];
   const teacherAssignments = data?.assignments ?? [];
 
-  const openAssignmentSubmits = async (assignment: AssignmentSummary) => {
-    if (!accessToken) {
-      return;
-    }
 
-    setSubmitting(true);
-    setSubmitError(null);
-
-    try {
-      const submits = await getAssignmentSubmits(accessToken, assignment.id);
-      setAssignmentSubmits(submits);
-      setGradeForms(
-        Object.fromEntries(
-          submits.map((submit) => [
-            submit.id,
-            {
-              score: submit.score === null ? '' : String(submit.score),
-              feedback: submit.feedback ?? '',
-            },
-          ]),
-        ),
-      );
-      setSelectedAssignment(assignment);
-    } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   useEffect(() => {
     return () => {
@@ -503,8 +476,18 @@ export function TeacherClassDetailScreen() {
               const progress = percentage(submitCount, totalStudents);
 
               return (
-                <SurfaceCard key={item.id} style={styles.assignmentCard}>
-                  <View style={[styles.assignmentHead, layout.isCompact ? styles.assignmentHeadStack : null]}>
+                <Pressable
+                  key={item.id}
+                  onPress={() => {
+                    navigation.navigate('TeacherAssignmentDetail', {
+                      assignmentId: item.id,
+                      classId: currentClass.id,
+                      classCode: currentClass.code,
+                    });
+                  }}
+                >
+                  <SurfaceCard style={styles.assignmentCard}>
+                    <View style={[styles.assignmentHead, layout.isCompact ? styles.assignmentHeadStack : null]}>
                     <View style={styles.flex}>
                       <AppText variant="body" weight="medium">
                         {item.title}
@@ -573,10 +556,15 @@ export function TeacherClassDetailScreen() {
                     label={content.teacher.classes.viewSubmissions}
                     loading={submitting}
                     onPress={() => {
-                      void openAssignmentSubmits(item);
+                      navigation.navigate('TeacherAssignmentDetail', {
+                        assignmentId: item.id,
+                        classId: currentClass.id,
+                        classCode: currentClass.code,
+                      });
                     }}
                   />
                 </SurfaceCard>
+                </Pressable>
               );
             })}
           </View>
@@ -758,13 +746,13 @@ export function TeacherClassDetailScreen() {
               PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, TXT, ZIP hoặc ẢNH • tối đa 10MB
             </AppText>
           </View>
-          <TextInputField
+          <DateTimePickerField
             label={content.common.form.deadline}
             value={assignmentForm.deadline}
-            onChangeText={value =>
-              setAssignmentForm(current => ({ ...current, deadline: value }))
+            onChange={(date: Date) =>
+              setAssignmentForm(current => ({ ...current, deadline: date }))
             }
-            placeholder={content.common.placeholders.dateTime + " (VD: 2026-07-20T10:00:00)"}
+            minimumDate={new Date()}
           />
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <AppText variant="label" weight="semibold">Cho phép nộp muộn</AppText>
@@ -808,7 +796,7 @@ export function TeacherClassDetailScreen() {
                 await createAssignment(accessToken, {
                   title: assignmentForm.title.trim(),
                   description: assignmentForm.description.trim() || undefined,
-                  deadline: new Date(assignmentForm.deadline).toISOString(),
+                  deadline: assignmentForm.deadline.toISOString(),
                   maxScore: Number(assignmentForm.maxScore),
                   allowLate: assignmentForm.allowLate,
                   latePenaltyPct: assignmentForm.allowLate ? Number(assignmentForm.latePenaltyPct) : 0,
@@ -825,7 +813,7 @@ export function TeacherClassDetailScreen() {
                 setAssignmentForm({
                   title: '',
                   description: '',
-                  deadline: '',
+                  deadline: new Date(Date.now() + 24 * 60 * 60 * 1000),
                   allowLate: false,
                   maxScore: '10',
                   latePenaltyPct: '10',

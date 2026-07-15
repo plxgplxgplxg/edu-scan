@@ -19,6 +19,7 @@ import { RegisterScreen } from '../screens/auth/RegisterScreen';
 import { TeacherDashboardScreen } from '../screens/teacher/TeacherDashboardScreen';
 import { TeacherClassesScreen } from '../screens/teacher/TeacherClassesScreen';
 import { TeacherClassDetailScreen } from '../screens/teacher/TeacherClassDetailScreen';
+import { TeacherAssignmentDetailScreen } from '../screens/teacher/TeacherAssignmentDetailScreen';
 import { TeacherOmrExamsScreen } from '../screens/teacher/TeacherOmrExamsScreen';
 import { TeacherOmrScreen } from '../screens/teacher/TeacherOmrScreen';
 import { TeacherOmrExamDetailScreen } from '../screens/teacher/TeacherOmrExamDetailScreen';
@@ -252,6 +253,10 @@ export function AppNavigator() {
             <Stack.Screen
               name="TeacherClassDetail"
               component={TeacherClassDetailScreen}
+            />
+            <Stack.Screen
+              name="TeacherAssignmentDetail"
+              component={TeacherAssignmentDetailScreen}
             />
             <Stack.Screen name="TeacherOmrExams" component={TeacherOmrExamsScreen} />
             <Stack.Screen
