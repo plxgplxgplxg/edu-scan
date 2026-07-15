@@ -287,7 +287,7 @@ export class ClassesRepository {
     const where: Prisma.UserWhereInput = {
       role: Role.STUDENT,
       isActive: true,
-      enrollments: {
+      classEnrollments: {
         none: { classId }
       }
     };

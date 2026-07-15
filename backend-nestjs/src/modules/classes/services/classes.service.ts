@@ -200,7 +200,7 @@ export class ClassesService {
     page = 1,
     limit = 10
   ) {
-    const classEntity = await this.classesRepository.findById(classId);
+    const classEntity = await this.classesRepository.findClassById(classId);
     if (!classEntity) {
       throw new NotFoundException('Class not found');
     }

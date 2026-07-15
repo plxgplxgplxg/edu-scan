@@ -6,6 +6,7 @@ import {
   Patch,
   Post,
   Delete,
+  Query,
   Req,
   UploadedFile,
   UseGuards,
