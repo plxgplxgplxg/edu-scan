@@ -137,12 +137,10 @@ export class ExamsService {
 
     if (
       hasDependentData &&
-      (updateExamDto.answerKeys !== undefined ||
-        updateExamDto.variants !== undefined ||
-        updateExamDto.classIds !== undefined)
+      updateExamDto.classIds !== undefined
     ) {
       throw new BadRequestException(
-        'Cannot change classes, variants, or answer keys after submissions or OMR batches already exist',
+        'Cannot change classes after submissions or OMR batches already exist',
       );
     }
 
@@ -174,9 +172,7 @@ export class ExamsService {
     );
     if (!exam) throw new NotFoundException('Exam not found');
 
-    if (exam.status === ExamStatus.PUBLISHED) {
-      throw new BadRequestException('Cannot modify published exam');
-    }
+
 
     const updated = await this.examsRepository.upsertExamQuestionAnswer({
       examId,
@@ -201,9 +197,7 @@ export class ExamsService {
     );
     if (!exam) throw new NotFoundException('Exam not found');
 
-    if (exam.status === ExamStatus.PUBLISHED) {
-      throw new BadRequestException('Cannot modify published exam');
-    }
+
 
     const updated = await this.examsRepository.removeExamQuestionAnswer({
       examId,

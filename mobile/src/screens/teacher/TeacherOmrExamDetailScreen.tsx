@@ -191,7 +191,7 @@ export function TeacherOmrExamDetailScreen() {
   const renderSettings = () => {
     return (
       <View style={{ gap: appTheme.spacing.md }}>
-        <Pressable>
+        <Pressable onPress={() => navigation.navigate('TeacherOmrExamBuilder', { examId, initialStep: 1 })}>
           <SurfaceCard style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
             <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#F3E8FF', alignItems: 'center', justifyContent: 'center' }}>
               <Settings size={20} color={palette.primary} />
@@ -200,7 +200,7 @@ export function TeacherOmrExamDetailScreen() {
             <ChevronRight size={20} color={palette.mutedForeground} />
           </SurfaceCard>
         </Pressable>
-        <Pressable>
+        <Pressable onPress={() => navigation.navigate('TeacherOmrExamBuilder', { examId, initialStep: 3 })}>
           <SurfaceCard style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
             <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#F3E8FF', alignItems: 'center', justifyContent: 'center' }}>
               <Pencil size={20} color={palette.primary} />

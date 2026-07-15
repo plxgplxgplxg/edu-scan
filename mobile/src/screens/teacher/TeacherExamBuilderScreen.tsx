@@ -42,10 +42,11 @@ export function TeacherExamBuilderScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<any>();
   const examId = route.params?.examId as string | undefined;
+  const initialStep = route.params?.initialStep as number | undefined;
   const { accessToken } = useAuth();
   const insets = useSafeAreaInsets();
 
-  const [step, setStep] = useState<number>(1);
+  const [step, setStep] = useState<number>(initialStep || 1);
 
   // Step 1 states
   const [title, setTitle] = useState('');
@@ -74,7 +75,7 @@ export function TeacherExamBuilderScreen() {
   useEffect(() => {
     if (data) {
       setTitle(data.title ?? '');
-      setQuestionCount(40);
+      setQuestionCount(data.questionCount || 40);
       if (data.variants && data.variants.length > 0) {
         const codes = data.variants.map(v => v.testCode === 'DEFAULT' ? '' : v.testCode).filter(c => c !== '');
         setTestCodes(codes);
@@ -208,7 +209,7 @@ export function TeacherExamBuilderScreen() {
   };
 
   return (
-    <Screen bleedTop withoutBottomInset style={{ backgroundColor: palette.background }}>
+    <Screen scrollable={false} bleedTop withoutBottomInset style={{ backgroundColor: palette.background }}>
       <GradientBackground colors={['#9b51e0', '#f472b6']} style={styles.header}>
         <View style={[styles.headerTop, { paddingTop: insets.top + 16 }]}>
           <Pressable onPress={() => step > 1 ? setStep(step - 1) : navigation.goBack()} style={styles.backButton}>
@@ -233,7 +234,7 @@ export function TeacherExamBuilderScreen() {
         </View>
       </GradientBackground>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {loading && <LoadingState label="Đang tải..." />}
         {error && <ErrorState message={error} retryLabel="Thử lại" onRetry={() => void reload()} />}
         
@@ -259,9 +260,23 @@ export function TeacherExamBuilderScreen() {
 
         {step === 2 && (
           <View style={styles.stepSection}>
+            {data && (data.submissionCount ?? 0) > 0 && (
+              <View style={{ backgroundColor: '#FFF9E6', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#FFEAA7', marginBottom: 8 }}>
+                <AppText variant="caption" color={palette.warning} weight="bold">
+                  * Đề thi đã có bài chấm. Không thể thay đổi số câu hỏi, số lựa chọn hoặc cấu trúc mã đề.
+                </AppText>
+              </View>
+            )}
             <AppText variant="label" weight="semibold">Tổng số câu hỏi</AppText>
             <View style={styles.counterRow}>
-              <Pressable style={styles.counterBtn} onPress={() => setQuestionCount(Math.max(1, questionCount - 1))}>
+              <Pressable 
+                style={[styles.counterBtn, (data?.submissionCount ?? 0) > 0 ? { opacity: 0.5 } : null]} 
+                onPress={() => {
+                  if ((data?.submissionCount ?? 0) > 0) return;
+                  setQuestionCount(Math.max(1, questionCount - 1));
+                }}
+                disabled={(data?.submissionCount ?? 0) > 0}
+              >
                 <AppText variant="title" weight="bold">-</AppText>
               </Pressable>
               <View style={styles.counterValue}>
@@ -269,6 +284,7 @@ export function TeacherExamBuilderScreen() {
                   style={{ fontSize: 24, fontWeight: 'bold', color: palette.primary, textAlign: 'center', minWidth: 48, padding: 0 }}
                   keyboardType="number-pad"
                   value={questionCount ? String(questionCount) : ''}
+                  editable={!((data?.submissionCount ?? 0) > 0)}
                   onChangeText={(text) => {
                     const num = parseInt(text.replace(/[^0-9]/g, ''), 10);
                     if (!isNaN(num)) {
@@ -283,22 +299,41 @@ export function TeacherExamBuilderScreen() {
                 />
                 <AppText variant="caption" color={palette.mutedForeground}>câu hỏi (tối đa 40)</AppText>
               </View>
-              <Pressable style={styles.counterBtn} onPress={() => setQuestionCount(Math.min(40, questionCount + 1))}>
+              <Pressable 
+                style={[styles.counterBtn, (data?.submissionCount ?? 0) > 0 ? { opacity: 0.5 } : null]} 
+                onPress={() => {
+                  if ((data?.submissionCount ?? 0) > 0) return;
+                  setQuestionCount(Math.min(40, questionCount + 1));
+                }}
+                disabled={(data?.submissionCount ?? 0) > 0}
+              >
                 <AppText variant="title" weight="bold">+</AppText>
               </Pressable>
             </View>
 
             <AppText variant="label" weight="semibold" style={{ marginTop: 16 }}>Số lựa chọn mỗi câu</AppText>
             <View style={styles.optionsRow}>
-              {[2, 3, 4].map(num => (
-                <Pressable
-                  key={num}
-                  style={[styles.optionBtn, optionsCount === num ? styles.optionBtnActive : null]}
-                  onPress={() => setOptionsCount(num)}
-                >
-                  <AppText variant="body" weight="bold" color={optionsCount === num ? palette.white : palette.foreground}>{num}</AppText>
-                </Pressable>
-              ))}
+              {[2, 3, 4].map(num => {
+                const isSelected = optionsCount === num;
+                const isBtnDisabled = (data?.submissionCount ?? 0) > 0;
+                return (
+                  <Pressable
+                    key={num}
+                    style={[
+                      styles.optionBtn, 
+                      isSelected ? styles.optionBtnActive : null,
+                      isBtnDisabled ? { opacity: 0.5 } : null
+                    ]}
+                    onPress={() => {
+                      if (isBtnDisabled) return;
+                      setOptionsCount(num);
+                    }}
+                    disabled={isBtnDisabled}
+                  >
+                    <AppText variant="body" weight="bold" color={isSelected ? palette.white : palette.foreground}>{num}</AppText>
+                  </Pressable>
+                );
+              })}
             </View>
 
             <AppText variant="label" weight="semibold" style={{ marginTop: 16 }}>Các mã đề (để trống nếu không có mã đề)</AppText>
@@ -309,26 +344,31 @@ export function TeacherExamBuilderScreen() {
                     placeholder={`Nhập mã đề ${idx + 1}`}
                     placeholderTextColor={palette.mutedForeground}
                     value={code}
+                    editable={!((data?.submissionCount ?? 0) > 0)}
                     onChangeText={(txt) => {
                       const newCodes = [...testCodes];
                       newCodes[idx] = txt;
                       setTestCodes(newCodes);
                     }}
-                    style={{ flex: 1, height: 48, backgroundColor: palette.white, borderRadius: 12, borderWidth: 1, borderColor: palette.border, paddingHorizontal: 16, fontSize: 16, color: palette.foreground, fontFamily: appTheme.typography.family }}
+                    style={{ flex: 1, height: 48, backgroundColor: palette.white, borderRadius: 12, borderWidth: 1, borderColor: palette.border, paddingHorizontal: 16, fontSize: 16, color: palette.foreground, fontFamily: appTheme.typography.family, opacity: (data?.submissionCount ?? 0) > 0 ? 0.6 : 1 }}
                   />
-                  <Pressable onPress={() => {
-                    const newCodes = [...testCodes];
-                    newCodes.splice(idx, 1);
-                    setTestCodes(newCodes);
-                  }} style={{ paddingHorizontal: 16, backgroundColor: palette.destructive + '15', borderRadius: 12, height: 48, justifyContent: 'center' }}>
-                    <AppText weight="bold" color={palette.destructive}>Xóa</AppText>
-                  </Pressable>
+                  {!((data?.submissionCount ?? 0) > 0) && (
+                    <Pressable onPress={() => {
+                      const newCodes = [...testCodes];
+                      newCodes.splice(idx, 1);
+                      setTestCodes(newCodes);
+                    }} style={{ paddingHorizontal: 16, backgroundColor: palette.destructive + '15', borderRadius: 12, height: 48, justifyContent: 'center' }}>
+                      <AppText weight="bold" color={palette.destructive}>Xóa</AppText>
+                    </Pressable>
+                  )}
                 </View>
               ))}
-              <Pressable onPress={() => setTestCodes([...testCodes, ''])} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: palette.primary, borderStyle: 'dashed' }}>
-                <AppText variant="title" weight="bold" color={palette.primary}>+</AppText>
-                <AppText weight="bold" color={palette.primary}>Thêm mã đề</AppText>
-              </Pressable>
+              {!((data?.submissionCount ?? 0) > 0) && (
+                <Pressable onPress={() => setTestCodes([...testCodes, ''])} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: palette.primary, borderStyle: 'dashed' }}>
+                  <AppText variant="title" weight="bold" color={palette.primary}>+</AppText>
+                  <AppText weight="bold" color={palette.primary}>Thêm mã đề</AppText>
+                </Pressable>
+              )}
             </View>
 
             <AppText variant="label" weight="semibold" style={{ marginTop: 16 }}>Mẫu phiếu trả lời</AppText>
@@ -710,10 +750,6 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     backgroundColor: palette.white,
     padding: 16,
     paddingBottom: 32,

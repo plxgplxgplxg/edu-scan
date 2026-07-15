@@ -284,6 +284,8 @@ export class ExamsRepository {
         });
       }
 
+      await this.regradeSubmissions(examId, tx);
+
       return tx.exam.findUniqueOrThrow({
         where: { id: examId },
         include: examDetailInclude,
@@ -334,6 +336,8 @@ export class ExamsRepository {
         },
       });
 
+      await this.regradeSubmissions(data.examId, tx);
+
       return tx.exam.findUniqueOrThrow({
         where: { id: data.examId },
         include: examDetailInclude,
@@ -361,6 +365,8 @@ export class ExamsRepository {
         });
       }
 
+      await this.regradeSubmissions(data.examId, tx);
+
       return tx.exam.findUniqueOrThrow({
         where: { id: data.examId },
         include: examDetailInclude,
@@ -374,5 +380,109 @@ export class ExamsRepository {
       data: { status },
       include: examDetailInclude,
     });
+  }
+
+  async regradeSubmissions(examId: string, tx: Prisma.TransactionClient) {
+    const exam = await tx.exam.findUnique({
+      where: { id: examId },
+      include: {
+        variants: {
+          include: {
+            answerKeys: true,
+          },
+        },
+      },
+    });
+    if (!exam) return;
+
+    const variantAnswerKeysMap = new Map<string, Map<number, AnswerChoice>>();
+    for (const variant of exam.variants) {
+      const keysMap = new Map<number, AnswerChoice>();
+      for (const key of variant.answerKeys) {
+        keysMap.set(key.questionNumber, key.correctAnswer);
+      }
+      variantAnswerKeysMap.set(variant.id, keysMap);
+    }
+
+    const submissions = await tx.submission.findMany({
+      where: { examId },
+      include: {
+        details: true,
+      },
+    });
+
+    for (const sub of submissions) {
+      const variantId = sub.resolvedVariantId;
+      const answerKeysMap = variantId ? variantAnswerKeysMap.get(variantId) : null;
+
+      let correctCount = 0;
+      let wrongCount = 0;
+      let reviewCount = 0;
+      const detailUpdates = [];
+
+      for (const detail of sub.details) {
+        const finalAnswer = detail.finalAnswer;
+        const correctAnswer = answerKeysMap ? (answerKeysMap.get(detail.questionNumber) ?? null) : null;
+        const isCorrect = finalAnswer !== null && correctAnswer !== null && finalAnswer === correctAnswer;
+
+        let needsReview = detail.needsReview;
+        let reviewReason = detail.reviewReason;
+
+        if (finalAnswer === null) {
+          needsReview = true;
+          reviewReason = 'MANUAL_BLANK';
+        } else {
+          if (correctAnswer !== null) {
+            needsReview = false;
+            reviewReason = null;
+          }
+        }
+
+        if (needsReview) {
+          reviewCount++;
+        } else if (isCorrect) {
+          correctCount++;
+        } else {
+          wrongCount++;
+        }
+
+        detailUpdates.push(
+          tx.submissionDetail.update({
+            where: {
+              submissionId_questionNumber: {
+                submissionId: sub.id,
+                questionNumber: detail.questionNumber,
+              },
+            },
+            data: {
+              correctAnswer,
+              isCorrect,
+              needsReview,
+              reviewReason,
+            },
+          })
+        );
+      }
+
+      const totalQuestions = answerKeysMap ? answerKeysMap.size : sub.details.length;
+      const score = totalQuestions > 0 && answerKeysMap && answerKeysMap.size > 0
+        ? (correctCount / answerKeysMap.size) * exam.maxScore
+        : 0;
+
+      const subNeedsReview = sub.details.some(d => d.needsReview) || reviewCount > 0;
+
+      await Promise.all(detailUpdates);
+
+      await tx.submission.update({
+        where: { id: sub.id },
+        data: {
+          correctCount,
+          wrongCount,
+          reviewCount,
+          score,
+          status: subNeedsReview ? 'NEEDS_REVIEW' : 'GRADED',
+        },
+      });
+    }
   }
 }
