@@ -69,7 +69,6 @@ export async function downloadRemoteFile(input: {
         title: safeFileName,
         description: 'Tải tệp EduScan',
         mime: input.mimeType || 'application/octet-stream',
-        path: `${ReactNativeBlobUtil.fs.dirs.DownloadDir}/${safeFileName}`,
       },
     }).fetch('GET', normalizedUrl);
   } catch (error) {
@@ -77,6 +76,5 @@ export async function downloadRemoteFile(input: {
       'Không tải được tệp',
       error instanceof Error ? error.message : 'Vui lòng thử lại sau.',
     );
-    throw error;
   }
 }
