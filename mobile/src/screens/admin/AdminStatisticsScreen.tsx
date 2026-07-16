@@ -10,12 +10,13 @@ import { palette, spacing, typography } from '../../theme/tokens';
 import { PageHeader } from '../../components/PageHeader';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { EmptyState } from '../../components/EmptyState';
+import { Screen } from '../../components/Screen';
 import { primaryHeroGradient } from '../../theme/header';
 
 export function AdminStatisticsScreen() {
   const navigation = useNavigation();
-  const { session } = useAuth();
-  const token = session?.accessToken || '';
+  const { accessToken } = useAuth();
+  const token = accessToken || '';
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['adminStats'],
@@ -26,18 +27,16 @@ export function AdminStatisticsScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.container}>
+      <Screen contentContainerStyle={styles.center}>
         <PageHeader title="Thống kê hệ thống" onBack={() => navigation.goBack()} gradient={primaryHeroGradient} />
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={palette.primary} />
-        </View>
-      </View>
+        <ActivityIndicator size="large" color={palette.primary} />
+      </Screen>
     );
   }
 
   if (error || !data) {
     return (
-      <View style={styles.container}>
+      <Screen>
         <PageHeader title="Thống kê hệ thống" onBack={() => navigation.goBack()} gradient={primaryHeroGradient} />
         <EmptyState
           icon={<Users size={24} color={palette.primary} />}
@@ -46,39 +45,41 @@ export function AdminStatisticsScreen() {
           actionLabel="Thử lại"
           onAction={refetch}
         />
-      </View>
+      </Screen>
     );
   }
 
   const { overview, classes } = data;
 
   return (
-    <View style={styles.container}>
+    <Screen contentContainerStyle={styles.scrollContent}>
       <PageHeader title="Thống kê hệ thống" onBack={() => navigation.goBack()} gradient={primaryHeroGradient} />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.sectionTitle}>Tổng quan</Text>
-        <View style={styles.grid}>
-          <SurfaceCard style={styles.statCard}>
-            <Users color={palette.primary} size={24} />
-            <Text style={styles.statValue}>{overview.totalTeachers}</Text>
-            <Text style={styles.statLabel}>Giáo viên</Text>
-          </SurfaceCard>
+      <Text style={styles.sectionTitle}>Tổng quan</Text>
+      <View style={styles.grid}>
+        <SurfaceCard style={styles.statCard}>
+          <Users color={palette.primary} size={24} />
+          <Text style={styles.statValue}>{overview.totalTeachers}</Text>
+          <Text style={styles.statLabel}>Giáo viên</Text>
+        </SurfaceCard>
 
-          <SurfaceCard style={styles.statCard}>
-            <GraduationCap color={palette.success} size={24} />
-            <Text style={styles.statValue}>{overview.totalStudents}</Text>
-            <Text style={styles.statLabel}>Học sinh</Text>
-          </SurfaceCard>
+        <SurfaceCard style={styles.statCard}>
+          <GraduationCap color={palette.success} size={24} />
+          <Text style={styles.statValue}>{overview.totalStudents}</Text>
+          <Text style={styles.statLabel}>Học sinh</Text>
+        </SurfaceCard>
 
-          <SurfaceCard style={styles.statCard}>
-            <BookOpen color={palette.info} size={24} />
-            <Text style={styles.statValue}>{overview.totalClasses}</Text>
-            <Text style={styles.statLabel}>Lớp học</Text>
-          </SurfaceCard>
-        </View>
+        <SurfaceCard style={styles.statCard}>
+          <BookOpen color={palette.info} size={24} />
+          <Text style={styles.statValue}>{overview.totalClasses}</Text>
+          <Text style={styles.statLabel}>Lớp học</Text>
+        </SurfaceCard>
+      </View>
 
-        <Text style={styles.sectionTitle}>Danh sách lớp học</Text>
-        {(classes?.data || []).map((c: any) => (
+      <Text style={styles.sectionTitle}>Danh sách lớp học</Text>
+      {(classes?.data || []).length === 0 ? (
+        <Text style={styles.emptyText}>Chưa có lớp học nào.</Text>
+      ) : (
+        (classes?.data || []).map((c: any) => (
           <SurfaceCard key={c.id} style={styles.classCard}>
             <View>
               <Text style={styles.className}>{c.name}</Text>
@@ -87,12 +88,9 @@ export function AdminStatisticsScreen() {
               </Text>
             </View>
           </SurfaceCard>
-        ))}
-        {classes.data.length === 0 && (
-          <Text style={styles.emptyText}>Chưa có lớp học nào.</Text>
-        )}
-      </ScrollView>
-    </View>
+        ))
+      )}
+    </Screen>
   );
 }
 

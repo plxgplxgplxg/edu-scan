@@ -10,11 +10,12 @@ import { palette, spacing, typography } from '../../theme/tokens';
 import { PageHeader } from '../../components/PageHeader';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { EmptyState } from '../../components/EmptyState';
+import { Screen } from '../../components/Screen';
 
 export function StudentStatisticsScreen() {
   const navigation = useNavigation();
-  const { session } = useAuth();
-  const token = session?.accessToken || '';
+  const { accessToken } = useAuth();
+  const token = accessToken || '';
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['studentStats'],
@@ -25,18 +26,16 @@ export function StudentStatisticsScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.container}>
+      <Screen contentContainerStyle={styles.center}>
         <PageHeader title="Thống kê học tập" onBack={() => navigation.goBack()} />
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={palette.primary} />
-        </View>
-      </View>
+        <ActivityIndicator size="large" color={palette.primary} />
+      </Screen>
     );
   }
 
   if (error || !data) {
     return (
-      <View style={styles.container}>
+      <Screen>
         <PageHeader title="Thống kê học tập" onBack={() => navigation.goBack()} />
         <EmptyState
           icon={<BookOpen size={24} color={palette.primary} />}
@@ -45,45 +44,55 @@ export function StudentStatisticsScreen() {
           actionLabel="Thử lại"
           onAction={refetch}
         />
-      </View>
+      </Screen>
     );
   }
 
+  const { overview, recentClasses } = data;
+
   return (
-    <View style={styles.container}>
+    <Screen contentContainerStyle={styles.scrollContent}>
       <PageHeader title="Thống kê học tập" onBack={() => navigation.goBack()} />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.sectionTitle}>Kết quả học tập</Text>
-        
-        <View style={styles.grid}>
-          <SurfaceCard style={styles.statCard}>
-            <BookOpen color={palette.primary} size={24} />
-            <Text style={styles.statValue}>{data.totalClasses}</Text>
-            <Text style={styles.statLabel}>Lớp tham gia</Text>
-          </SurfaceCard>
+      <Text style={styles.sectionTitle}>Kết quả học tập</Text>
+      
+      <View style={styles.grid}>
+        <SurfaceCard style={styles.statCard}>
+          <BookOpen color={palette.primary} size={24} />
+          <Text style={styles.statValue}>{overview.totalAssignments}</Text>
+          <Text style={styles.statLabel}>Bài tập</Text>
+        </SurfaceCard>
 
-          <SurfaceCard style={styles.statCard}>
-            <CheckCircle color={palette.success} size={24} />
-            <Text style={styles.statValue}>{data.onTimeSubmits}</Text>
-            <Text style={styles.statLabel}>Nộp đúng hạn</Text>
-          </SurfaceCard>
-        </View>
+        <SurfaceCard style={styles.statCard}>
+          <CheckCircle color={palette.success} size={24} />
+          <Text style={styles.statValue}>{overview.completedAssignments}</Text>
+          <Text style={styles.statLabel}>Hoàn thành</Text>
+        </SurfaceCard>
+      </View>
 
-        <View style={styles.grid}>
-          <SurfaceCard style={styles.statCard}>
-            <Clock color={palette.warning} size={24} />
-            <Text style={styles.statValue}>{data.lateSubmits}</Text>
-            <Text style={styles.statLabel}>Nộp trễ</Text>
+      <Text style={styles.sectionTitle}>Môn học gần đây</Text>
+      {recentClasses.length === 0 ? (
+        <Text style={styles.emptyText}>Chưa tham gia lớp nào</Text>
+      ) : (
+        recentClasses.map((cls: any) => (
+          <SurfaceCard key={cls.id} style={styles.classCard}>
+            <View style={styles.flex}>
+              <Text style={styles.className}>{cls.name}</Text>
+              <Text style={styles.classSub}>
+                Đã nộp: {cls.completedAssignments}/{cls.totalAssignments} bài
+              </Text>
+            </View>
+            <View style={styles.progressContainer}>
+              <View 
+                style={[
+                  styles.progressBar, 
+                  { width: `${cls.totalAssignments > 0 ? (cls.completedAssignments / cls.totalAssignments) * 100 : 0}%` }
+                ]} 
+              />
+            </View>
           </SurfaceCard>
-
-          <SurfaceCard style={styles.statCard}>
-            <AlertCircle color={palette.destructive} size={24} />
-            <Text style={styles.statValue}>{data.missingSubmits}</Text>
-            <Text style={styles.statLabel}>Chưa nộp</Text>
-          </SurfaceCard>
-        </View>
-      </ScrollView>
-    </View>
+        ))
+      )}
+    </Screen>
   );
 }
 

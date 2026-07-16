@@ -61,7 +61,7 @@ export function Screen({
   );
   const omitTopInset = bleedTop || !!headerChild;
   const bottomInset = !withoutBottomInset
-    ? layout.navHeight + Math.max(insets.bottom, layout.bottomOffset) + layout.sectionGap
+    ? layout.navHeight + Math.max(insets.bottom, layout.bottomOffset) + layout.sectionGap + 100 // Thêm 100px kéo dư
     : 0;
   const { refreshControl: customRefreshControl, ...restScrollViewProps } = scrollViewProps ?? {};
 

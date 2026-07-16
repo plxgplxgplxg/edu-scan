@@ -7,6 +7,7 @@ import { Users, AlertCircle, Clock, BarChart2 } from 'lucide-react-native';
 import { requestJson } from '../../api/http';
 import { useAuth } from '../../store/auth-store';
 import { appTheme, palette } from '../../theme/tokens';
+import { Screen } from '../../components/Screen';
 import { PageHeader } from '../../components/PageHeader';
 import { SurfaceCard } from '../../components/SurfaceCard';
 import { EmptyState } from '../../components/EmptyState';
@@ -75,16 +76,15 @@ export function TeacherStatisticsScreen() {
   ] : undefined;
 
   return (
-    <View style={styles.container}>
+    <Screen
+      contentContainerStyle={styles.scrollContent}
+      scrollViewProps={{ showsVerticalScrollIndicator: false }}
+    >
       <PageHeader 
         title="Thống kê giảng dạy" 
         onBack={() => navigation.goBack()} 
         metrics={headerMetrics}
       />
-      <ScrollView 
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]} 
-        showsVerticalScrollIndicator={false}
-      >
         <View style={styles.sectionHeader}>
           <AppText variant="headline" style={styles.sectionTitle}>Tổng quan</AppText>
           <View style={styles.filterGroup}>
@@ -191,8 +191,7 @@ export function TeacherStatisticsScreen() {
             />
           </View>
         )}
-      </ScrollView>
-    </View>
+    </Screen>
   );
 }
 
